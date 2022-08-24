@@ -1,3 +1,6 @@
+use crate::entities::task_details::TaskDetails;
+
+use super::{ DeviceDetails, LogDetails };
 use reqwest::{blocking::Client, header::CONTENT_TYPE, StatusCode};
 use serde_json::Value;
 
@@ -37,7 +40,7 @@ pub struct ScheduledTasksJson {
     #[serde(rename = "State")]
     pub state: String,
     #[serde(rename = "CurrentProgressPercentage")]
-    pub progress: Option<f64>
+    pub progress: Option<String>
 }
 
 pub type LogFileVec = Vec<LogFileJson>;
@@ -76,18 +79,18 @@ impl ServerInfo {
         Ok(())
     }
 
-    pub fn get_log_filenames(self) -> Result<(), reqwest::Error> {
+    pub fn get_log_filenames(self) -> Result<Vec<LogDetails>, reqwest::Error> {
         let client = Client::new();
         let response = client
             .get(self.server_url)
             .header("X-Emby-Token", self.api_key)
             .send()?;
+        let mut details = Vec::new();
         match response.status() {
             StatusCode::OK => {
-                let logfiles = response.json::<LogFileVec>().unwrap();
-                println!("Logfiles found: ");
-                for file in logfiles {
-                    println!("\t{}\t{}K", file.name, file.size/1024)
+                let logs = response.json::<LogFileVec>().unwrap();
+                for log in logs {
+                    details.push(LogDetails::new(log.date_created, log.date_modified, log.name, log.size/1024));
                 }
             } StatusCode::UNAUTHORIZED => {
                 println!("Authentication failed.  Try reconfiguring with \"jellyroller reconfigure\"");
@@ -96,24 +99,23 @@ impl ServerInfo {
             }
         }
 
-        Ok(())
+        Ok(details)
     }
 
-    pub fn get_devices(self) -> Result<(), reqwest::Error> {
+    pub fn get_devices(self) -> Result<Vec<DeviceDetails>, reqwest::Error> {
         let client = Client::new();
         let response = client
             .get(self.server_url)
             .header("X-Emby-Token", self.api_key)
             .send()?;
-        match response.status() {
+            let mut details = Vec::new();
+            match response.status() {
             StatusCode::OK => {
                 let json = response.text().unwrap();
                 //let j = json.as_str();
                 let devices = serde_json::from_str::<DeviceRootJson>(&json).unwrap();
-                println!("Active devices (UserName, Session Id):");
                 for device in devices.items {
-                    //println!("\t{}, {}", device.username, session.id);
-                    println!("{} | {} | {}", device.id, device.name, device.lastusername);
+                    details.push(DeviceDetails::new(device.id, device.name, device.lastusername));
                 }
             } StatusCode::UNAUTHORIZED => {
                 println!("Authentication failed.  Try reconfiguring with \"jellyroller reconfigure\"");
@@ -122,7 +124,7 @@ impl ServerInfo {
             }
         }
 
-        Ok(())
+        Ok(details)
     }
 
     pub fn get_deviceid_by_username(self, username: String) -> Result<Vec<String>, reqwest::Error> {
@@ -170,22 +172,23 @@ impl ServerInfo {
         Ok(())
     }
 
-    pub fn get_scheduled_tasks(self) -> Result<(), reqwest::Error> {
+    pub fn get_scheduled_tasks(self) -> Result<Vec<TaskDetails>, reqwest::Error> {
         let client = Client::new();
         let response = client
             .get(self.server_url)
             .header("X-Emby-Token", self.api_key)
             .send()?;
+            let mut details = Vec::new();
         match response.status() {
             StatusCode::OK => {
                 let scheduled_tasks = response.json::<ScheduledTasksVec>().unwrap();
-                println!("Scheduled tasks (Name, State, Percent Complete):");
                 for task in scheduled_tasks {
-                    println!("\t{}, {}, {:?}", task.name, task.state, 
+                    details.push(TaskDetails::new(task.name, task.state, 
                         match task.progress {
                             Some(ref x) => x.to_string(),
-                            None => "N/A".to_string()
-                        });
+                            None => "".to_string()
+                        })
+                    );
                 }
             } StatusCode::UNAUTHORIZED => {
                 println!("Authentication failed.  Try reconfiguring with \"jellyroller reconfigure\"");
@@ -194,7 +197,7 @@ impl ServerInfo {
             }
         }
 
-        Ok(())
+        Ok(details)
     }
 
     pub fn scan_library(self) -> Result<(), reqwest::Error> {

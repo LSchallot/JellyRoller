@@ -11,8 +11,7 @@ jellyroller
 A CLI controller for managing Jellyfin  
 
 USAGE:
-    Windows:    jellyroller.exe <SUBCOMMAND>           
-    Linux:      jellyroller <SUBCOMMAND>
+    jellyroller <SUBCOMMAND>
 
 OPTIONS:
     -h, --help    Print help information
@@ -27,7 +26,7 @@ SUBCOMMANDS:
     grant-admin                  Grants the specified user admin rights
     help                         Print this message or the help of the given subcommand(s)
     list-logs                    Displays the available system logs
-    list-users                   Lists the current users
+    list-users                   Lists the current users with basic information
     reconfigure                  Reconfigure the connection information
     remove-device-by-username    Removes all devices associated with the specified user
     reset-password               Resets a user's password

@@ -1,3 +1,4 @@
+use super::UserDetails;
 use reqwest::blocking::Client;
 use reqwest::StatusCode;
 use reqwest::header::CONTENT_TYPE;
@@ -107,8 +108,6 @@ impl UserDel {
             .send()?;
             match response.status() {
             StatusCode::NO_CONTENT => {
-                // let body: Value = response.json()?;
-                // println!("{:#}", body);
                 println!("User \"{}\" successfully removed.", &self.username);
             } StatusCode::UNAUTHORIZED => {
                 println!("Authentication failed.  Try reconfiguring with \"jellyroller reconfigure\"");
@@ -139,7 +138,11 @@ pub struct Policy {
     #[serde(rename = "AuthenticationProviderId")]
     auth_provider_id: String,
     #[serde(rename = "PasswordResetProviderId")]
-    pass_reset_provider_id: String
+    pass_reset_provider_id: String,
+    #[serde(rename = "IsAdministrator")]
+    is_admin: bool,
+    #[serde(rename = "IsDisabled")]
+    is_disabled: bool
 }
 
 #[derive(Serialize, Deserialize)]
@@ -181,7 +184,7 @@ impl UserAuth {
             StatusCode::OK => {
                 let result = response.json::<UserAuthJson>().unwrap();
                 println!("User authenticated successfully.");
-                return Ok(result.access_token)
+                Ok(result.access_token)
             } _ => {
                 // Panic since the application requires an authenticated user
                 panic!("[ERROR] Unable to authenticate user.  Please assure your configuration information is correct.\n");
@@ -204,18 +207,27 @@ impl UserList {
         }
     }
 
-    pub fn list_users(self) -> Result<(), reqwest::Error> {
+    pub fn list_users(self) -> Result<Vec<UserDetails>, reqwest::Error> {
         let client = Client::new();
         let response = client
             .get(self.server_url)
             .header("X-Emby-Token", self.api_key)
             .send()?;
-        let users = response.json::<UserInfoVec>().unwrap();
-        println!("Current users:");
-        for user in users {
-            println!("\t{}", user.name);
+        let mut details = Vec::new();
+        match response.status() {
+            StatusCode::OK => {
+                let users = response.json::<UserInfoVec>().unwrap();
+                for user in users {
+                    details.push(UserDetails::new(user.name, user.policy.is_admin, user.policy.is_disabled));
+                }
+            } StatusCode::UNAUTHORIZED => {
+                println!("Authentication failed.  Try reconfiguring with \"jellyroller reconfigure\"");
+            } _ => {
+                println!("Status Code: {}", response.status());
+            }
         }
-        Ok(())
+        
+        Ok(details)
     }
 
     pub fn get_user_id(self, username: &String) -> String {

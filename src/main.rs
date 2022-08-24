@@ -6,6 +6,11 @@ mod user_actions;
 use user_actions::*;
 mod system_actions;
 use system_actions::*;
+mod entities;
+use entities::user_details::UserDetails;
+use entities::device_details::DeviceDetails;
+use entities::task_details::TaskDetails;
+use entities::log_details::LogDetails;
 
 #[macro_use]
 extern crate serde_derive;
@@ -56,16 +61,20 @@ enum Commands {
         #[clap(required = true, value_parser)]
         password: String,
     },
-    /// Deletes an existing user
+    /// Deletes an existing user.
     #[clap(arg_required_else_help = true)]
     DeleteUser {
-        /// User to remove
+        /// User to remove.
         #[clap(required = true, value_parser)]
         username: String,
     },
-    /// Lists the current users
-    ListUsers {},
-    /// Resets a user's password
+    /// Lists the current users with basic information.
+    ListUsers {
+        /// Print information as json.
+        #[clap(long, required = false)]
+        json: bool
+    },
+    /// Resets a user's password.
     #[clap(arg_required_else_help = true)]
     ResetPassword {
         /// User to be modified.
@@ -75,11 +84,15 @@ enum Commands {
         #[clap(required = true, value_parser)]
         password: String,
     },
-    /// Displays the server information
+    /// Displays the server information.
     ServerInfo {},
-    /// Displays the available system logs
-    ListLogs{},
-    /// Displays the requested logfile
+    /// Displays the available system logs.
+    ListLogs{
+        /// Print information as json.
+        #[clap(long, required = false)]
+        json: bool
+    },
+    /// Displays the requested logfile.
     ShowLog {
         /// Name of the logfile to show.
         #[clap(required = true, value_parser)]
@@ -87,16 +100,24 @@ enum Commands {
     },
     /// Reconfigure the connection information.
     Reconfigure {},
-    /// Show all active devices
-    GetDevices {},
-    /// Removes all devices associated with the specified user
+    /// Show all active devices.
+    GetDevices {
+        /// Print information as json.
+        #[clap(long, required = false)]
+        json: bool
+    },
+    /// Removes all devices associated with the specified user.
     RemoveDeviceByUsername {
         #[clap(required = true, value_parser)]
         username: String
     },
-    /// Show all scheduled tasks and their status
-    GetScheduledTasks {},
-    /// Start a library scan
+    /// Show all scheduled tasks and their status.
+    GetScheduledTasks {
+        /// Print information as json.
+        #[clap(long, required = false)]
+        json: bool
+    },
+    /// Start a library scan.
     ScanLibrary {},
     /// Disable a user.
     DisableUser {
@@ -108,12 +129,12 @@ enum Commands {
         #[clap(required = true, value_parser)]
         username: String
     },
-    /// Grants the specified user admin rights
+    /// Grants the specified user admin rights.
     GrantAdmin {
         #[clap(required = true, value_parser)]
         username: String
     },
-    /// Revokes admin rights from the specified user
+    /// Revokes admin rights from the specified user.
     RevokeAdmin {
         #[clap(required = true, value_parser)]
         username: String
@@ -140,22 +161,33 @@ fn main() -> Result<(), confy::ConfyError> {
             UserDel::remove(UserDel::new(user_id, cfg.server_url, cfg.api_key))
                 .expect("Unable to delete user.");
         },
-        Commands::ListUsers {} => {
-            UserList::list_users(UserList::new("/Users".to_string(), cfg.server_url, cfg.api_key))
-                .expect("Unable to list users.");
+        Commands::ListUsers { json } => {
+            let users = UserList::list_users(UserList::new("/Users".to_string(), cfg.server_url, cfg.api_key)).unwrap();
+            if json {
+                UserDetails::json_print(users);
+            } else {
+                UserDetails::table_print(users);
+            }
         },
         Commands::ResetPassword { username, password } => {
             let user_id = UserList::get_user_id(UserList::new("/Users".to_string(), cfg.server_url.to_string(), cfg.api_key.to_string()), &username);
             ResetPass::reset(ResetPass::new(user_id, password, cfg.server_url, cfg.api_key))
                 .expect("Unable to reset user password.");
         },
+
+        // TODO:  Beautify output
         Commands::ServerInfo {} => {
             ServerInfo::get_server_info(ServerInfo::new("/System/Info".to_string(), cfg.server_url, cfg.api_key))
                 .expect("Unable to gather server information.");
         },
-        Commands::ListLogs {} => {
-            ServerInfo::get_log_filenames(ServerInfo::new("/System/Logs".to_string(), cfg.server_url, cfg.api_key))
-                .expect("Unable to gather server log filenames.");
+
+        Commands::ListLogs { json } => {
+            let logs = ServerInfo::get_log_filenames(ServerInfo::new("/System/Logs".to_string(), cfg.server_url, cfg.api_key)).unwrap();
+            if json {
+                LogDetails::json_print(logs);
+            } else {
+                LogDetails::table_print(logs);
+            }     
         },
         Commands::ShowLog { logfile } => {
             LogFile::get_logfile(LogFile::new("/System/Logs/Log".to_string(), cfg.server_url, cfg.api_key, logfile))
@@ -164,13 +196,21 @@ fn main() -> Result<(), confy::ConfyError> {
         Commands::Reconfigure {} => {
             initial_config(cfg);
         },
-        Commands::GetDevices {} => {
-            ServerInfo::get_devices(ServerInfo::new("/Devices".to_string(), cfg.server_url, cfg.api_key))
-                .expect("Unable to gather session information.");
+        Commands::GetDevices { json } => {
+            let devices = ServerInfo::get_devices(ServerInfo::new("/Devices".to_string(), cfg.server_url, cfg.api_key)).unwrap();
+            if json {
+                DeviceDetails::json_print(devices);
+            } else {
+                DeviceDetails::table_print(devices);
+            }
         },
-        Commands::GetScheduledTasks {} => {
-            ServerInfo::get_scheduled_tasks(ServerInfo::new("/ScheduledTasks".to_string(), cfg.server_url, cfg.api_key))
-                .expect("Unable to gather scheduled tasks information.");
+        Commands::GetScheduledTasks { json } => {
+            let tasks = ServerInfo::get_scheduled_tasks(ServerInfo::new("/ScheduledTasks".to_string(), cfg.server_url, cfg.api_key)).unwrap();
+            if json {
+                TaskDetails::json_print(tasks);
+            } else {
+                TaskDetails::table_print(tasks);
+            }
         },
         Commands::ScanLibrary {} => {
             ServerInfo::scan_library(ServerInfo::new("/Library/Refresh".to_string(), cfg.server_url, cfg.api_key))
