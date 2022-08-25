@@ -118,6 +118,11 @@ enum Commands {
         #[clap(long, required = false)]
         json: bool
     },
+    /// Executes a scheduled task by name.
+    ExecuteTaskByName {
+        #[clap(required = true, value_parser)]
+        task: String
+    },
     /// Start a library scan.
     ScanLibrary {},
     /// Disable a user.
@@ -213,6 +218,11 @@ fn main() -> Result<(), confy::ConfyError> {
                 TaskDetails::table_print(tasks);
             }
         },
+        Commands::ExecuteTaskByName { task } => {
+            let taskid = ServerInfo::get_taskid_by_taskname(ServerInfo::new("/ScheduledTasks".to_string(), cfg.server_url.to_string(), cfg.api_key.to_string()), task.to_string()).unwrap();
+            ServerInfo::execute_task_by_id(ServerInfo::new("/ScheduledTasks/Running/{taskId}".to_string(), cfg.server_url, cfg.api_key), task, taskid)
+                .expect("Unable to start scheduled task.");
+        }
         Commands::ScanLibrary {} => {
             ServerInfo::scan_library(ServerInfo::new("/Library/Refresh".to_string(), cfg.server_url, cfg.api_key))
                 .expect("Unable to start library scan.");

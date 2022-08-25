@@ -4,19 +4,10 @@ use super::{ DeviceDetails, DeviceRootJson, LogDetails, responder::*};
 use reqwest::{blocking::Client, StatusCode};
 use serde_json::Value;
 
-#[derive(Serialize, Deserialize)]
-pub struct ScheduledTasksJson {
-    #[serde(rename = "Name")]
-    pub name: String,
-    #[serde(rename = "State")]
-    pub state: String,
-    #[serde(rename = "CurrentProgressPercentage")]
-    pub progress: Option<String>
-}
-
 pub type LogFileVec = Vec<LogDetails>;
-pub type ScheduledTasksVec = Vec<ScheduledTasksJson>;
+pub type ScheduledTasksVec = Vec<TaskDetails>;
 
+#[derive(Clone)]
 pub struct ServerInfo {
     server_url: String,
     api_key: String
@@ -85,6 +76,39 @@ impl ServerInfo {
         Ok(details)
     }
 
+    pub fn get_taskid_by_taskname(self, taskname: String) -> Result<String, reqwest::Error> {
+        let response = simple_get(self.server_url, self.api_key);
+        match response.status() {
+            StatusCode::OK => {
+                let tasks = response.json::<ScheduledTasksVec>().unwrap();
+                for task in tasks {
+                    if task.name == taskname {
+                        return Ok(task.id);
+                    }
+                }
+            } StatusCode::UNAUTHORIZED => {
+                println!("Authentication failed.  Try reconfiguring with \"jellyroller reconfigure\"");
+            } _ => {
+                println!("Status Code: {}", response.status());
+            }
+        }
+        Ok("".to_string())
+    }
+
+    pub fn execute_task_by_id(self, taskname: String, taskid: String) -> Result<(), reqwest::Error> {
+        let response = simple_post(self.server_url.replace("{taskId}", &taskid), self.api_key, "".to_string());
+        match response.status() {
+            StatusCode::NO_CONTENT => {
+                println!("Task \"{}\" initiated.", taskname);
+            } StatusCode::UNAUTHORIZED => {
+                println!("Authentication failed.  Try reconfiguring with \"jellyroller reconfigure\"");
+            } _ => {
+                println!("Status Code: {}", response.status());
+            }
+        }
+        Ok(())
+    }
+    
     pub fn get_deviceid_by_username(self, username: String) -> Result<Vec<String>, reqwest::Error> {
         let response = simple_get(self.server_url, self.api_key);
         let mut filtered = Vec::new();
@@ -133,12 +157,7 @@ impl ServerInfo {
             StatusCode::OK => {
                 let scheduled_tasks = response.json::<ScheduledTasksVec>().unwrap();
                 for task in scheduled_tasks {
-                    details.push(TaskDetails::new(task.name, task.state, 
-                        match task.progress {
-                            Some(ref x) => x.to_string(),
-                            None => "".to_string()
-                        })
-                    );
+                    details.push(TaskDetails::new(task.name, task.state, task.percent_complete, task.id));
                 }
             } StatusCode::UNAUTHORIZED => {
                 println!("Authentication failed.  Try reconfiguring with \"jellyroller reconfigure\"");
@@ -153,7 +172,7 @@ impl ServerInfo {
     pub fn scan_library(self) -> Result<(), reqwest::Error> {
         let response = simple_post(
             self.server_url, 
-            self.api_key.to_string(), 
+            self.api_key, 
             "".to_string());
         match response.status() {
             StatusCode::NO_CONTENT => {

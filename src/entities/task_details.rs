@@ -7,15 +7,18 @@ pub struct TaskDetails {
     #[serde(rename = "State")]
     pub state: String,
     #[serde(rename = "CurrentProgressPercentage")]
-    pub percent_complete: String
+    pub percent_complete: Option<String>,
+    #[serde(rename = "Id")]
+    pub id: String
 }
 
 impl TaskDetails {
-    pub fn new(name: String, state: String, percent_complete: String) -> TaskDetails {
+    pub fn new(name: String, state: String, percent_complete: Option<String>, id: String) -> TaskDetails {
         TaskDetails{
             name,
             state,
-            percent_complete
+            percent_complete,
+            id
         }
     }
 
@@ -27,9 +30,9 @@ impl TaskDetails {
         let mut table = Table::new();
         table
             .set_content_arrangement(ContentArrangement::Dynamic)
-            .set_header(vec!["Username", "Admin", "Disabled"]);
+            .set_header(vec!["Task Name", "State", "% Complete", "Id"]);
         for task in tasks {
-            table.add_row(vec![task.name, task.state, task.percent_complete]);
+            table.add_row(vec![task.name, task.state, task.percent_complete.unwrap_or_else(|| "".to_owned()), task.id]);
         }
         println!("{table}");
     }
