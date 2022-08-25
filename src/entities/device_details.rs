@@ -1,18 +1,24 @@
 use comfy_table::{ Table, ContentArrangement };
 
 #[derive(Serialize, Deserialize)]
+pub struct DeviceRootJson {
+    #[serde(rename = "Items")]
+    pub items: Vec<DeviceDetails>
+}
+
+#[derive(Serialize, Deserialize)]
 pub struct DeviceDetails {
     pub id: String,
-    name: String,
-    lastuser: String
+    pub name: String,
+    pub lastusername: String
 }
 
 impl DeviceDetails {
-    pub fn new(id: String, name: String, lastuser: String) -> DeviceDetails {
+    pub fn new(id: String, name: String, lastusername: String) -> DeviceDetails {
         DeviceDetails{
             id,
             name,
-            lastuser
+            lastusername
         }
     }
 
@@ -26,7 +32,7 @@ impl DeviceDetails {
             .set_content_arrangement(ContentArrangement::Dynamic)
             .set_header(vec!["Device Id", "Device Name", "Last Used By"]);
         for device in devices {
-            table.add_row(vec![device.id, device.name, device.lastuser]);
+            table.add_row(vec![device.id, device.name, device.lastusername]);
         }
         println!("{table}");
     }

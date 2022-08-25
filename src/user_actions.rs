@@ -1,7 +1,5 @@
-use super::UserDetails;
-use reqwest::blocking::Client;
-use reqwest::StatusCode;
-use reqwest::header::CONTENT_TYPE;
+use super::{ UserDetails, responder::*} ;
+use reqwest::{StatusCode, blocking::Client, header::CONTENT_TYPE};
 use serde_json::json;
 
 #[derive(Serialize, Deserialize)]
@@ -23,13 +21,10 @@ impl ResetPass {
     }
     
     pub fn reset(self)  -> Result<(), reqwest::Error> {
-        let client = Client::new();
-        let response = client
-            .post(self.server_url.to_string())
-            .header(CONTENT_TYPE, "application/json")
-            .header("X-Emby-Token", self.api_key.to_string())
-            .body(serde_json::to_string_pretty(&self).unwrap())
-            .send()?;
+        let response = simple_post(
+            self.server_url.to_string(), 
+            self.api_key.to_string(), 
+            serde_json::to_string_pretty(&self).unwrap());
         match response.status() {
             StatusCode::NO_CONTENT => {
                 println!("Password updated successfully.");
@@ -63,13 +58,10 @@ impl UserAdd {
     }
 
     pub fn create(self) -> Result<(), reqwest::Error> {
-        let client = Client::new();
-        let response = client
-            .post(self.server_url.to_string())
-            .header("X-Emby-Token", &self.api_key)
-            .header(CONTENT_TYPE, "application/json")
-            .body(serde_json::to_string_pretty(&self).unwrap())
-            .send()?;
+        let response = simple_post(
+            self.server_url.to_string(), 
+            self.api_key.to_string(), 
+            serde_json::to_string_pretty(&self).unwrap());
         match response.status() {
             StatusCode::OK => {
                 println!("User \"{}\" successfully created.", &self.name);
@@ -122,30 +114,6 @@ impl UserDel {
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct User {
-    #[serde(rename = "Name")]
-    name: String,
-    #[serde(rename = "ServerId")]
-    serverid: String,
-    #[serde(rename = "Id")]
-    id: String,
-    #[serde(rename = "Policy")]
-    policy: Policy
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct Policy {
-    #[serde(rename = "AuthenticationProviderId")]
-    auth_provider_id: String,
-    #[serde(rename = "PasswordResetProviderId")]
-    pass_reset_provider_id: String,
-    #[serde(rename = "IsAdministrator")]
-    is_admin: bool,
-    #[serde(rename = "IsDisabled")]
-    is_disabled: bool
-}
-
-#[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct UserAuthJson {
     #[serde(rename = "AccessToken")]
@@ -154,7 +122,7 @@ pub struct UserAuthJson {
     pub server_id: String,
 }
 
-pub type UserInfoVec = Vec<User>;
+pub type UserInfoVec = Vec<UserDetails>;
 
 #[derive(Serialize, Deserialize)]
 pub struct UserAuth {
@@ -208,18 +176,11 @@ impl UserList {
     }
 
     pub fn list_users(self) -> Result<Vec<UserDetails>, reqwest::Error> {
-        let client = Client::new();
-        let response = client
-            .get(self.server_url)
-            .header("X-Emby-Token", self.api_key)
-            .send()?;
-        let mut details = Vec::new();
+        let response = simple_get(self.server_url, self.api_key);
+        let mut users = Vec::new();
         match response.status() {
             StatusCode::OK => {
-                let users = response.json::<UserInfoVec>().unwrap();
-                for user in users {
-                    details.push(UserDetails::new(user.name, user.policy.is_admin, user.policy.is_disabled));
-                }
+                users = response.json::<UserInfoVec>().unwrap();
             } StatusCode::UNAUTHORIZED => {
                 println!("Authentication failed.  Try reconfiguring with \"jellyroller reconfigure\"");
             } _ => {
@@ -227,9 +188,10 @@ impl UserList {
             }
         }
         
-        Ok(details)
+        Ok(users)
     }
 
+    // TODO: Standardize the GET request?
     pub fn get_user_id(self, username: &String) -> String {
         let client = Client::new();
         let response = client
@@ -254,14 +216,10 @@ impl UserList {
             &req_json_keys[0]:&req_json_values[0],
             &req_json_keys[1]:&req_json_values[1]
         });
-        let client = Client::new();
-        let response = client
-            .post(self.server_url.replace("{userId}", &id))
-            .header(CONTENT_TYPE, "application/json")
-            .header("X-Emby-Authorization", "MediaBrowser Client=\"JellyRoller\", Device=\"jellyroller-cli\", DeviceId=\"1\", Version=\"0.0.1\"")
-            .header("X-Emby-Token", self.api_key)
-            .body(serde_json::to_string_pretty(&body).unwrap())
-            .send()?;
+        let response = simple_post(
+            self.server_url.replace("{userId}", &id), 
+            self.api_key.to_string(), 
+            serde_json::to_string_pretty(&body).unwrap());
         match response.status() {
             StatusCode::NO_CONTENT => {
                 println!("User {} configuration value of {} successfully set to {}", username, config_key, config_value);
@@ -273,15 +231,11 @@ impl UserList {
     }
 
     pub fn get_user_providers_vec(self, id: String) -> Result<Vec<String>, reqwest::Error> {
-        let client = Client::new();
-        let response = client
-            .get(self.server_url.replace("{userId}", &id))
-            .header("X-Emby-Token", self.api_key.to_string())
-            .send()?;
+        let response = simple_get(self.server_url.replace("{userId}", &id), self.api_key);
         match response.status() {
             StatusCode::OK => {
                 let json = response.text().unwrap();
-                let providers = serde_json::from_str::<User>(&json).unwrap();
+                let providers = serde_json::from_str::<UserDetails>(&json).unwrap();
                 // Auth provider will always be at position 0 and PassReset provider will be at 1
                 let json_vec = vec![providers.policy.auth_provider_id, providers.policy.pass_reset_provider_id];
                 Ok(json_vec)

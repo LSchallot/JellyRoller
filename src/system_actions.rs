@@ -1,37 +1,8 @@
 use crate::entities::task_details::TaskDetails;
 
-use super::{ DeviceDetails, LogDetails };
-use reqwest::{blocking::Client, header::CONTENT_TYPE, StatusCode};
+use super::{ DeviceDetails, DeviceRootJson, LogDetails, responder::*};
+use reqwest::{blocking::Client, StatusCode};
 use serde_json::Value;
-
-#[derive(Serialize, Deserialize)]
-pub struct LogFileJson {
-    #[serde(rename = "DateCreated")]
-    pub date_created: String,
-    #[serde(rename = "DateModified")]
-    pub date_modified: String,
-    #[serde(rename = "Name")]
-    pub name: String,
-    #[serde(rename = "Size")]
-    pub size: i32
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct DeviceRootJson {
-    #[serde(rename = "Items")]
-    pub items: Vec<DeviceJson>
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct DeviceJson {
-    #[serde(rename = "Name")]
-    pub name: String,
-    #[serde(rename = "Id")]
-    pub id: String,
-    #[serde(rename = "LastUserName")]
-    pub lastusername: String,
-
-}
 
 #[derive(Serialize, Deserialize)]
 pub struct ScheduledTasksJson {
@@ -43,7 +14,7 @@ pub struct ScheduledTasksJson {
     pub progress: Option<String>
 }
 
-pub type LogFileVec = Vec<LogFileJson>;
+pub type LogFileVec = Vec<LogDetails>;
 pub type ScheduledTasksVec = Vec<ScheduledTasksJson>;
 
 pub struct ServerInfo {
@@ -60,11 +31,7 @@ impl ServerInfo {
     }
 
     pub fn get_server_info(self) -> Result<(), reqwest::Error> {
-        let client = Client::new();
-        let response = client
-            .get(self.server_url)
-            .header("X-Emby-Token", self.api_key)
-            .send()?;
+        let response = simple_get(self.server_url, self.api_key);
         match response.status() {
             StatusCode::OK => {
                 let body: Value = response.json()?;
@@ -80,11 +47,7 @@ impl ServerInfo {
     }
 
     pub fn get_log_filenames(self) -> Result<Vec<LogDetails>, reqwest::Error> {
-        let client = Client::new();
-        let response = client
-            .get(self.server_url)
-            .header("X-Emby-Token", self.api_key)
-            .send()?;
+        let response = simple_get(self.server_url, self.api_key);
         let mut details = Vec::new();
         match response.status() {
             StatusCode::OK => {
@@ -103,16 +66,11 @@ impl ServerInfo {
     }
 
     pub fn get_devices(self) -> Result<Vec<DeviceDetails>, reqwest::Error> {
-        let client = Client::new();
-        let response = client
-            .get(self.server_url)
-            .header("X-Emby-Token", self.api_key)
-            .send()?;
+        let response = simple_get(self.server_url, self.api_key);
             let mut details = Vec::new();
             match response.status() {
             StatusCode::OK => {
                 let json = response.text().unwrap();
-                //let j = json.as_str();
                 let devices = serde_json::from_str::<DeviceRootJson>(&json).unwrap();
                 for device in devices.items {
                     details.push(DeviceDetails::new(device.id, device.name, device.lastusername));
@@ -128,11 +86,7 @@ impl ServerInfo {
     }
 
     pub fn get_deviceid_by_username(self, username: String) -> Result<Vec<String>, reqwest::Error> {
-        let client = Client::new();
-        let response = client
-            .get(self.server_url)
-            .header("X-Emby-Token", self.api_key)
-            .send()?;
+        let response = simple_get(self.server_url, self.api_key);
         let mut filtered = Vec::new();
         match response.status() {
             StatusCode::OK => {
@@ -173,12 +127,8 @@ impl ServerInfo {
     }
 
     pub fn get_scheduled_tasks(self) -> Result<Vec<TaskDetails>, reqwest::Error> {
-        let client = Client::new();
-        let response = client
-            .get(self.server_url)
-            .header("X-Emby-Token", self.api_key)
-            .send()?;
-            let mut details = Vec::new();
+        let response = simple_get(self.server_url, self.api_key);
+        let mut details = Vec::new();
         match response.status() {
             StatusCode::OK => {
                 let scheduled_tasks = response.json::<ScheduledTasksVec>().unwrap();
@@ -201,13 +151,10 @@ impl ServerInfo {
     }
 
     pub fn scan_library(self) -> Result<(), reqwest::Error> {
-        let client = Client::new();
-        let response = client
-            .post(self.server_url)
-            .header(CONTENT_TYPE, "application/json")
-            .header("X-Emby-Token", self.api_key)
-            .body("".to_string())
-            .send()?;
+        let response = simple_post(
+            self.server_url, 
+            self.api_key.to_string(), 
+            "".to_string());
         match response.status() {
             StatusCode::NO_CONTENT => {
                 println!("Library scan initiated.");

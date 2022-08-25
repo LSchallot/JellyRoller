@@ -6,9 +6,10 @@ mod user_actions;
 use user_actions::*;
 mod system_actions;
 use system_actions::*;
+mod responder;
 mod entities;
 use entities::user_details::UserDetails;
-use entities::device_details::DeviceDetails;
+use entities::device_details::{DeviceDetails, DeviceRootJson};
 use entities::task_details::TaskDetails;
 use entities::log_details::LogDetails;
 
