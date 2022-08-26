@@ -2,7 +2,6 @@ use comfy_table::{ Table, ContentArrangement };
 
 #[derive(Serialize, Deserialize)]
 pub struct DeviceRootJson {
-    #[serde(rename = "Items")]
     pub items: Vec<DeviceDetails>
 }
 

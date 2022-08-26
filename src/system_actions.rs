@@ -1,6 +1,6 @@
 use crate::entities::task_details::TaskDetails;
 
-use super::{ DeviceDetails, DeviceRootJson, LogDetails, responder::*};
+use super::{ DeviceDetails, DeviceRootJson, LibraryDetails, LibraryRootJson, LogDetails, responder::*};
 use reqwest::{blocking::Client, StatusCode};
 use serde_json::Value;
 
@@ -91,6 +91,25 @@ impl ServerInfo {
         Ok(details)
     }
 
+    pub fn get_libraries(self) -> Result<Vec<LibraryDetails>, reqwest::Error> {
+        let response = simple_get(self.server_url, self.api_key);
+        let mut details = Vec::new();
+        match response.status() {
+            StatusCode::OK => {
+                let json = response.text().unwrap();
+                let libraries = serde_json::from_str::<LibraryRootJson>(&json).unwrap();
+                for library in libraries {
+                    details.push(LibraryDetails::new(library.name, library.collection_type, library.item_id, library.refresh_status));
+                }
+            } StatusCode::UNAUTHORIZED => {
+                println!("Authentication failed.  Try reconfiguring with \"jellyroller reconfigure\"");
+            } _ => {
+                println!("Status Code: {}", response.status());
+            }
+        }
+        Ok(details)
+    }
+    
     pub fn get_taskid_by_taskname(self, taskname: String) -> Result<String, reqwest::Error> {
         let response = simple_get(self.server_url, self.api_key);
         match response.status() {

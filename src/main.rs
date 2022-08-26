@@ -12,6 +12,7 @@ use entities::user_details::UserDetails;
 use entities::device_details::{DeviceDetails, DeviceRootJson};
 use entities::task_details::TaskDetails;
 use entities::log_details::LogDetails;
+use entities::library_details::{LibraryDetails, LibraryRootJson};
 
 #[macro_use]
 extern crate serde_derive;
@@ -148,7 +149,13 @@ enum Commands {
     /// Restarts Jellyfin
     RestartJellyfin {},
     /// Shuts down Jellyfin
-    ShutdownJellyfin {}
+    ShutdownJellyfin {},
+    /// Gets the libraries available to the configured user
+    GetLibraries {
+        /// Print information as json.
+        #[clap(long, required = false)]
+        json: bool
+    }
 }
 
 
@@ -212,6 +219,14 @@ fn main() -> Result<(), confy::ConfyError> {
                 DeviceDetails::json_print(devices);
             } else {
                 DeviceDetails::table_print(devices);
+            }
+        },
+        Commands::GetLibraries { json } => {
+            let libraries = ServerInfo::get_libraries(ServerInfo::new("/Library/VirtualFolders".to_string(), cfg.server_url, cfg.api_key)).unwrap();
+            if json {
+                LibraryDetails::json_print(libraries);
+            } else {
+                LibraryDetails::table_print(libraries);
             }
         },
         Commands::GetScheduledTasks { json } => {
@@ -298,7 +313,6 @@ fn main() -> Result<(), confy::ConfyError> {
             ServerInfo::restart_or_shutdown(ServerInfo::new("/System/Shutdown".to_string(), cfg.server_url, cfg.api_key))
                 .expect("Unable to stop Jellyfin.");
         }
-
     }
     
     Ok(())
