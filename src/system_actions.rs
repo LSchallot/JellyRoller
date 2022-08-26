@@ -21,6 +21,7 @@ impl ServerInfo {
         }
     }
 
+    // Currently used for server-info, restart-jellyfin, shutdown-jellyfin
     pub fn get_server_info(self) -> Result<(), reqwest::Error> {
         let response = simple_get(self.server_url, self.api_key);
         match response.status() {
@@ -34,6 +35,20 @@ impl ServerInfo {
             }
         }
 
+        Ok(())
+    }
+
+    pub fn restart_or_shutdown(self) -> Result<(), reqwest::Error> {
+        let response = simple_post(self.server_url, self.api_key, "".to_string());
+        match response.status() {
+            StatusCode::NO_CONTENT => {
+                println!("Command successful.");
+            } StatusCode::UNAUTHORIZED => {
+                println!("Authentication failed.  Try reconfiguring with \"jellyroller reconfigure\"");
+            } _ => {
+                println!("Status Code: {}", response.status());
+            }
+        }
         Ok(())
     }
 
@@ -82,7 +97,7 @@ impl ServerInfo {
             StatusCode::OK => {
                 let tasks = response.json::<ScheduledTasksVec>().unwrap();
                 for task in tasks {
-                    if task.name == taskname {
+                    if task.name.to_lowercase() == taskname.to_lowercase() {
                         return Ok(task.id);
                     }
                 }

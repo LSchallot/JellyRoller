@@ -144,7 +144,11 @@ enum Commands {
     RevokeAdmin {
         #[clap(required = true, value_parser)]
         username: String
-    }
+    },
+    /// Restarts Jellyfin
+    RestartJellyfin {},
+    /// Shuts down Jellyfin
+    ShutdownJellyfin {}
 }
 
 
@@ -285,6 +289,14 @@ fn main() -> Result<(), confy::ConfyError> {
                 req_json_keys,
                 req_json_values)
                 .expect("Unable to enable user.");
+        },
+        Commands::RestartJellyfin {} => {
+            ServerInfo::restart_or_shutdown(ServerInfo::new("/System/Restart".to_string(), cfg.server_url, cfg.api_key))
+                .expect("Unable to restart Jellyfin.");
+        },
+        Commands::ShutdownJellyfin {} => {
+            ServerInfo::restart_or_shutdown(ServerInfo::new("/System/Shutdown".to_string(), cfg.server_url, cfg.api_key))
+                .expect("Unable to stop Jellyfin.");
         }
 
     }
