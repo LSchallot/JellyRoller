@@ -29,6 +29,7 @@ impl DeviceDetails {
         let mut table = Table::new();
         table
             .set_content_arrangement(ContentArrangement::Dynamic)
+            .set_width(120)
             .set_header(vec!["Device Id", "Device Name", "Last Used By"]);
         for device in devices {
             table.add_row(vec![device.id, device.name, device.lastusername]);

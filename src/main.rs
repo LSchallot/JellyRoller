@@ -6,6 +6,8 @@ mod user_actions;
 use user_actions::*;
 mod system_actions;
 use system_actions::*;
+mod plugin_actions;
+use plugin_actions::*;
 mod responder;
 mod entities;
 use entities::user_details::UserDetails;
@@ -13,6 +15,7 @@ use entities::device_details::{DeviceDetails, DeviceRootJson};
 use entities::task_details::TaskDetails;
 use entities::log_details::LogDetails;
 use entities::library_details::{LibraryDetails, LibraryRootJson};
+use entities::plugin_details::{PluginDetails, PluginRootJson};
 
 #[macro_use]
 extern crate serde_derive;
@@ -155,6 +158,12 @@ enum Commands {
         /// Print information as json.
         #[clap(long, required = false)]
         json: bool
+    },
+    /// Returns a list of installed plugins
+    GetPlugins {
+       /// Print information as json.
+       #[clap(long, required = false)]
+       json: bool 
     }
 }
 
@@ -312,6 +321,14 @@ fn main() -> Result<(), confy::ConfyError> {
         Commands::ShutdownJellyfin {} => {
             ServerInfo::restart_or_shutdown(ServerInfo::new("/System/Shutdown".to_string(), cfg.server_url, cfg.api_key))
                 .expect("Unable to stop Jellyfin.");
+        },
+        Commands::GetPlugins { json } => {
+            let plugins = PluginInfo::get_plugins(PluginInfo::new("/Plugins".to_string(), cfg.server_url, cfg.api_key)).unwrap();
+            if json {
+                PluginDetails::json_print(plugins);
+            } else {
+                PluginDetails::table_print(plugins);
+            }
         }
     }
     

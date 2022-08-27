@@ -30,6 +30,7 @@ impl TaskDetails {
         let mut table = Table::new();
         table
             .set_content_arrangement(ContentArrangement::Dynamic)
+            .set_width(120)
             .set_header(vec!["Task Name", "State", "% Complete", "Id"]);
         for task in tasks {
             table.add_row(vec![task.name, task.state, task.percent_complete.unwrap_or_else(|| "".to_owned()), task.id]);

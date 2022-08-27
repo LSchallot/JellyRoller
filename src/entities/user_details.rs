@@ -34,6 +34,7 @@ impl UserDetails {
         let mut table = Table::new();
         table
             .set_content_arrangement(ContentArrangement::Dynamic)
+            .set_width(120)
             .set_header(vec!["Username", "Admin", "Disabled"]);
         for user in users {
             table.add_row(vec![user.name, user.policy.is_admin.to_string(), user.policy.is_disabled.to_string()]);

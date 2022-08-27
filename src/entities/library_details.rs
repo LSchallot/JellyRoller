@@ -1,11 +1,5 @@
 use comfy_table::{ Table, ContentArrangement };
 
-// #[derive(Serialize, Deserialize)]
-// pub struct LibraryRootJson {
-//     #[serde(rename = "Items")]
-//     pub items: Vec<LibraryDetails>
-// }
-
 pub type LibraryRootJson = Vec<LibraryDetails>;
 
 #[derive(Serialize, Deserialize)]
@@ -46,6 +40,7 @@ impl LibraryDetails {
         let mut table = Table::new();
         table
             .set_content_arrangement(ContentArrangement::Dynamic)
+            .set_width(120)
             .set_header(vec!["Library Name", "Collection Type", "Library Id", "Refresh Status"]);
         for library in libraries {
             table.add_row(vec![library.name, library.collection_type, library.item_id, library.refresh_status]);

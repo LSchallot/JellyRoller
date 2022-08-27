@@ -30,6 +30,7 @@ impl LogDetails {
         let mut table = Table::new();
         table
             .set_content_arrangement(ContentArrangement::Dynamic)
+            .set_width(120)
             .set_header(vec!["Log Name", "Size", "Date Created", "Last Modified"]);
         for log in logs {
             table.add_row(vec![log.name, log.size.to_string(), log.date_created, log.date_modified]);
