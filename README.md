@@ -21,7 +21,10 @@ SUBCOMMANDS:
     delete-user                  Deletes an existing user
     disable-user                 Disable a user
     enable-user                  Enable a user
+    execute-task-by-name         Executes a scheduled task by name
     get-devices                  Show all active devices
+    get-libraries                Gets the libraries available to the configured user
+    get-plugins                  Returns a list of installed plugins
     get-scheduled-tasks          Show all scheduled tasks and their status
     grant-admin                  Grants the specified user admin rights
     help                         Print this message or the help of the given subcommand(s)
@@ -30,10 +33,12 @@ SUBCOMMANDS:
     reconfigure                  Reconfigure the connection information
     remove-device-by-username    Removes all devices associated with the specified user
     reset-password               Resets a user's password
+    restart-jellyfin             Restarts Jellyfin
     revoke-admin                 Revokes admin rights from the specified user
     scan-library                 Start a library scan
     server-info                  Displays the server information
     show-log                     Displays the requested logfile
+    shutdown-jellyfin            Shuts down Jellyfin
 ```
 
 ## Installation
@@ -46,14 +51,11 @@ cd jellyroller
 cargo build
 ```
 ### Downloading Release
-See Releases for binaries.  I can currently build for 64-bit Windows, 64-Bit Linux
+See Releases for binaries.  I can currently supply builds for x86_64 Windows and x86_64 Linux.  Please open an issue if you would like to request an additional format.
 ## Roadmap
 Please see below for my current ideas.  I will be organizing these into issues and releases in the coming days.  I am a firm believer in "dogfooding" so the commands I felt were needed (ones I will most often use) for an initial release are in place.  Please feel free to open feature requests via an issue or contacting me in the JellyRoller Matrix room (https://matrix.to/#/#jellyroller:matrix.org).  I am also freely open to coding suggestions.
 
 | Feature/Enhancement | Priority |
 | ------------------- | -------- |
-| Output beautification | Medium |
-| Scheduled Task Execution Support | High |
-| Code stucture cleanup | Low/Medium |
 | Documentation of test process | Medium |
 | Implementation of automatic testing | High | 
