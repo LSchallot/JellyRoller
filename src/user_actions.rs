@@ -1,6 +1,5 @@
-use super::{ UserDetails, responder::*} ;
+use super::{ UserDetails, Policy, responder::*} ;
 use reqwest::{StatusCode, blocking::Client, header::CONTENT_TYPE};
-use serde_json::json;
 
 #[derive(Serialize, Deserialize)]
 pub struct ResetPass {
@@ -210,43 +209,27 @@ impl UserList {
         panic!("Could not find user {}.", username);
     }
 
-    pub fn update_user_config_bool(self, id: String, config_key: String, config_value: bool, username: String, req_json_keys: Vec<String>, req_json_values: Vec<String>) -> Result<(), reqwest::Error> {
-        let body = json!({
-            &config_key:config_value, 
-            &req_json_keys[0]:&req_json_values[0],
-            &req_json_keys[1]:&req_json_values[1]
-        });
+    pub fn get_user_information(self, id: String) -> Result<UserDetails, reqwest::Error> {
+        let response = simple_get(self.server_url.replace("{userId}", &id), self.api_key);
+        let user_info: UserDetails = serde_json::from_str(response.text().unwrap().as_str()).unwrap();
+        Ok(user_info)
+    }
+
+    pub fn update_user_config_bool(self, user_info: Policy, id: String, username: String) -> Result<(), reqwest::Error> {
+        let body = serde_json::to_string_pretty(&user_info).unwrap();
+        println!("{}", body);
         let response = simple_post(
             self.server_url.replace("{userId}", &id), 
             self.api_key.to_string(), 
-            serde_json::to_string_pretty(&body).unwrap());
+            body);
         match response.status() {
             StatusCode::NO_CONTENT => {
-                println!("User {} configuration value of {} successfully set to {}", username, config_key, config_value);
+                println!("User {} successfully updated.", username);
             } _ => {
                 println!("Status Code: {}", response.status());
+                println!("What? {}", response.text().unwrap());
             }
         }
         Ok(())
-    }
-
-    pub fn get_user_providers_vec(self, id: String) -> Result<Vec<String>, reqwest::Error> {
-        let response = simple_get(self.server_url.replace("{userId}", &id), self.api_key);
-        match response.status() {
-            StatusCode::OK => {
-                let json = response.text().unwrap();
-                let providers = serde_json::from_str::<UserDetails>(&json).unwrap();
-                // Auth provider will always be at position 0 and PassReset provider will be at 1
-                let json_vec = vec![providers.policy.auth_provider_id, providers.policy.pass_reset_provider_id];
-                Ok(json_vec)
-                    
-            } StatusCode::UNAUTHORIZED => {
-                println!("Authentication failed.  Try reconfiguring with \"jellyroller reconfigure\"");
-                std::process::exit(0);
-            } _ => {
-                println!("Status Code: {}", response.status());
-                std::process::exit(0);
-            }
-        }
     }
 }

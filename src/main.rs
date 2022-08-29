@@ -10,7 +10,7 @@ mod plugin_actions;
 use plugin_actions::*;
 mod responder;
 mod entities;
-use entities::user_details::UserDetails;
+use entities::user_details::{UserDetails, Policy};
 use entities::device_details::{DeviceDetails, DeviceRootJson};
 use entities::task_details::TaskDetails;
 use entities::log_details::LogDetails;
@@ -164,6 +164,11 @@ enum Commands {
        /// Print information as json.
        #[clap(long, required = false)]
        json: bool 
+    },
+    /// Returns the specified user's information
+    GetUserDetails {
+        #[clap(required = true, value_parser)]
+        username: String
     }
 }
 
@@ -263,56 +268,48 @@ fn main() -> Result<(), confy::ConfyError> {
             }
         },
         Commands::DisableUser { username } => {
-            let req_json_keys = req_json_keys();
             let id = get_user_id(&cfg, &username);
-            let req_json_values = UserList::get_user_providers_vec(UserList::new("/Users/{userId}".to_string(), cfg.server_url.to_string(), cfg.api_key.to_string()), id.to_string()).unwrap();
-            UserList::update_user_config_bool(UserList::new("/Users/{userId}/Policy".to_string(), cfg.server_url, cfg.api_key), 
-                id, 
-                "IsDisabled".to_string(), 
-                true, 
-                username, 
-                req_json_keys,
-                req_json_values)
-                .expect("Unable to disable user.");
+            let mut user_info = UserList::get_user_information(UserList::new("/Users/{userId}".to_string(), cfg.server_url.to_string(), cfg.api_key.to_string()), id.to_string()).unwrap();
+            user_info.policy.is_disabled = true;
+            UserList::update_user_config_bool(
+                UserList::new("/Users/{userId}/Policy".to_string(), cfg.server_url, cfg.api_key),
+                user_info.policy, 
+                id,
+                username)
+                .expect("Unable to update user.");
         },
         Commands::EnableUser { username } => {
-            let req_json_keys = req_json_keys();
             let id = get_user_id(&cfg, &username);
-            let req_json_values = UserList::get_user_providers_vec(UserList::new("/Users/{userId}".to_string(), cfg.server_url.to_string(), cfg.api_key.to_string()), id.to_string()).unwrap();
-            UserList::update_user_config_bool(UserList::new("/Users/{userId}/Policy".to_string(), cfg.server_url, cfg.api_key), 
-                id, 
-                "IsDisabled".to_string(), 
-                false, 
-                username, 
-                req_json_keys,
-                req_json_values)
-                .expect("Unable to enable user.");
+            let mut user_info = UserList::get_user_information(UserList::new("/Users/{userId}".to_string(), cfg.server_url.to_string(), cfg.api_key.to_string()), id.to_string()).unwrap();
+            user_info.policy.is_disabled = false;
+            UserList::update_user_config_bool(
+                UserList::new("/Users/{userId}/Policy".to_string(), cfg.server_url, cfg.api_key),
+                user_info.policy, 
+                id,
+                username)
+                .expect("Unable to update user.");
         },
         Commands::GrantAdmin { username } => {
-            let req_json_keys = req_json_keys();
             let id = get_user_id(&cfg, &username);
-            let req_json_values = UserList::get_user_providers_vec(UserList::new("/Users/{userId}".to_string(), cfg.server_url.to_string(), cfg.api_key.to_string()), id.to_string()).unwrap();
-            UserList::update_user_config_bool(UserList::new("/Users/{userId}/Policy".to_string(), cfg.server_url, cfg.api_key), 
-                id, 
-                "IsAdministrator".to_string(), 
-                true, 
-                username, 
-                req_json_keys,
-                req_json_values)
-                .expect("Unable to enable user.");
+            let mut user_info = UserList::get_user_information(UserList::new("/Users/{userId}".to_string(), cfg.server_url.to_string(), cfg.api_key.to_string()), id.to_string()).unwrap();
+            user_info.policy.is_administrator = true;
+            UserList::update_user_config_bool(
+                UserList::new("/Users/{userId}/Policy".to_string(), cfg.server_url, cfg.api_key),
+                user_info.policy, 
+                id,
+                username)
+                .expect("Unable to update user.");
         },
         Commands::RevokeAdmin { username } => {
-            let req_json_keys = req_json_keys();
             let id = get_user_id(&cfg, &username);
-            let req_json_values = UserList::get_user_providers_vec(UserList::new("/Users/{userId}".to_string(), cfg.server_url.to_string(), cfg.api_key.to_string()), id.to_string()).unwrap();
-            UserList::update_user_config_bool(UserList::new("/Users/{userId}/Policy".to_string(), cfg.server_url, cfg.api_key), 
-                id, 
-                "IsAdministrator".to_string(), 
-                false, 
-                username, 
-                req_json_keys,
-                req_json_values)
-                .expect("Unable to enable user.");
+            let mut user_info = UserList::get_user_information(UserList::new("/Users/{userId}".to_string(), cfg.server_url.to_string(), cfg.api_key.to_string()), id.to_string()).unwrap();
+            user_info.policy.is_administrator = false;
+            UserList::update_user_config_bool(
+                UserList::new("/Users/{userId}/Policy".to_string(), cfg.server_url, cfg.api_key),
+                user_info.policy, 
+                id,
+                username)
+                .expect("Unable to update user.");
         },
         Commands::RestartJellyfin {} => {
             ServerInfo::restart_or_shutdown(ServerInfo::new("/System/Restart".to_string(), cfg.server_url, cfg.api_key))
@@ -329,16 +326,13 @@ fn main() -> Result<(), confy::ConfyError> {
             } else {
                 PluginDetails::table_print(plugins);
             }
+        },
+        Commands::GetUserDetails { username } => {
+            println!("TODO");
         }
     }
     
     Ok(())
-}
-///
-/// Jellyfin requires AuthenticationProviderId and PasswordResetProviderId values for a user properties update.
-///
-fn req_json_keys() -> Vec<String> {
-    vec!["AuthenticationProviderId".to_string(), "PasswordResetProviderId".to_string()]
 }
 
 ///

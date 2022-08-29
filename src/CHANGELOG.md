@@ -19,6 +19,9 @@ All notable changes to this project will be documented in this file.
 ### Changed
 - Output displays
 - Project code structure reworked
+
+### Fixed
+- Fixed issue where some user details were being reverted to default values upon a policy update.
  
 ## [0.1.0] - 2022-08-23
 Initial release. 
