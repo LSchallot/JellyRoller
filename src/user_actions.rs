@@ -211,10 +211,9 @@ impl UserList {
 
     pub fn get_user_information(self, id: String) -> Result<UserDetails, reqwest::Error> {
         let response = simple_get(self.server_url.replace("{userId}", &id), self.api_key);
-        let user_info: UserDetails = serde_json::from_str(response.text().unwrap().as_str()).unwrap();
-        Ok(user_info)
+        Ok(serde_json::from_str(response.text().unwrap().as_str()).unwrap())
     }
-
+    
     pub fn update_user_config_bool(self, user_info: Policy, id: String, username: String) -> Result<(), reqwest::Error> {
         let body = serde_json::to_string_pretty(&user_info).unwrap();
         println!("{}", body);
@@ -226,8 +225,9 @@ impl UserList {
             StatusCode::NO_CONTENT => {
                 println!("User {} successfully updated.", username);
             } _ => {
+                println!("Unable to update user policy information.");
                 println!("Status Code: {}", response.status());
-                println!("What? {}", response.text().unwrap());
+                println!("{}", response.text().unwrap());
             }
         }
         Ok(())

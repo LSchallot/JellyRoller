@@ -1,6 +1,6 @@
 use std::env;
 use std::io::{self, Write};
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ValueEnum};
 
 mod user_actions;
 use user_actions::*;
@@ -16,6 +16,8 @@ use entities::task_details::TaskDetails;
 use entities::log_details::LogDetails;
 use entities::library_details::{LibraryDetails, LibraryRootJson};
 use entities::plugin_details::{PluginDetails, PluginRootJson};
+mod utils;
+use utils::output_writer::*;
 
 #[macro_use]
 extern crate serde_derive;
@@ -75,9 +77,15 @@ enum Commands {
     },
     /// Lists the current users with basic information.
     ListUsers {
-        /// Print information as json.
-        #[clap(long, required = false)]
-        json: bool
+        /// Exports the user list information to a file
+        #[clap(short, long)]
+        export: bool,
+        /// Path for the file export
+        #[clap(short, long, default_value="")]
+        output: String,
+        /// Username to gather information about
+        #[clap(short, long, default_value="")]
+        username: String
     },
     /// Resets a user's password.
     #[clap(arg_required_else_help = true)]
@@ -165,13 +173,19 @@ enum Commands {
        #[clap(long, required = false)]
        json: bool 
     },
-    /// Returns the specified user's information
-    GetUserDetails {
-        #[clap(required = true, value_parser)]
-        username: String
-    }
+    // Returns the specified user's information (JSON only)
+    // GetUserDetails {
+    //     /// Username to lookup information for.
+    //     #[clap(required = true, value_parser)]
+    //     username: String
+    // },
 }
 
+#[derive(ValueEnum, Clone, Debug, PartialEq)]
+enum Detail {
+    User,
+    Server
+}
 
 fn main() -> Result<(), confy::ConfyError> {
     
@@ -183,6 +197,7 @@ fn main() -> Result<(), confy::ConfyError> {
     }
     let args = Cli::parse();
     match args.command {
+        // User based commands
         Commands::AddUser { username, password } => {
             UserAdd::create(UserAdd::new(username, password, cfg.server_url, cfg.api_key))
                 .expect("Unable to add user.");
@@ -192,12 +207,32 @@ fn main() -> Result<(), confy::ConfyError> {
             UserDel::remove(UserDel::new(user_id, cfg.server_url, cfg.api_key))
                 .expect("Unable to delete user.");
         },
-        Commands::ListUsers { json } => {
-            let users = UserList::list_users(UserList::new("/Users".to_string(), cfg.server_url, cfg.api_key)).unwrap();
-            if json {
-                UserDetails::json_print(users);
+        Commands::ListUsers { export, mut output, username} => {
+            if username.is_empty() {
+                let users = UserList::list_users(UserList::new("/Users".to_string(), cfg.server_url, cfg.api_key)).unwrap();
+                if !export {
+                    UserDetails::json_print_users(users);
+                } else {
+                    println!("Exporting all user information.....");
+                    if output.is_empty() {
+                        output = "exported-user-info.json".to_string();
+                    }
+                    let data = serde_json::to_string_pretty(&users).unwrap();
+                    export_data(data, output);
+                } 
             } else {
-                UserDetails::table_print(users);
+                let user_id = UserList::get_user_id(UserList::new("/Users".to_string(), cfg.server_url.to_string(), cfg.api_key.to_string()), &username);
+                let user = UserList::get_user_information(UserList::new("/Users/{userId}".to_string(), cfg.server_url, cfg.api_key), user_id).unwrap();
+                if !export {
+                    UserDetails::json_print_user(user);
+                } else {
+                    println!("Exporting user information.....");
+                    if output.is_empty() {
+                        output = format!("exported-user-info-{}.json", username);
+                    }
+                    let data = serde_json::to_string_pretty(&user).unwrap();
+                    export_data(data, output);
+                }
             }
         },
         Commands::ResetPassword { username, password } => {
@@ -205,8 +240,56 @@ fn main() -> Result<(), confy::ConfyError> {
             ResetPass::reset(ResetPass::new(user_id, password, cfg.server_url, cfg.api_key))
                 .expect("Unable to reset user password.");
         },
+        Commands::DisableUser { username } => {
+            let id = get_user_id(&cfg, &username);
+            let mut user_info = UserList::get_user_information(UserList::new("/Users/{userId}".to_string(), cfg.server_url.to_string(), cfg.api_key.to_string()), id.to_string()).unwrap();
+            user_info.policy.is_disabled = true;
+            UserList::update_user_config_bool(
+                UserList::new("/Users/{userId}/Policy".to_string(), cfg.server_url, cfg.api_key),
+                user_info.policy, 
+                id,
+                username)
+                .expect("Unable to update user.");
+        },
+        Commands::EnableUser { username } => {
+            let id = get_user_id(&cfg, &username);
+            let mut user_info = UserList::get_user_information(UserList::new("/Users/{userId}".to_string(), cfg.server_url.to_string(), cfg.api_key.to_string()), id.to_string()).unwrap();
+            user_info.policy.is_disabled = false;
+            UserList::update_user_config_bool(
+                UserList::new("/Users/{userId}/Policy".to_string(), cfg.server_url, cfg.api_key),
+                user_info.policy, 
+                id,
+                username)
+                .expect("Unable to update user.");
+        },
+        Commands::GrantAdmin { username } => {
+            let id = get_user_id(&cfg, &username);
+            let mut user_info = UserList::get_user_information(UserList::new("/Users/{userId}".to_string(), cfg.server_url.to_string(), cfg.api_key.to_string()), id.to_string()).unwrap();
+            user_info.policy.is_administrator = true;
+            UserList::update_user_config_bool(
+                UserList::new("/Users/{userId}/Policy".to_string(), cfg.server_url, cfg.api_key),
+                user_info.policy, 
+                id,
+                username)
+                .expect("Unable to update user.");
+        },
+        Commands::RevokeAdmin { username } => {
+            let id = get_user_id(&cfg, &username);
+            let mut user_info = UserList::get_user_information(UserList::new("/Users/{userId}".to_string(), cfg.server_url.to_string(), cfg.api_key.to_string()), id.to_string()).unwrap();
+            user_info.policy.is_administrator = false;
+            UserList::update_user_config_bool(
+                UserList::new("/Users/{userId}/Policy".to_string(), cfg.server_url, cfg.api_key),
+                user_info.policy, 
+                id,
+                username)
+                .expect("Unable to update user.");
+        },
+        // Commands::GetUserDetails { username } => {
+        //     let id = get_user_id(&cfg, &username);
+        //     let user_info = UserList::get_user_information(UserList::new("/Users/{userId}".to_string(), cfg.server_url, cfg.api_key), id.to_string()).unwrap(); 
+        // },
 
-        // TODO:  Beautify output
+        // Server based commands
         Commands::ServerInfo {} => {
             ServerInfo::get_server_info(ServerInfo::new("/System/Info".to_string(), cfg.server_url, cfg.api_key))
                 .expect("Unable to gather server information.");
@@ -267,50 +350,6 @@ fn main() -> Result<(), confy::ConfyError> {
                     .expect("Unable to delete specified id.");
             }
         },
-        Commands::DisableUser { username } => {
-            let id = get_user_id(&cfg, &username);
-            let mut user_info = UserList::get_user_information(UserList::new("/Users/{userId}".to_string(), cfg.server_url.to_string(), cfg.api_key.to_string()), id.to_string()).unwrap();
-            user_info.policy.is_disabled = true;
-            UserList::update_user_config_bool(
-                UserList::new("/Users/{userId}/Policy".to_string(), cfg.server_url, cfg.api_key),
-                user_info.policy, 
-                id,
-                username)
-                .expect("Unable to update user.");
-        },
-        Commands::EnableUser { username } => {
-            let id = get_user_id(&cfg, &username);
-            let mut user_info = UserList::get_user_information(UserList::new("/Users/{userId}".to_string(), cfg.server_url.to_string(), cfg.api_key.to_string()), id.to_string()).unwrap();
-            user_info.policy.is_disabled = false;
-            UserList::update_user_config_bool(
-                UserList::new("/Users/{userId}/Policy".to_string(), cfg.server_url, cfg.api_key),
-                user_info.policy, 
-                id,
-                username)
-                .expect("Unable to update user.");
-        },
-        Commands::GrantAdmin { username } => {
-            let id = get_user_id(&cfg, &username);
-            let mut user_info = UserList::get_user_information(UserList::new("/Users/{userId}".to_string(), cfg.server_url.to_string(), cfg.api_key.to_string()), id.to_string()).unwrap();
-            user_info.policy.is_administrator = true;
-            UserList::update_user_config_bool(
-                UserList::new("/Users/{userId}/Policy".to_string(), cfg.server_url, cfg.api_key),
-                user_info.policy, 
-                id,
-                username)
-                .expect("Unable to update user.");
-        },
-        Commands::RevokeAdmin { username } => {
-            let id = get_user_id(&cfg, &username);
-            let mut user_info = UserList::get_user_information(UserList::new("/Users/{userId}".to_string(), cfg.server_url.to_string(), cfg.api_key.to_string()), id.to_string()).unwrap();
-            user_info.policy.is_administrator = false;
-            UserList::update_user_config_bool(
-                UserList::new("/Users/{userId}/Policy".to_string(), cfg.server_url, cfg.api_key),
-                user_info.policy, 
-                id,
-                username)
-                .expect("Unable to update user.");
-        },
         Commands::RestartJellyfin {} => {
             ServerInfo::restart_or_shutdown(ServerInfo::new("/System/Restart".to_string(), cfg.server_url, cfg.api_key))
                 .expect("Unable to restart Jellyfin.");
@@ -326,10 +365,8 @@ fn main() -> Result<(), confy::ConfyError> {
             } else {
                 PluginDetails::table_print(plugins);
             }
-        },
-        Commands::GetUserDetails { username } => {
-            println!("TODO");
         }
+        
     }
     
     Ok(())

@@ -15,6 +15,7 @@ All notable changes to this project will be documented in this file.
     + Plugin information display
     + Added ability to list tasks
     + Added ability to execute tasks by name
+    + Added ability to export all user information
 
 ### Changed
 - Output displays
