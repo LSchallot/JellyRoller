@@ -182,9 +182,9 @@ enum Commands {
        #[clap(long, required = false)]
        json: bool 
     },
-    /// Uses the supplied file to mass create new users.  File format is: username,password
+    /// Uses the supplied file to mass create new users.  
     AddUsers {
-        /// File that contains the user information
+        /// File that contains the user information in "username,password" lines.
         #[clap(required = true, value_parser)]
         inputfile: String,
     }

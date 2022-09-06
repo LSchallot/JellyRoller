@@ -18,6 +18,7 @@ OPTIONS:
 
 SUBCOMMANDS:
     add-user                     Creates a new user
+    add-users                    Uses the supplied file to mass create new users
     delete-user                  Deletes an existing user
     disable-user                 Disable a user
     enable-user                  Enable a user
