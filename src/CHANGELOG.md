@@ -16,6 +16,7 @@ All notable changes to this project will be documented in this file.
     + Added ability to list tasks
     + Added ability to execute tasks by name
     + Added ability to export all user information excluding passwords
+    + Added ability to import users from a file.
 
 ### Changed
 - Output displays

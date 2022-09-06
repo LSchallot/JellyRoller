@@ -1,5 +1,6 @@
+use std::fs::File;
 use std::env;
-use std::io::{self, Write};
+use std::io::{self, Write, BufReader, BufRead};
 use clap::{Parser, Subcommand, ValueEnum};
 
 mod user_actions;
@@ -180,6 +181,12 @@ enum Commands {
        /// Print information as json.
        #[clap(long, required = false)]
        json: bool 
+    },
+    /// Uses the supplied file to mass create new users.  File format is: username,password
+    AddUsers {
+        /// File that contains the user information
+        #[clap(required = true, value_parser)]
+        inputfile: String,
     }
 }
 
@@ -201,8 +208,9 @@ fn main() -> Result<(), confy::ConfyError> {
     match args.command {
         // User based commands
         Commands::AddUser { username, password } => {
-            UserAdd::create(UserAdd::new(username, password, cfg.server_url, cfg.api_key))
-                .expect("Unable to add user.");
+            // UserAdd::create(UserAdd::new(username, password, cfg.server_url, cfg.api_key))
+            //     .expect("Unable to add user.");
+            add_user(&cfg, username, password);
         },
         Commands::DeleteUser { username } => {
             let user_id = get_user_id(&cfg, &username);
@@ -277,7 +285,14 @@ fn main() -> Result<(), confy::ConfyError> {
         },
         Commands::RevokeAdmin { username } => {
             let id = get_user_id(&cfg, &username);
-            let mut user_info = UserList::get_user_information(UserList::new(USER_ID, cfg.server_url.clone(), cfg.api_key.clone()), id.clone()).unwrap();
+            let mut user_info: UserDetails = 
+                match UserList::get_user_information(UserList::new(USER_ID, cfg.server_url.clone(), cfg.api_key.clone()), id.clone()) {
+                    Err(_) => {
+                        println!("Error");
+                        std::process::exit(0);
+                    },
+                    Ok(ul) => ul,
+                };
             user_info.policy.is_administrator = false;
             UserList::update_user_config_bool(
                 UserList::new(USER_POLICY, cfg.server_url, cfg.api_key),
@@ -286,6 +301,21 @@ fn main() -> Result<(), confy::ConfyError> {
                 username)
                 .expect("Unable to update user.");
         },
+        Commands::AddUsers { inputfile } => {
+            let data = File::open(inputfile).unwrap();
+            let reader = BufReader::new(data);
+            for line in reader.lines() {
+                match line {
+                    Ok(l) => {
+                        let vec: Vec<&str> = l.split(",").collect();
+                        add_user(&cfg, vec[0].to_owned(), vec[1].to_owned());
+
+                    },
+                    Err(_) => println!("Error!")
+                }
+            }
+
+        }
 
         // Server based commands
         Commands::ServerInfo {} => {
@@ -375,6 +405,11 @@ fn main() -> Result<(), confy::ConfyError> {
 /// 
 fn get_user_id(cfg: &AppConfig, username: &String) -> String {
     UserList::get_user_id(UserList::new("/Users", cfg.server_url.clone(), cfg.api_key.clone()), username)
+}
+
+fn add_user(cfg: &AppConfig, username: String, password: String) {
+    UserAdd::create(UserAdd::new(username, password, cfg.server_url.clone(), cfg.api_key.clone()))
+                .expect("Unable to add user.");
 }
 
 ///

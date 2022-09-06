@@ -6,7 +6,13 @@ pub fn simple_get(server_url: String, api_key: String) -> Response {
         .get(server_url)
         .header("X-Emby-Token", api_key)
         .send();
-    response.unwrap()
+    match response {
+        Ok(resp) => resp,
+        Err(_) => {
+            println!("Post response error.");
+            std::process::exit(0)
+        }
+    }
 }
 
 pub fn simple_post(server_url: String, api_key: String, body: String) -> Response {
@@ -17,5 +23,11 @@ pub fn simple_post(server_url: String, api_key: String, body: String) -> Respons
         .header("X-Emby-Token", api_key)
         .body(body)
         .send();
-    response.unwrap()
+    match response {
+        Ok(resp) => resp,
+        Err(_) => {
+            println!("Post response error.");
+            std::process::exit(0)
+        }
+    }
 }
