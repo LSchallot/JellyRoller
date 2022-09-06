@@ -21,8 +21,8 @@ impl ResetPass {
     
     pub fn reset(self)  -> Result<(), reqwest::Error> {
         let response = simple_post(
-            self.server_url.to_string(), 
-            self.api_key.to_string(), 
+            self.server_url.clone(), 
+            self.api_key.clone(), 
             serde_json::to_string_pretty(&self).unwrap());
         match response.status() {
             StatusCode::NO_CONTENT => {
@@ -58,8 +58,8 @@ impl UserAdd {
 
     pub fn create(self) -> Result<(), reqwest::Error> {
         let response = simple_post(
-            self.server_url.to_string(), 
-            self.api_key.to_string(), 
+            self.server_url.clone(), 
+            self.api_key.clone(), 
             serde_json::to_string_pretty(&self).unwrap());
         match response.status() {
             StatusCode::OK => {
@@ -142,7 +142,7 @@ impl UserAuth {
     pub fn auth_user(self) -> Result<String, reqwest::Error> {  
         let client = Client::new();
         let response = client
-            .post(self.server_url.to_string())
+            .post(self.server_url.clone())
             .header(CONTENT_TYPE, "application/json")
             .header("X-Emby-Authorization", "MediaBrowser Client=\"JellyRoller\", Device=\"jellyroller\", DeviceId=\"1\", Version=\"0.0.1\"")
             .body(serde_json::to_string_pretty(&self).unwrap())
@@ -167,7 +167,7 @@ pub struct UserList {
 }
 
 impl UserList {
-    pub fn new(endpoint: String, server_url: String, api_key: String) -> UserList{
+    pub fn new(endpoint: &str, server_url: String, api_key: String) -> UserList{
         UserList{
             server_url: format!("{}{}",server_url, endpoint),
             api_key
@@ -219,7 +219,7 @@ impl UserList {
         println!("{}", body);
         let response = simple_post(
             self.server_url.replace("{userId}", &id), 
-            self.api_key.to_string(), 
+            self.api_key.clone(), 
             body);
         match response.status() {
             StatusCode::NO_CONTENT => {

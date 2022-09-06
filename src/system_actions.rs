@@ -14,7 +14,7 @@ pub struct ServerInfo {
 }
 
 impl ServerInfo {
-    pub fn new(endpoint: String, server_url: String, api_key: String) -> ServerInfo {
+    pub fn new(endpoint: &str, server_url: String, api_key: String) -> ServerInfo {
         ServerInfo {
             server_url: format!("{}{}",server_url, endpoint),
             api_key
@@ -39,7 +39,7 @@ impl ServerInfo {
     }
 
     pub fn restart_or_shutdown(self) -> Result<(), reqwest::Error> {
-        let response = simple_post(self.server_url, self.api_key, "".to_string());
+        let response = simple_post(self.server_url, self.api_key, String::new());
         match response.status() {
             StatusCode::NO_CONTENT => {
                 println!("Command successful.");
@@ -126,11 +126,11 @@ impl ServerInfo {
                 println!("Status Code: {}", response.status());
             }
         }
-        Ok("".to_string())
+        Ok(String::new())
     }
 
     pub fn execute_task_by_id(self, taskname: String, taskid: String) -> Result<(), reqwest::Error> {
-        let response = simple_post(self.server_url.replace("{taskId}", &taskid), self.api_key, "".to_string());
+        let response = simple_post(self.server_url.replace("{taskId}", &taskid), self.api_key, String::new());
         match response.status() {
             StatusCode::NO_CONTENT => {
                 println!("Task \"{}\" initiated.", taskname);
@@ -207,7 +207,7 @@ impl ServerInfo {
         let response = simple_post(
             self.server_url, 
             self.api_key, 
-            "".to_string());
+            String::new());
         match response.status() {
             StatusCode::NO_CONTENT => {
                 println!("Library scan initiated.");

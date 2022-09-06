@@ -8,7 +8,7 @@ pub struct PluginInfo {
 }
 
 impl PluginInfo {
-    pub fn new(endpoint: String, server_url: String, api_key: String) -> PluginInfo {
+    pub fn new(endpoint: &str, server_url: String, api_key: String) -> PluginInfo {
         PluginInfo {
             server_url: format!("{}{}", server_url, endpoint),
             api_key

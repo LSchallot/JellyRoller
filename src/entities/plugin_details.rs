@@ -34,7 +34,7 @@ impl PluginDetails {
             .set_width(120)
             .set_header(vec!["Plugin Name", "Version", "Config Filename", "Description", "Id", "Can Uninstall", "Image", "Status"]);
         for plugin in plugins {
-            table.add_row(vec![plugin.name, plugin.version, plugin.configuration_file_name.unwrap_or_else(|| "".to_string()), plugin.description, plugin.id, plugin.can_uninstall.to_string(), plugin.has_image.to_string(), plugin.status]);
+            table.add_row(vec![plugin.name, plugin.version, plugin.configuration_file_name.unwrap_or_else(|| String::new()), plugin.description, plugin.id, plugin.can_uninstall.to_string(), plugin.has_image.to_string(), plugin.status]);
         }
         println!("{table}");
     }

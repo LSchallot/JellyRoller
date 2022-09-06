@@ -53,9 +53,4 @@ cargo build
 ### Downloading Release
 See Releases for binaries.  I can currently supply builds for x86_64 Windows and x86_64 Linux.  Please open an issue if you would like to request an additional format.
 ## Roadmap
-Please see below for my current ideas.  I will be organizing these into issues and releases in the coming days.  I am a firm believer in "dogfooding" so the commands I felt were needed (ones I will most often use) for an initial release are in place.  Please feel free to open feature requests via an issue or contacting me in the JellyRoller Matrix room (https://matrix.to/#/#jellyroller:matrix.org).  I am also freely open to coding suggestions.
-
-| Feature/Enhancement | Priority |
-| ------------------- | -------- |
-| Documentation of test process | Medium |
-| Implementation of automatic testing | High | 
+I will be organizing ideas into issues and releases in the coming days.  I am a firm believer in "dogfooding" so the commands I felt were needed (ones I will most often use) for an initial release are in place.  Please feel free to open feature requests via an issue or contacting me in the JellyRoller Matrix room (https://matrix.to/#/#jellyroller:matrix.org).  I am also freely open to coding suggestions.
