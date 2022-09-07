@@ -325,7 +325,6 @@ fn main() -> Result<(), confy::ConfyError> {
             //let reader = BufReader::new(File::open(inputfile).unwrap());
             let data = fs::read_to_string(inputfile).unwrap();
             if data.chars().nth(0).unwrap() == '[' {
-                // Data is a JSON Array
                 let info = serde_json::from_str::<Vec<UserDetails>>(&data).unwrap();
                 for item in info {
                     //let user_id = get_user_id(&cfg, &item.name);
@@ -337,8 +336,6 @@ fn main() -> Result<(), confy::ConfyError> {
                     
                 }
             } else {
-                // Data is not a JSON Array
-                println!("Not Array");
                 let info = serde_json::from_str::<UserDetails>(&data).unwrap();
                 let user_id = get_user_id(&cfg, &info.name);
                 UserList::update_user_info(
