@@ -40,6 +40,7 @@ SUBCOMMANDS:
     server-info                  Displays the server information
     show-log                     Displays the requested logfile
     shutdown-jellyfin            Shuts down Jellyfin
+    update-users                 Mass update users in the supplied file
 ```
 
 ## Installation
