@@ -312,7 +312,7 @@ fn main() -> Result<(), confy::ConfyError> {
             for line in reader.lines() {
                 match line {
                     Ok(l) => {
-                        let vec: Vec<&str> = l.split(",").collect();
+                        let vec: Vec<&str> = l.split(',').collect();
                         add_user(&cfg, vec[0].to_owned(), vec[1].to_owned());
 
                     },
@@ -324,7 +324,7 @@ fn main() -> Result<(), confy::ConfyError> {
             // Determine if JSON file contains multiple users (would be an array, so it would start with "[")
             //let reader = BufReader::new(File::open(inputfile).unwrap());
             let data = fs::read_to_string(inputfile).unwrap();
-            if data.chars().nth(0).unwrap() == '[' {
+            if data.starts_with('[') {
                 let info = serde_json::from_str::<Vec<UserDetails>>(&data).unwrap();
                 for item in info {
                     //let user_id = get_user_id(&cfg, &item.name);
@@ -339,7 +339,7 @@ fn main() -> Result<(), confy::ConfyError> {
                 let info = serde_json::from_str::<UserDetails>(&data).unwrap();
                 let user_id = get_user_id(&cfg, &info.name);
                 UserList::update_user_info(
-                    UserList::new(USER_ID, cfg.server_url.clone(), cfg.api_key.clone()),
+                    UserList::new(USER_ID, cfg.server_url, cfg.api_key),
                     user_id,
                     info
                 ).expect("Unable to update user.");

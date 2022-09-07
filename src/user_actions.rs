@@ -254,7 +254,7 @@ impl UserList {
         }
         response = simple_post(
             policy_url.replace("{userId}", &id),
-            self.api_key.clone(),
+            self.api_key,
             serde_json::to_string_pretty(&info.policy).unwrap());
         match response.status() {
             StatusCode::NO_CONTENT => {
