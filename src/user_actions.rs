@@ -216,7 +216,6 @@ impl UserList {
     
     pub fn update_user_config_bool(self, user_info: Policy, id: String, username: String) -> Result<(), reqwest::Error> {
         let body = serde_json::to_string_pretty(&user_info).unwrap();
-        println!("{}", body);
         let response = simple_post(
             self.server_url.replace("{userId}", &id), 
             self.api_key.clone(), 
@@ -226,6 +225,42 @@ impl UserList {
                 println!("User {} successfully updated.", username);
             } _ => {
                 println!("Unable to update user policy information.");
+                println!("Status Code: {}", response.status());
+                println!("{}", response.text().unwrap());
+            }
+        }
+        Ok(())
+    }
+
+    //
+    // I really hate this function but it works for now.
+    //
+    pub fn update_user_info(self, id: String, info: UserDetails) -> Result<(), reqwest::Error> {
+        let body = serde_json::to_string_pretty(&info).unwrap();
+        // So we have to update the Policy and the user info separate even though they are the same JSON object :/
+        let policy_url = format!("{}/Policy",self.server_url);
+        let mut response = simple_post(
+            self.server_url.replace("{userId}", &id),
+            self.api_key.clone(),
+            body);
+        match response.status() {
+            StatusCode::NO_CONTENT => {
+                println!("User information successfully updated for {}.", info.name);
+            } _ => {
+                println!("Unable to update user information.");
+                println!("Status Code: {}", response.status());
+                println!("{}", response.text().unwrap());
+            }
+        }
+        response = simple_post(
+            policy_url.replace("{userId}", &id),
+            self.api_key.clone(),
+            serde_json::to_string_pretty(&info.policy).unwrap());
+        match response.status() {
+            StatusCode::NO_CONTENT => {
+                println!("User policy successfully updated for {}.", info.name);
+            } _ => {
+                println!("Unable to update user information.");
                 println!("Status Code: {}", response.status());
                 println!("{}", response.text().unwrap());
             }

@@ -25,8 +25,8 @@ pub fn simple_post(server_url: String, api_key: String, body: String) -> Respons
         .send();
     match response {
         Ok(resp) => resp,
-        Err(_) => {
-            println!("Post response error.");
+        Err(e) => {
+            println!("Post response error. {e}");
             std::process::exit(0)
         }
     }

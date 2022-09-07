@@ -1,4 +1,4 @@
-use std::fs::File;
+use std::fs::{File, self};
 use std::env;
 use std::io::{self, Write, BufReader, BufRead};
 use clap::{Parser, Subcommand, ValueEnum};
@@ -186,7 +186,13 @@ enum Commands {
     AddUsers {
         /// File that contains the user information in "username,password" lines.
         #[clap(required = true, value_parser)]
-        inputfile: String,
+        inputfile: String
+    },
+    /// Mass update users in the supplied file
+    UpdateUsers {
+        /// File that contains the user JSON information.
+        #[clap(required = true, value_parser)]
+        inputfile: String
     }
 }
 
@@ -302,8 +308,7 @@ fn main() -> Result<(), confy::ConfyError> {
                 .expect("Unable to update user.");
         },
         Commands::AddUsers { inputfile } => {
-            let data = File::open(inputfile).unwrap();
-            let reader = BufReader::new(data);
+            let reader = BufReader::new(File::open(inputfile).unwrap());
             for line in reader.lines() {
                 match line {
                     Ok(l) => {
@@ -314,7 +319,34 @@ fn main() -> Result<(), confy::ConfyError> {
                     Err(_) => println!("Error!")
                 }
             }
-
+        },
+        Commands::UpdateUsers { inputfile } => {
+            // Determine if JSON file contains multiple users (would be an array, so it would start with "[")
+            //let reader = BufReader::new(File::open(inputfile).unwrap());
+            let data = fs::read_to_string(inputfile).unwrap();
+            if data.chars().nth(0).unwrap() == '[' {
+                // Data is a JSON Array
+                let info = serde_json::from_str::<Vec<UserDetails>>(&data).unwrap();
+                for item in info {
+                    //let user_id = get_user_id(&cfg, &item.name);
+                    UserList::update_user_info(
+                        UserList::new(USER_ID, cfg.server_url.clone(), cfg.api_key.clone()),
+                        item.id.clone(),
+                        item
+                    ).expect("Unable to update user.");
+                    
+                }
+            } else {
+                // Data is not a JSON Array
+                println!("Not Array");
+                let info = serde_json::from_str::<UserDetails>(&data).unwrap();
+                let user_id = get_user_id(&cfg, &info.name);
+                UserList::update_user_info(
+                    UserList::new(USER_ID, cfg.server_url.clone(), cfg.api_key.clone()),
+                    user_id,
+                    info
+                ).expect("Unable to update user.");
+            }
         }
 
         // Server based commands
