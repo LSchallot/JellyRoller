@@ -21,18 +21,18 @@ impl DeviceDetails {
         }
     }
 
-    pub fn json_print(devices: Vec<DeviceDetails>) {
+    pub fn json_print(devices: &[DeviceDetails]) {
         println!("{}", serde_json::to_string_pretty(&devices).unwrap());
     }
 
-    pub fn table_print(devices: Vec<DeviceDetails>) {
+    pub fn table_print(devices: &[DeviceDetails]) {
         let mut table = Table::new();
         table
             .set_content_arrangement(ContentArrangement::Dynamic)
             .set_width(120)
             .set_header(vec!["Device Id", "Device Name", "Last Used By"]);
         for device in devices {
-            table.add_row(vec![device.id, device.name, device.lastusername]);
+            table.add_row(vec![&device.id, &device.name, &device.lastusername]);
         }
         println!("{table}");
     }

@@ -32,7 +32,7 @@ impl LibraryDetails {
         }
     }
 
-    pub fn json_print(libraries: Vec<LibraryDetails>) {
+    pub fn json_print(libraries: &[LibraryDetails]) {
         println!("{}", serde_json::to_string_pretty(&libraries).unwrap());
     }
 

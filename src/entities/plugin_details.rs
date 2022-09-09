@@ -23,7 +23,7 @@ pub struct PluginDetails {
 }
 
 impl PluginDetails {
-    pub fn json_print(plugins: Vec<PluginDetails>) {
+    pub fn json_print(plugins: &[PluginDetails]) {
         println!("{}", serde_json::to_string_pretty(&plugins).unwrap());
     }
 

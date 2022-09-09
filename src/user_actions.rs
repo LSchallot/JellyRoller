@@ -1,4 +1,4 @@
-use super::{ UserDetails, Policy, responder::*} ;
+use super::{ UserDetails, Policy, responder::{simple_get, simple_post}} ;
 use reqwest::{StatusCode, blocking::Client, header::CONTENT_TYPE};
 
 #[derive(Serialize, Deserialize)]
@@ -10,20 +10,20 @@ pub struct ResetPass {
 }
 
 impl ResetPass {
-    pub fn new(username: String, newpw: String, server_url: String, api_key: String) -> ResetPass{
+    pub fn new(username: &str, newpw: String, server_url: &str, api_key: &str) -> ResetPass{
         ResetPass{
-            username: username.clone(),
+            username: username.to_owned(),
             newpw,
             server_url: format!("{}/Users/{}/Password", server_url, username),
-            api_key
+            api_key: api_key.to_owned()
         }
     }
     
-    pub fn reset(self)  -> Result<(), reqwest::Error> {
+    pub fn reset(self)  -> Result<(), Box<dyn std::error::Error>> {
         let response = simple_post(
             self.server_url.clone(), 
             self.api_key.clone(), 
-            serde_json::to_string_pretty(&self).unwrap());
+            serde_json::to_string_pretty(&self)?);
         match response.status() {
             StatusCode::NO_CONTENT => {
                 println!("Password updated successfully.");
@@ -47,7 +47,7 @@ pub struct UserAdd {
 }
 
 impl UserAdd {
-    pub fn new(username: String, password: String, server_url: String, api_key: String) -> UserAdd{
+    pub fn new(username: String, password: String, server_url: &str, api_key: String) -> UserAdd{
         UserAdd{
             name: username,
             password,
@@ -56,11 +56,11 @@ impl UserAdd {
         }
     }
 
-    pub fn create(self) -> Result<(), reqwest::Error> {
+    pub fn create(self) -> Result<(), Box<dyn std::error::Error>> {
         let response = simple_post(
             self.server_url.clone(), 
             self.api_key.clone(), 
-            serde_json::to_string_pretty(&self).unwrap());
+            serde_json::to_string_pretty(&self)?);
         match response.status() {
             StatusCode::OK => {
                 println!("User \"{}\" successfully created.", &self.name);
@@ -82,7 +82,7 @@ pub struct UserDel {
 }
 
 impl UserDel {
-    pub fn new(username: String, server_url: String, api_key: String) -> UserDel{
+    pub fn new(username: String, server_url: &str, api_key: String) -> UserDel{
         UserDel{
             server_url: format!("{}/Users/{}",server_url,&username),
             api_key,
@@ -131,25 +131,25 @@ pub struct UserAuth {
 }
 
 impl UserAuth {
-    pub fn new(server_url: String, username: String, password: String) -> UserAuth{
+    pub fn new(server_url: &str, username: &str, password: String) -> UserAuth{
         UserAuth{ 
             server_url: format!("{}/Users/authenticatebyname",server_url),
-            username, 
+            username: username.to_owned(), 
             pw: password
         }
     }
     
-    pub fn auth_user(self) -> Result<String, reqwest::Error> {  
+    pub fn auth_user(self) -> Result<String, Box<dyn std::error::Error>> {  
         let client = Client::new();
         let response = client
             .post(self.server_url.clone())
             .header(CONTENT_TYPE, "application/json")
             .header("X-Emby-Authorization", "MediaBrowser Client=\"JellyRoller\", Device=\"jellyroller\", DeviceId=\"1\", Version=\"0.0.1\"")
-            .body(serde_json::to_string_pretty(&self).unwrap())
+            .body(serde_json::to_string_pretty(&self)?)
             .send()?;
         match response.status() {
             StatusCode::OK => {
-                let result = response.json::<UserAuthJson>().unwrap();
+                let result = response.json::<UserAuthJson>()?;
                 println!("User authenticated successfully.");
                 Ok(result.access_token)
             } _ => {
@@ -167,19 +167,19 @@ pub struct UserList {
 }
 
 impl UserList {
-    pub fn new(endpoint: &str, server_url: String, api_key: String) -> UserList{
+    pub fn new(endpoint: &str, server_url: &str, api_key: String) -> UserList{
         UserList{
             server_url: format!("{}{}",server_url, endpoint),
             api_key
         }
     }
 
-    pub fn list_users(self) -> Result<Vec<UserDetails>, reqwest::Error> {
+    pub fn list_users(self) -> Result<Vec<UserDetails>, Box<dyn std::error::Error>> {
         let response = simple_get(self.server_url, self.api_key);
         let mut users = Vec::new();
         match response.status() {
             StatusCode::OK => {
-                users = response.json::<UserInfoVec>().unwrap();
+                users = response.json::<UserInfoVec>()?;
             } StatusCode::UNAUTHORIZED => {
                 println!("Authentication failed.  Try reconfiguring with \"jellyroller reconfigure\"");
             } _ => {
@@ -209,25 +209,23 @@ impl UserList {
         panic!("Could not find user {}.", username);
     }
 
-    pub fn get_user_information(self, id: String) -> Result<UserDetails, reqwest::Error> {
-        let response = simple_get(self.server_url.replace("{userId}", &id), self.api_key);
-        Ok(serde_json::from_str(response.text().unwrap().as_str()).unwrap())
+    pub fn get_user_information(self, id: &str) -> Result<UserDetails, Box<dyn std::error::Error>> {
+        let response = simple_get(self.server_url.replace("{userId}", id), self.api_key);
+        Ok(serde_json::from_str(response.text()?.as_str())?)
     }
     
-    pub fn update_user_config_bool(self, user_info: Policy, id: String, username: String) -> Result<(), reqwest::Error> {
-        let body = serde_json::to_string_pretty(&user_info).unwrap();
+    pub fn update_user_config_bool(self, user_info: &Policy, id: &str, username: &str) -> Result<(), Box<dyn std::error::Error>> {
+        let body = serde_json::to_string_pretty(user_info)?;
         let response = simple_post(
-            self.server_url.replace("{userId}", &id), 
+            self.server_url.replace("{userId}", id), 
             self.api_key.clone(), 
             body);
-        match response.status() {
-            StatusCode::NO_CONTENT => {
-                println!("User {} successfully updated.", username);
-            } _ => {
-                println!("Unable to update user policy information.");
-                println!("Status Code: {}", response.status());
-                println!("{}", response.text().unwrap());
-            }
+        if response.status() == StatusCode::NO_CONTENT {
+            println!("User {} successfully updated.", username);
+        } else {
+            println!("Unable to update user policy information.");
+            println!("Status Code: {}", response.status());
+            println!("{}", response.text()?);
         }
         Ok(())
     }
@@ -235,36 +233,33 @@ impl UserList {
     //
     // I really hate this function but it works for now.
     //
-    pub fn update_user_info(self, id: String, info: UserDetails) -> Result<(), reqwest::Error> {
-        let body = serde_json::to_string_pretty(&info).unwrap();
+    pub fn update_user_info(self, id: &str, info: &UserDetails) -> Result<(), Box<dyn std::error::Error>> {
+        let body = serde_json::to_string_pretty(&info)?;
         // So we have to update the Policy and the user info separate even though they are the same JSON object :/
         let policy_url = format!("{}/Policy",self.server_url);
-        let mut response = simple_post(
-            self.server_url.replace("{userId}", &id),
-            self.api_key.clone(),
-            body);
-        match response.status() {
-            StatusCode::NO_CONTENT => {
-                println!("User information successfully updated for {}.", info.name);
-            } _ => {
-                println!("Unable to update user information.");
-                println!("Status Code: {}", response.status());
-                println!("{}", response.text().unwrap());
+        let user_response = simple_post(self.server_url.replace("{userId}", id), self.api_key.clone(), body);
+        if user_response.status() == StatusCode::NO_CONTENT {} else {
+            println!("Unable to update user information.");
+            println!("Status Code: {}", user_response.status());
+            match user_response.text() {
+                Ok(t) => println!("{}", t),
+                Err(_) => eprintln!("Could not get response text from user information update.")
+            }            
+        }
+        
+        let response = simple_post(policy_url.replace("{userId}", id), self.api_key, serde_json::to_string_pretty(&info.policy)?);
+        if response.status() == StatusCode::NO_CONTENT {
+            println!("{} successfully updated.", info.name);
+        } else {
+            println!("Unable to update user information.");
+            println!("Status Code: {}", response.status());
+            match response.text() {
+                Ok(t) => println!("{}", t),
+                Err(_) => eprintln!("Could not get response text from user policy update.")
             }
         }
-        response = simple_post(
-            policy_url.replace("{userId}", &id),
-            self.api_key,
-            serde_json::to_string_pretty(&info.policy).unwrap());
-        match response.status() {
-            StatusCode::NO_CONTENT => {
-                println!("User policy successfully updated for {}.", info.name);
-            } _ => {
-                println!("Unable to update user information.");
-                println!("Status Code: {}", response.status());
-                println!("{}", response.text().unwrap());
-            }
-        }
+
         Ok(())
+    
     }
 }

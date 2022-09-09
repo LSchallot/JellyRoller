@@ -159,11 +159,11 @@ pub struct AccessSchedule {
     pub end_hour: i64,
 }
 impl UserDetails {
-    pub fn json_print_user(user: UserDetails) {
+    pub fn json_print_user(user: &UserDetails) {
         println!("{}", serde_json::to_string_pretty(&user).unwrap());
     }
 
-    pub fn json_print_users(users: Vec<UserDetails>) {
+    pub fn json_print_users(users: &[UserDetails]) {
         println!("{}", serde_json::to_string_pretty(&users).unwrap());
     }
 }

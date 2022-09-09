@@ -4,11 +4,11 @@ use std::io::{self, Write, BufReader, BufRead};
 use clap::{Parser, Subcommand, ValueEnum};
 
 mod user_actions;
-use user_actions::*;
+use user_actions::{ResetPass, UserAdd, UserAuth, UserDel, UserList};
 mod system_actions;
-use system_actions::*;
+use system_actions::{LogFile, ServerInfo};
 mod plugin_actions;
-use plugin_actions::*;
+use plugin_actions::PluginInfo;
 mod responder;
 mod entities;
 use entities::user_details::{UserDetails, Policy};
@@ -18,7 +18,7 @@ use entities::log_details::LogDetails;
 use entities::library_details::{LibraryDetails, LibraryRootJson};
 use entities::plugin_details::{PluginDetails, PluginRootJson};
 mod utils;
-use utils::output_writer::*;
+use utils::output_writer::export_data;
 
 #[macro_use]
 extern crate serde_derive;
@@ -214,97 +214,115 @@ fn main() -> Result<(), confy::ConfyError> {
     match args.command {
         // User based commands
         Commands::AddUser { username, password } => {
-            // UserAdd::create(UserAdd::new(username, password, cfg.server_url, cfg.api_key))
-            //     .expect("Unable to add user.");
             add_user(&cfg, username, password);
         },
         Commands::DeleteUser { username } => {
             let user_id = get_user_id(&cfg, &username);
-            UserDel::remove(UserDel::new(user_id, cfg.server_url, cfg.api_key))
+            UserDel::remove(UserDel::new(user_id, &cfg.server_url, cfg.api_key))
                 .expect("Unable to delete user.");
         },
         Commands::ListUsers { export, mut output, username} => {
             if username.is_empty() {
-                let users = UserList::list_users(UserList::new(USERS, cfg.server_url, cfg.api_key)).unwrap();
-                if !export {
-                    UserDetails::json_print_users(users);
-                } else {
+                let users: Vec<UserDetails> = 
+                    match UserList::list_users(UserList::new(USERS, &cfg.server_url, cfg.api_key)) {
+                        Err(_) => {
+                            eprintln!("Unable to gather users.");
+                            std::process::exit(0);
+                        },
+                        Ok(i) => i
+                    };
+                if export {
                     println!("Exporting all user information.....");
                     if output.is_empty() {
                         output = "exported-user-info.json".to_owned();
                     }
-                    let data = serde_json::to_string_pretty(&users).unwrap();
-                    export_data(data, output);
+                    let data: String = 
+                        match serde_json::to_string_pretty(&users) {
+                            Err(_) => {
+                                eprintln!("Unable to convert user information into JSON.");
+                                std::process::exit(0);
+                            },
+                            Ok(i) => i
+                        };
+                    export_data(&data, output);
+                } else {
+                    UserDetails::json_print_users(&users);
                 } 
             } else {
-                let user_id = UserList::get_user_id(UserList::new(USERS, cfg.server_url.clone(), cfg.api_key.clone()), &username);
-                let user = UserList::get_user_information(UserList::new(USER_ID, cfg.server_url, cfg.api_key), user_id).unwrap();
-                if !export {
-                    UserDetails::json_print_user(user);
-                } else {
+                let user_id = UserList::get_user_id(UserList::new(USERS, &cfg.server_url, cfg.api_key.clone()), &username);
+                let user = gather_user_information(&cfg, &username, &user_id);
+                if export {
                     println!("Exporting user information.....");
                     if output.is_empty() {
                         output = format!("exported-user-info-{}.json", username);
                     }
-                    let data = serde_json::to_string_pretty(&user).unwrap();
-                    export_data(data, output);
+                    let data: String = 
+                        match serde_json::to_string_pretty(&user) {
+                            Err(_) => {
+                                eprintln!("Unable to convert user information into JSON.");
+                                std::process::exit(0);
+                            },
+                            Ok(i) => i
+                        };
+                    export_data(&data, output);
+                } else {
+                    UserDetails::json_print_user(&user);
                 }
             }
         },
         Commands::ResetPassword { username, password } => {
-            let user_id = UserList::get_user_id(UserList::new(USERS, cfg.server_url.clone(), cfg.api_key.clone()), &username);
-            ResetPass::reset(ResetPass::new(user_id, password, cfg.server_url, cfg.api_key))
-                .expect("Unable to reset user password.");
+            let user_id = UserList::get_user_id(UserList::new(USERS, &cfg.server_url, cfg.api_key.clone()), &username);
+            match ResetPass::reset(ResetPass::new(&user_id, password, &cfg.server_url, &cfg.api_key)) {
+                Err(_) => {
+                    eprintln!("Unable to convert user information into JSON.");
+                    std::process::exit(0);
+                },
+                Ok(i) => i
+                        
+            }
         },
         Commands::DisableUser { username } => {
             let id = get_user_id(&cfg, &username);
-            let mut user_info = UserList::get_user_information(UserList::new(USER_ID, cfg.server_url.clone(), cfg.api_key.clone()), id.clone()).unwrap();
+            let mut user_info = gather_user_information(&cfg, &username, &id);
             user_info.policy.is_disabled = true;
             UserList::update_user_config_bool(
-                UserList::new(USER_POLICY, cfg.server_url, cfg.api_key),
-                user_info.policy, 
-                id,
-                username)
+                UserList::new(USER_POLICY, &cfg.server_url, cfg.api_key),
+                &user_info.policy, 
+                &id,
+                &username)
                 .expect("Unable to update user.");
         },
         Commands::EnableUser { username } => {
             let id = get_user_id(&cfg, &username);
-            let mut user_info = UserList::get_user_information(UserList::new(USER_ID, cfg.server_url.clone(), cfg.api_key.clone()), id.clone()).unwrap();
+            let mut user_info = gather_user_information(&cfg, &username, &id);
             user_info.policy.is_disabled = false;
             UserList::update_user_config_bool(
-                UserList::new(USER_POLICY, cfg.server_url, cfg.api_key),
-                user_info.policy, 
-                id,
-                username)
+                UserList::new(USER_POLICY, &cfg.server_url, cfg.api_key),
+                &user_info.policy, 
+                &id,
+                &username)
                 .expect("Unable to update user.");
         },
         Commands::GrantAdmin { username } => {
             let id = get_user_id(&cfg, &username);
-            let mut user_info = UserList::get_user_information(UserList::new(USER_ID, cfg.server_url.clone(), cfg.api_key.clone()), id.clone()).unwrap();
+            let mut user_info = gather_user_information(&cfg, &username, &id);
             user_info.policy.is_administrator = true;
             UserList::update_user_config_bool(
-                UserList::new(USER_POLICY, cfg.server_url, cfg.api_key),
-                user_info.policy, 
-                id,
-                username)
+                UserList::new(USER_POLICY, &cfg.server_url, cfg.api_key),
+                &user_info.policy, 
+                &id,
+                &username)
                 .expect("Unable to update user.");
         },
         Commands::RevokeAdmin { username } => {
             let id = get_user_id(&cfg, &username);
-            let mut user_info: UserDetails = 
-                match UserList::get_user_information(UserList::new(USER_ID, cfg.server_url.clone(), cfg.api_key.clone()), id.clone()) {
-                    Err(_) => {
-                        println!("Error");
-                        std::process::exit(0);
-                    },
-                    Ok(ul) => ul,
-                };
+            let mut user_info = gather_user_information(&cfg, &username, &id);
             user_info.policy.is_administrator = false;
             UserList::update_user_config_bool(
-                UserList::new(USER_POLICY, cfg.server_url, cfg.api_key),
-                user_info.policy, 
-                id,
-                username)
+                UserList::new(USER_POLICY, &cfg.server_url, cfg.api_key),
+                &user_info.policy, 
+                &id,
+                &username)
                 .expect("Unable to update user.");
         },
         Commands::AddUsers { inputfile } => {
@@ -316,109 +334,179 @@ fn main() -> Result<(), confy::ConfyError> {
                         add_user(&cfg, vec[0].to_owned(), vec[1].to_owned());
 
                     },
-                    Err(_) => println!("Error!")
+                    Err(e) => println!("Unable to add user.  {e}")
                 }
             }
         },
         Commands::UpdateUsers { inputfile } => {
-            // Determine if JSON file contains multiple users (would be an array, so it would start with "[")
-            //let reader = BufReader::new(File::open(inputfile).unwrap());
-            let data = fs::read_to_string(inputfile).unwrap();
+            let data: String = 
+                match fs::read_to_string(inputfile) {
+                    Err(_) => {
+                        eprintln!("Unable to process input file.");
+                        std::process::exit(0);
+                    },
+                    Ok(i) => i
+                };
             if data.starts_with('[') {
-                let info = serde_json::from_str::<Vec<UserDetails>>(&data).unwrap();
+                let info: Vec<UserDetails> = 
+                    match serde_json::from_str::<Vec<UserDetails>>(&data) {
+                        Err(_) => {
+                            eprintln!("Unable to convert user details JSON..");
+                            std::process::exit(0);
+                        },
+                        Ok(i) => i
+                    };
                 for item in info {
-                    //let user_id = get_user_id(&cfg, &item.name);
-                    UserList::update_user_info(
-                        UserList::new(USER_ID, cfg.server_url.clone(), cfg.api_key.clone()),
-                        item.id.clone(),
-                        item
-                    ).expect("Unable to update user.");
+                    match UserList::update_user_info(
+                        UserList::new(USER_ID, &cfg.server_url, cfg.api_key.clone()),
+                        &item.id,
+                        &item
+                    ) {
+                        Ok(_) => {},
+                        Err(e) => eprintln!("Unable to update user.  {e}")
+                    };
                     
                 }
             } else {
-                let info = serde_json::from_str::<UserDetails>(&data).unwrap();
+                let info: UserDetails = 
+                    match serde_json::from_str::<UserDetails>(&data) {
+                        Err(_) => {
+                            eprintln!("Unable to convert user details JSON.");
+                            std::process::exit(0);
+                        },
+                        Ok(i) => i
+                    };
                 let user_id = get_user_id(&cfg, &info.name);
-                UserList::update_user_info(
-                    UserList::new(USER_ID, cfg.server_url, cfg.api_key),
-                    user_id,
-                    info
-                ).expect("Unable to update user.");
+                match UserList::update_user_info(
+                    UserList::new(USER_ID, &cfg.server_url, cfg.api_key),
+                    &user_id,
+                    &info
+                ) {
+                    Ok(_) => {},
+                    Err(e) => { eprintln!("Unable to update user.  {e}")}
+                }
             }
         }
 
         // Server based commands
         Commands::ServerInfo {} => {
-            ServerInfo::get_server_info(ServerInfo::new("/System/Info", cfg.server_url, cfg.api_key))
+            ServerInfo::get_server_info(ServerInfo::new("/System/Info", &cfg.server_url, &cfg.api_key))
                 .expect("Unable to gather server information.");
         },
 
         Commands::ListLogs { json } => {
-            let logs = ServerInfo::get_log_filenames(ServerInfo::new("/System/Logs", cfg.server_url, cfg.api_key)).unwrap();
+            let logs = 
+                match ServerInfo::get_log_filenames(ServerInfo::new("/System/Logs", &cfg.server_url, &cfg.api_key)) {
+                    Err(_) => {
+                        eprintln!("Unable to get get log filenames.");
+                        std::process::exit(0);
+                    },
+                    Ok(i) => i
+                };
             if json {
-                LogDetails::json_print(logs);
+                LogDetails::json_print(&logs);
             } else {
                 LogDetails::table_print(logs);
             }     
         },
         Commands::ShowLog { logfile } => {
-            LogFile::get_logfile(LogFile::new("/System/Logs/Log".to_owned(), cfg.server_url, cfg.api_key, logfile))
+            LogFile::get_logfile(LogFile::new("/System/Logs/Log", &cfg.server_url, cfg.api_key, logfile))
                 .expect("Unable to retrieve the specified logfile.");
         },
         Commands::Reconfigure {} => {
             initial_config(cfg);
         },
         Commands::GetDevices { json } => {
-            let devices = ServerInfo::get_devices(ServerInfo::new(DEVICES, cfg.server_url, cfg.api_key)).unwrap();
+            let devices: Vec<DeviceDetails> = 
+                match ServerInfo::get_devices(ServerInfo::new(DEVICES, &cfg.server_url, &cfg.api_key)) {
+                    Err(_) => {
+                        eprintln!("Unable to get devices.");
+                        std::process::exit(0);
+                    },
+                    Ok(i) => i
+            };
             if json {
-                DeviceDetails::json_print(devices);
+                DeviceDetails::json_print(&devices);
             } else {
-                DeviceDetails::table_print(devices);
+                DeviceDetails::table_print(&devices);
             }
         },
         Commands::GetLibraries { json } => {
-            let libraries = ServerInfo::get_libraries(ServerInfo::new("/Library/VirtualFolders", cfg.server_url, cfg.api_key)).unwrap();
+            let libraries: Vec<LibraryDetails> = 
+             match ServerInfo::get_libraries(ServerInfo::new("/Library/VirtualFolders", &cfg.server_url, &cfg.api_key)) {
+                Err(_) => {
+                    eprintln!("Unable to get libraries.");
+                    std::process::exit(0);
+                },
+                Ok(i) => i
+             };
             if json {
-                LibraryDetails::json_print(libraries);
+                LibraryDetails::json_print(&libraries);
             } else {
                 LibraryDetails::table_print(libraries);
             }
         },
         Commands::GetScheduledTasks { json } => {
-            let tasks = ServerInfo::get_scheduled_tasks(ServerInfo::new("/ScheduledTasks", cfg.server_url, cfg.api_key)).unwrap();
+            let tasks: Vec<TaskDetails> = 
+                match ServerInfo::get_scheduled_tasks(ServerInfo::new("/ScheduledTasks", &cfg.server_url, &cfg.api_key)) {
+                    Err(_) => {
+                        eprintln!("Unable to get scheduled tasks.");
+                        std::process::exit(0);
+                    },
+                    Ok(i) => i
+                };
+            
             if json {
-                TaskDetails::json_print(tasks);
+                TaskDetails::json_print(&tasks);
             } else {
                 TaskDetails::table_print(tasks);
             }
         },
         Commands::ExecuteTaskByName { task } => {
-            let taskid = ServerInfo::get_taskid_by_taskname(ServerInfo::new("/ScheduledTasks", cfg.server_url.clone(), cfg.api_key.clone()), task.clone()).unwrap();
-            ServerInfo::execute_task_by_id(ServerInfo::new("/ScheduledTasks/Running/{taskId}", cfg.server_url, cfg.api_key), task, taskid)
-                .expect("Unable to start scheduled task.");
+            let taskid: String = 
+                match ServerInfo::get_taskid_by_taskname(ServerInfo::new("/ScheduledTasks", &cfg.server_url, &cfg.api_key), &task) {
+                    Err(_) => {
+                        eprintln!("Unable to get task id by taskname.");
+                        std::process::exit(0);
+                    },
+                    Ok(i) => i
+                };
+            ServerInfo::execute_task_by_id(ServerInfo::new("/ScheduledTasks/Running/{taskId}", &cfg.server_url, &cfg.api_key), &task, &taskid);
         }
         Commands::ScanLibrary {} => {
-            ServerInfo::scan_library(ServerInfo::new("/Library/Refresh", cfg.server_url, cfg.api_key))
-                .expect("Unable to start library scan.");
+            ServerInfo::scan_library(ServerInfo::new("/Library/Refresh", &cfg.server_url, &cfg.api_key));
         },
         Commands::RemoveDeviceByUsername { username } => {
-            let filtered = ServerInfo::get_deviceid_by_username(ServerInfo::new(DEVICES, cfg.server_url.clone(), cfg.api_key.clone()), username).unwrap();
+            let filtered: Vec<String> = 
+                match ServerInfo::get_deviceid_by_username(ServerInfo::new(DEVICES, &cfg.server_url, &cfg.api_key), &username) {
+                    Err(_) => {
+                        eprintln!("Unable to get device id by username.");
+                        std::process::exit(0);
+                    },
+                    Ok(i) => i
+                };
             for item in filtered {
-                ServerInfo::remove_device(ServerInfo::new(DEVICES, cfg.server_url.clone(), cfg.api_key.clone()), item)
+                ServerInfo::remove_device(ServerInfo::new(DEVICES, &cfg.server_url, &cfg.api_key), &item)
                     .expect("Unable to delete specified id.");
             }
         },
         Commands::RestartJellyfin {} => {
-            ServerInfo::restart_or_shutdown(ServerInfo::new("/System/Restart", cfg.server_url, cfg.api_key))
-                .expect("Unable to restart Jellyfin.");
+            ServerInfo::restart_or_shutdown(ServerInfo::new("/System/Restart", &cfg.server_url, &cfg.api_key));
         },
         Commands::ShutdownJellyfin {} => {
-            ServerInfo::restart_or_shutdown(ServerInfo::new("/System/Shutdown", cfg.server_url, cfg.api_key))
-                .expect("Unable to stop Jellyfin.");
+            ServerInfo::restart_or_shutdown(ServerInfo::new("/System/Shutdown", &cfg.server_url, &cfg.api_key));
         },
         Commands::GetPlugins { json } => {
-            let plugins = PluginInfo::get_plugins(PluginInfo::new("/Plugins", cfg.server_url, cfg.api_key)).unwrap();
+            let plugins: Vec<PluginDetails> = 
+                match PluginInfo::get_plugins(PluginInfo::new("/Plugins", &cfg.server_url, cfg.api_key)) {
+                    Err(_) => {
+                        eprintln!("Unable to get plugin information.");
+                        std::process::exit(0);
+                    },
+                    Ok(i) => i
+                };
             if json {
-                PluginDetails::json_print(plugins);
+                PluginDetails::json_print(&plugins);
             } else {
                 PluginDetails::table_print(plugins);
             }
@@ -433,11 +521,24 @@ fn main() -> Result<(), confy::ConfyError> {
 /// Retrieve the id for the specified user.  Most API calls require the id of the user rather than the username.
 /// 
 fn get_user_id(cfg: &AppConfig, username: &String) -> String {
-    UserList::get_user_id(UserList::new("/Users", cfg.server_url.clone(), cfg.api_key.clone()), username)
+    UserList::get_user_id(UserList::new("/Users", &cfg.server_url, cfg.api_key.clone()), username)
 }
 
+fn gather_user_information(cfg: &AppConfig, username: &String, id: &str) -> UserDetails {
+    match UserList::get_user_information(UserList::new(USER_ID, &cfg.server_url, cfg.api_key.clone()), id) {
+        Err(_) => {
+            println!("Unable to get user id for {}", username);
+            std::process::exit(0);
+        },
+        Ok(ul) => ul,
+    }
+}
+
+///
+/// Helper function to standardize the call for adding a user with a password.
+/// 
 fn add_user(cfg: &AppConfig, username: String, password: String) {
-    UserAdd::create(UserAdd::new(username, password, cfg.server_url.clone(), cfg.api_key.clone()))
+    UserAdd::create(UserAdd::new(username, password, &cfg.server_url, cfg.api_key.clone()))
                 .expect("Unable to add user.");
 }
 
@@ -452,20 +553,20 @@ fn initial_config(mut cfg: AppConfig) {
     println!("[INFO] OS detected as {}.", cfg.os);
     
     print!("[INPUT] Please enter your Jellyfin URL:  ");
-    io::stdout().flush().unwrap();
+    io::stdout().flush().expect("Unable to get Jellyfin URL.");
     let mut server_url_input = String::new();
     io::stdin().read_line(&mut server_url_input)
         .expect("Could not read server url information");
     cfg.server_url = server_url_input.trim().to_owned();
     
     print!("[INPUT] Please enter your Jellyfin username:  ");
-    io::stdout().flush().unwrap();
+    io::stdout().flush().expect("Unable to get username.");
     let mut username = String::new();
     io::stdin().read_line(&mut username)
         .expect("[ERROR] Could not read Jellyfin username");
     let password = rpassword::prompt_password("Please enter your Jellyfin password: ").unwrap();
     println!("Attempting to authenticate user.");
-    cfg.api_key = UserAuth::auth_user(UserAuth::new(cfg.server_url.clone(), username.trim().to_owned(), password))
+    cfg.api_key = UserAuth::auth_user(UserAuth::new(&cfg.server_url, username.trim(), password))
         .expect("Unable to generate user auth token.  Please assure your configuration information was input correctly\n"); 
 
     cfg.status = "configured".to_owned();

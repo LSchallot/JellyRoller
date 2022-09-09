@@ -1,6 +1,6 @@
 use crate::entities::task_details::TaskDetails;
 
-use super::{ DeviceDetails, DeviceRootJson, LibraryDetails, LibraryRootJson, LogDetails, responder::*};
+use super::{ DeviceDetails, DeviceRootJson, LibraryDetails, LibraryRootJson, LogDetails, responder::{simple_get, simple_post}};
 use reqwest::{blocking::Client, StatusCode};
 use serde_json::Value;
 
@@ -14,15 +14,15 @@ pub struct ServerInfo {
 }
 
 impl ServerInfo {
-    pub fn new(endpoint: &str, server_url: String, api_key: String) -> ServerInfo {
+    pub fn new(endpoint: &str, server_url: &str, api_key: &str) -> ServerInfo {
         ServerInfo {
             server_url: format!("{}{}",server_url, endpoint),
-            api_key
+            api_key: api_key.to_owned()
         }
     }
 
     // Currently used for server-info, restart-jellyfin, shutdown-jellyfin
-    pub fn get_server_info(self) -> Result<(), reqwest::Error> {
+    pub fn get_server_info(self) -> Result<(), Box<dyn std::error::Error>> {
         let response = simple_get(self.server_url, self.api_key);
         match response.status() {
             StatusCode::OK => {
@@ -38,7 +38,7 @@ impl ServerInfo {
         Ok(())
     }
 
-    pub fn restart_or_shutdown(self) -> Result<(), reqwest::Error> {
+    pub fn restart_or_shutdown(self) {
         let response = simple_post(self.server_url, self.api_key, String::new());
         match response.status() {
             StatusCode::NO_CONTENT => {
@@ -49,15 +49,14 @@ impl ServerInfo {
                 println!("Status Code: {}", response.status());
             }
         }
-        Ok(())
     }
 
-    pub fn get_log_filenames(self) -> Result<Vec<LogDetails>, reqwest::Error> {
+    pub fn get_log_filenames(self) -> Result<Vec<LogDetails>, Box<dyn std::error::Error>> {
         let response = simple_get(self.server_url, self.api_key);
         let mut details = Vec::new();
         match response.status() {
             StatusCode::OK => {
-                let logs = response.json::<LogFileVec>().unwrap();
+                let logs = response.json::<LogFileVec>()?;
                 for log in logs {
                     details.push(LogDetails::new(log.date_created, log.date_modified, log.name, log.size/1024));
                 }
@@ -71,13 +70,13 @@ impl ServerInfo {
         Ok(details)
     }
 
-    pub fn get_devices(self) -> Result<Vec<DeviceDetails>, reqwest::Error> {
+    pub fn get_devices(self) -> Result<Vec<DeviceDetails>, Box<dyn std::error::Error>> {
         let response = simple_get(self.server_url, self.api_key);
             let mut details = Vec::new();
             match response.status() {
             StatusCode::OK => {
-                let json = response.text().unwrap();
-                let devices = serde_json::from_str::<DeviceRootJson>(&json).unwrap();
+                let json = response.text()?;
+                let devices = serde_json::from_str::<DeviceRootJson>(&json)?;
                 for device in devices.items {
                     details.push(DeviceDetails::new(device.id, device.name, device.lastusername));
                 }
@@ -91,13 +90,13 @@ impl ServerInfo {
         Ok(details)
     }
 
-    pub fn get_libraries(self) -> Result<Vec<LibraryDetails>, reqwest::Error> {
+    pub fn get_libraries(self) -> Result<Vec<LibraryDetails>, Box<dyn std::error::Error>> {
         let response = simple_get(self.server_url, self.api_key);
         let mut details = Vec::new();
         match response.status() {
             StatusCode::OK => {
-                let json = response.text().unwrap();
-                let libraries = serde_json::from_str::<LibraryRootJson>(&json).unwrap();
+                let json = response.text()?;
+                let libraries = serde_json::from_str::<LibraryRootJson>(&json)?;
                 for library in libraries {
                     details.push(LibraryDetails::new(library.name, library.collection_type, library.item_id, library.refresh_status));
                 }
@@ -110,11 +109,11 @@ impl ServerInfo {
         Ok(details)
     }
     
-    pub fn get_taskid_by_taskname(self, taskname: String) -> Result<String, reqwest::Error> {
+    pub fn get_taskid_by_taskname(self, taskname: &str) -> Result<String, Box<dyn std::error::Error>> {
         let response = simple_get(self.server_url, self.api_key);
         match response.status() {
             StatusCode::OK => {
-                let tasks = response.json::<ScheduledTasksVec>().unwrap();
+                let tasks = response.json::<ScheduledTasksVec>()?;
                 for task in tasks {
                     if task.name.to_lowercase() == taskname.to_lowercase() {
                         return Ok(task.id);
@@ -129,8 +128,8 @@ impl ServerInfo {
         Ok(String::new())
     }
 
-    pub fn execute_task_by_id(self, taskname: String, taskid: String) -> Result<(), reqwest::Error> {
-        let response = simple_post(self.server_url.replace("{taskId}", &taskid), self.api_key, String::new());
+    pub fn execute_task_by_id(self, taskname: &str, taskid: &str) {
+        let response = simple_post(self.server_url.replace("{taskId}", taskid), self.api_key, String::new());
         match response.status() {
             StatusCode::NO_CONTENT => {
                 println!("Task \"{}\" initiated.", taskname);
@@ -140,16 +139,15 @@ impl ServerInfo {
                 println!("Status Code: {}", response.status());
             }
         }
-        Ok(())
     }
     
-    pub fn get_deviceid_by_username(self, username: String) -> Result<Vec<String>, reqwest::Error> {
+    pub fn get_deviceid_by_username(self, username: &str) -> Result<Vec<String>, Box<dyn std::error::Error>> {
         let response = simple_get(self.server_url, self.api_key);
         let mut filtered = Vec::new();
         match response.status() {
             StatusCode::OK => {
-                let json = response.text().unwrap();
-                let devices = serde_json::from_str::<DeviceRootJson>(&json).unwrap();
+                let json = response.text()?;
+                let devices = serde_json::from_str::<DeviceRootJson>(&json)?;
                 for device in devices.items {
                     if device.lastusername == username {
                         filtered.push(device.id);
@@ -165,7 +163,7 @@ impl ServerInfo {
         Ok(filtered)
     }
 
-    pub fn remove_device(self, id: String) -> Result<(), reqwest::Error> {
+    pub fn remove_device(self, id: &str) -> Result<(), reqwest::Error> {
         let client = Client::new();
         let response = client
             .delete(self.server_url)
@@ -189,7 +187,7 @@ impl ServerInfo {
         let mut details = Vec::new();
         match response.status() {
             StatusCode::OK => {
-                let scheduled_tasks = response.json::<ScheduledTasksVec>().unwrap();
+                let scheduled_tasks = response.json::<ScheduledTasksVec>()?;
                 for task in scheduled_tasks {
                     details.push(TaskDetails::new(task.name, task.state, task.percent_complete, task.id));
                 }
@@ -203,7 +201,7 @@ impl ServerInfo {
         Ok(details)
     }
 
-    pub fn scan_library(self) -> Result<(), reqwest::Error> {
+    pub fn scan_library(self) {
         let response = simple_post(
             self.server_url, 
             self.api_key, 
@@ -217,8 +215,6 @@ impl ServerInfo {
                 println!("Status Code: {}", response.status());
             }
         }
-
-        Ok(())
     }
 }
 
@@ -229,7 +225,7 @@ pub struct LogFile {
 }
 
 impl LogFile {
-    pub fn new(endpoint: String, server_url: String, api_key: String, logname: String) -> LogFile {
+    pub fn new(endpoint: &str, server_url: &str, api_key: String, logname: String) -> LogFile {
         LogFile { 
             server_url: format!("{}{}",server_url, endpoint),
             api_key,
@@ -247,7 +243,7 @@ impl LogFile {
         match response.status() {
             StatusCode::OK => {
                 let body = response.text();
-                println!("{:#}", body.unwrap());
+                println!("{:#}", body?);
             } StatusCode::UNAUTHORIZED => {
                 println!("Authentication failed.  Try reconfiguring with \"jellyroller reconfigure\"");
             } _ => {

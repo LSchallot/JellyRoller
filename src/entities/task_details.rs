@@ -22,7 +22,7 @@ impl TaskDetails {
         }
     }
 
-    pub fn json_print(tasks: Vec<TaskDetails>) {
+    pub fn json_print(tasks: &[TaskDetails]) {
         println!("{}", serde_json::to_string_pretty(&tasks).unwrap());
     }
 

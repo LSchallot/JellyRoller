@@ -22,7 +22,7 @@ impl LogDetails {
         }
     }
 
-    pub fn json_print(logs: Vec<LogDetails>) {
+    pub fn json_print(logs: &[LogDetails]) {
         println!("{}", serde_json::to_string_pretty(&logs).unwrap());
     }
 
