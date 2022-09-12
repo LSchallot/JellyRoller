@@ -1,7 +1,5 @@
-use reqwest::blocking::Client;
-use reqwest::StatusCode;
-use reqwest::header::CONTENT_TYPE;
-use serde_json::json;
+use super::{ UserDetails, Policy, responder::{simple_get, simple_post}} ;
+use reqwest::{StatusCode, blocking::Client, header::CONTENT_TYPE};
 
 #[derive(Serialize, Deserialize)]
 pub struct ResetPass {
@@ -12,23 +10,20 @@ pub struct ResetPass {
 }
 
 impl ResetPass {
-    pub fn new(username: String, newpw: String, server_url: String, api_key: String) -> ResetPass{
+    pub fn new(username: &str, newpw: String, server_url: &str, api_key: &str) -> ResetPass{
         ResetPass{
-            username: username.clone(),
+            username: username.to_owned(),
             newpw,
             server_url: format!("{}/Users/{}/Password", server_url, username),
-            api_key
+            api_key: api_key.to_owned()
         }
     }
     
-    pub fn reset(self)  -> Result<(), reqwest::Error> {
-        let client = Client::new();
-        let response = client
-            .post(self.server_url.to_string())
-            .header(CONTENT_TYPE, "application/json")
-            .header("X-Emby-Token", self.api_key.to_string())
-            .body(serde_json::to_string_pretty(&self).unwrap())
-            .send()?;
+    pub fn reset(self)  -> Result<(), Box<dyn std::error::Error>> {
+        let response = simple_post(
+            self.server_url.clone(), 
+            self.api_key.clone(), 
+            serde_json::to_string_pretty(&self)?);
         match response.status() {
             StatusCode::NO_CONTENT => {
                 println!("Password updated successfully.");
@@ -52,7 +47,7 @@ pub struct UserAdd {
 }
 
 impl UserAdd {
-    pub fn new(username: String, password: String, server_url: String, api_key: String) -> UserAdd{
+    pub fn new(username: String, password: String, server_url: &str, api_key: String) -> UserAdd{
         UserAdd{
             name: username,
             password,
@@ -61,14 +56,11 @@ impl UserAdd {
         }
     }
 
-    pub fn create(self) -> Result<(), reqwest::Error> {
-        let client = Client::new();
-        let response = client
-            .post(self.server_url.to_string())
-            .header("X-Emby-Token", &self.api_key)
-            .header(CONTENT_TYPE, "application/json")
-            .body(serde_json::to_string_pretty(&self).unwrap())
-            .send()?;
+    pub fn create(self) -> Result<(), Box<dyn std::error::Error>> {
+        let response = simple_post(
+            self.server_url.clone(), 
+            self.api_key.clone(), 
+            serde_json::to_string_pretty(&self)?);
         match response.status() {
             StatusCode::OK => {
                 println!("User \"{}\" successfully created.", &self.name);
@@ -90,7 +82,7 @@ pub struct UserDel {
 }
 
 impl UserDel {
-    pub fn new(username: String, server_url: String, api_key: String) -> UserDel{
+    pub fn new(username: String, server_url: &str, api_key: String) -> UserDel{
         UserDel{
             server_url: format!("{}/Users/{}",server_url,&username),
             api_key,
@@ -107,8 +99,6 @@ impl UserDel {
             .send()?;
             match response.status() {
             StatusCode::NO_CONTENT => {
-                // let body: Value = response.json()?;
-                // println!("{:#}", body);
                 println!("User \"{}\" successfully removed.", &self.username);
             } StatusCode::UNAUTHORIZED => {
                 println!("Authentication failed.  Try reconfiguring with \"jellyroller reconfigure\"");
@@ -123,26 +113,6 @@ impl UserDel {
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct User {
-    #[serde(rename = "Name")]
-    name: String,
-    #[serde(rename = "ServerId")]
-    serverid: String,
-    #[serde(rename = "Id")]
-    id: String,
-    #[serde(rename = "Policy")]
-    policy: Policy
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct Policy {
-    #[serde(rename = "AuthenticationProviderId")]
-    auth_provider_id: String,
-    #[serde(rename = "PasswordResetProviderId")]
-    pass_reset_provider_id: String
-}
-
-#[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct UserAuthJson {
     #[serde(rename = "AccessToken")]
@@ -151,7 +121,7 @@ pub struct UserAuthJson {
     pub server_id: String,
 }
 
-pub type UserInfoVec = Vec<User>;
+pub type UserInfoVec = Vec<UserDetails>;
 
 #[derive(Serialize, Deserialize)]
 pub struct UserAuth {
@@ -161,27 +131,27 @@ pub struct UserAuth {
 }
 
 impl UserAuth {
-    pub fn new(server_url: String, username: String, password: String) -> UserAuth{
+    pub fn new(server_url: &str, username: &str, password: String) -> UserAuth{
         UserAuth{ 
             server_url: format!("{}/Users/authenticatebyname",server_url),
-            username, 
+            username: username.to_owned(), 
             pw: password
         }
     }
     
-    pub fn auth_user(self) -> Result<String, reqwest::Error> {  
+    pub fn auth_user(self) -> Result<String, Box<dyn std::error::Error>> {  
         let client = Client::new();
         let response = client
-            .post(self.server_url.to_string())
+            .post(self.server_url.clone())
             .header(CONTENT_TYPE, "application/json")
             .header("X-Emby-Authorization", "MediaBrowser Client=\"JellyRoller\", Device=\"jellyroller\", DeviceId=\"1\", Version=\"0.0.1\"")
-            .body(serde_json::to_string_pretty(&self).unwrap())
+            .body(serde_json::to_string_pretty(&self)?)
             .send()?;
         match response.status() {
             StatusCode::OK => {
-                let result = response.json::<UserAuthJson>().unwrap();
+                let result = response.json::<UserAuthJson>()?;
                 println!("User authenticated successfully.");
-                return Ok(result.access_token)
+                Ok(result.access_token)
             } _ => {
                 // Panic since the application requires an authenticated user
                 panic!("[ERROR] Unable to authenticate user.  Please assure your configuration information is correct.\n");
@@ -197,27 +167,30 @@ pub struct UserList {
 }
 
 impl UserList {
-    pub fn new(endpoint: String, server_url: String, api_key: String) -> UserList{
+    pub fn new(endpoint: &str, server_url: &str, api_key: String) -> UserList{
         UserList{
             server_url: format!("{}{}",server_url, endpoint),
             api_key
         }
     }
 
-    pub fn list_users(self) -> Result<(), reqwest::Error> {
-        let client = Client::new();
-        let response = client
-            .get(self.server_url)
-            .header("X-Emby-Token", self.api_key)
-            .send()?;
-        let users = response.json::<UserInfoVec>().unwrap();
-        println!("Current users:");
-        for user in users {
-            println!("\t{}", user.name);
+    pub fn list_users(self) -> Result<Vec<UserDetails>, Box<dyn std::error::Error>> {
+        let response = simple_get(self.server_url, self.api_key);
+        let mut users = Vec::new();
+        match response.status() {
+            StatusCode::OK => {
+                users = response.json::<UserInfoVec>()?;
+            } StatusCode::UNAUTHORIZED => {
+                println!("Authentication failed.  Try reconfiguring with \"jellyroller reconfigure\"");
+            } _ => {
+                println!("Status Code: {}", response.status());
+            }
         }
-        Ok(())
+        
+        Ok(users)
     }
 
+    // TODO: Standardize the GET request?
     pub fn get_user_id(self, username: &String) -> String {
         let client = Client::new();
         let response = client
@@ -236,51 +209,57 @@ impl UserList {
         panic!("Could not find user {}.", username);
     }
 
-    pub fn update_user_config_bool(self, id: String, config_key: String, config_value: bool, username: String, req_json_keys: Vec<String>, req_json_values: Vec<String>) -> Result<(), reqwest::Error> {
-        let body = json!({
-            &config_key:config_value, 
-            &req_json_keys[0]:&req_json_values[0],
-            &req_json_keys[1]:&req_json_values[1]
-        });
-        let client = Client::new();
-        let response = client
-            .post(self.server_url.replace("{userId}", &id))
-            .header(CONTENT_TYPE, "application/json")
-            .header("X-Emby-Authorization", "MediaBrowser Client=\"JellyRoller\", Device=\"jellyroller-cli\", DeviceId=\"1\", Version=\"0.0.1\"")
-            .header("X-Emby-Token", self.api_key)
-            .body(serde_json::to_string_pretty(&body).unwrap())
-            .send()?;
-        match response.status() {
-            StatusCode::NO_CONTENT => {
-                println!("User {} configuration value of {} successfully set to {}", username, config_key, config_value);
-            } _ => {
-                println!("Status Code: {}", response.status());
-            }
+    pub fn get_user_information(self, id: &str) -> Result<UserDetails, Box<dyn std::error::Error>> {
+        let response = simple_get(self.server_url.replace("{userId}", id), self.api_key);
+        Ok(serde_json::from_str(response.text()?.as_str())?)
+    }
+    
+    pub fn update_user_config_bool(self, user_info: &Policy, id: &str, username: &str) -> Result<(), Box<dyn std::error::Error>> {
+        let body = serde_json::to_string_pretty(user_info)?;
+        let response = simple_post(
+            self.server_url.replace("{userId}", id), 
+            self.api_key.clone(), 
+            body);
+        if response.status() == StatusCode::NO_CONTENT {
+            println!("User {} successfully updated.", username);
+        } else {
+            println!("Unable to update user policy information.");
+            println!("Status Code: {}", response.status());
+            println!("{}", response.text()?);
         }
         Ok(())
     }
 
-    pub fn get_user_providers_vec(self, id: String) -> Result<Vec<String>, reqwest::Error> {
-        let client = Client::new();
-        let response = client
-            .get(self.server_url.replace("{userId}", &id))
-            .header("X-Emby-Token", self.api_key.to_string())
-            .send()?;
-        match response.status() {
-            StatusCode::OK => {
-                let json = response.text().unwrap();
-                let providers = serde_json::from_str::<User>(&json).unwrap();
-                // Auth provider will always be at position 0 and PassReset provider will be at 1
-                let json_vec = vec![providers.policy.auth_provider_id, providers.policy.pass_reset_provider_id];
-                Ok(json_vec)
-                    
-            } StatusCode::UNAUTHORIZED => {
-                println!("Authentication failed.  Try reconfiguring with \"jellyroller reconfigure\"");
-                std::process::exit(0);
-            } _ => {
-                println!("Status Code: {}", response.status());
-                std::process::exit(0);
+    //
+    // I really hate this function but it works for now.
+    //
+    pub fn update_user_info(self, id: &str, info: &UserDetails) -> Result<(), Box<dyn std::error::Error>> {
+        let body = serde_json::to_string_pretty(&info)?;
+        // So we have to update the Policy and the user info separate even though they are the same JSON object :/
+        let policy_url = format!("{}/Policy",self.server_url);
+        let user_response = simple_post(self.server_url.replace("{userId}", id), self.api_key.clone(), body);
+        if user_response.status() == StatusCode::NO_CONTENT {} else {
+            println!("Unable to update user information.");
+            println!("Status Code: {}", user_response.status());
+            match user_response.text() {
+                Ok(t) => println!("{}", t),
+                Err(_) => eprintln!("Could not get response text from user information update.")
+            }            
+        }
+        
+        let response = simple_post(policy_url.replace("{userId}", id), self.api_key, serde_json::to_string_pretty(&info.policy)?);
+        if response.status() == StatusCode::NO_CONTENT {
+            println!("{} successfully updated.", info.name);
+        } else {
+            println!("Unable to update user information.");
+            println!("Status Code: {}", response.status());
+            match response.text() {
+                Ok(t) => println!("{}", t),
+                Err(_) => eprintln!("Could not get response text from user policy update.")
             }
         }
+
+        Ok(())
+    
     }
 }
