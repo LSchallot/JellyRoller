@@ -17,6 +17,7 @@ use entities::task_details::TaskDetails;
 use entities::log_details::LogDetails;
 use entities::library_details::{LibraryDetails, LibraryRootJson};
 use entities::plugin_details::{PluginDetails, PluginRootJson};
+use entities::activity_details::{ActivityDetails};
 mod utils;
 use utils::output_writer::export_data;
 
@@ -65,8 +66,8 @@ struct Cli {
     command: Commands,
 }
 
-#[derive(Debug, Subcommand)]
-enum Commands {
+    #[derive(Debug, Subcommand)]
+    enum Commands {
     /// Creates a new user
     #[clap(arg_required_else_help = true)]
     AddUser {
@@ -193,6 +194,16 @@ enum Commands {
         /// File that contains the user JSON information.
         #[clap(required = true, value_parser)]
         inputfile: String
+    },
+    /// Creates a report of either activity or available media items
+    CreateReport {
+        /// Type of report (activity or media)
+        #[clap(required = true, arg_enum)]
+        report_type: ReportType,
+        /// Total number of records to return (defaults to 100)
+        #[clap(required = false, short, long, default_value="100")]
+        limit: String
+        
     }
 }
 
@@ -200,6 +211,12 @@ enum Commands {
 enum Detail {
     User,
     Server
+}
+
+#[derive(ValueEnum, Clone, Debug, PartialEq)]
+enum ReportType {
+    Activity,
+    Media
 }
 
 fn main() -> Result<(), confy::ConfyError> {
@@ -510,8 +527,25 @@ fn main() -> Result<(), confy::ConfyError> {
             } else {
                 PluginDetails::table_print(plugins);
             }
+        },
+        Commands::CreateReport { report_type, limit} => {
+            match report_type {
+                ReportType::Activity => {
+                    let activities: ActivityDetails =
+                        match ServerInfo::get_activity(ServerInfo::new("/System/ActivityLog/Entries", &cfg.server_url, &cfg.api_key), &limit) {
+                            Err(e) => {
+                                eprintln!("Unable to gather activity log entries, {e}");
+                                std::process::exit(0);
+                            },
+                            Ok(i) => i
+                        };
+                    ActivityDetails::table_print(activities);
+                },
+                ReportType::Media => {
+                    println!("Media");
+                }
+            }
         }
-        
     }
     
     Ok(())
