@@ -110,7 +110,6 @@ impl ServerInfo {
     }
 
     pub fn get_activity(self, limit: &str) -> Result<ActivityDetails, Box<dyn std::error::Error>> {
-        // First we need the total number of records
         let query = vec![("limit", limit)];
         let response = simple_get(self.server_url, self.api_key, query);
         match response.status() {

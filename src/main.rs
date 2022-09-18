@@ -202,7 +202,10 @@ struct Cli {
         report_type: ReportType,
         /// Total number of records to return (defaults to 100)
         #[clap(required = false, short, long, default_value="100")]
-        limit: String
+        limit: String,
+        /// Output filename
+        #[clap(required = false, short, long, default_value="")]
+        filename: String
         
     }
 }
@@ -528,9 +531,10 @@ fn main() -> Result<(), confy::ConfyError> {
                 PluginDetails::table_print(plugins);
             }
         },
-        Commands::CreateReport { report_type, limit} => {
+        Commands::CreateReport { report_type, limit, filename} => {
             match report_type {
                 ReportType::Activity => {
+                    println!("Gathering Activity information.....");
                     let activities: ActivityDetails =
                         match ServerInfo::get_activity(ServerInfo::new("/System/ActivityLog/Entries", &cfg.server_url, &cfg.api_key), &limit) {
                             Err(e) => {
@@ -539,7 +543,15 @@ fn main() -> Result<(), confy::ConfyError> {
                             },
                             Ok(i) => i
                         };
-                    ActivityDetails::table_print(activities);
+                    if filename != "" {
+                        println!("Exporting Activity information to {}.....", &filename);
+                        let csv = ActivityDetails::print_as_csv(activities.clone());
+                        export_data(&csv, filename);
+                        println!("Export complete.");
+                    }
+                    else {
+                        ActivityDetails::table_print(activities);
+                    }
                 },
                 ReportType::Media => {
                     println!("Media");

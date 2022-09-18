@@ -3,7 +3,7 @@ use serde_derive::Serialize;
 
 use comfy_table::{ Table, ContentArrangement };
 
-#[derive(Default, Serialize, Deserialize)]
+#[derive(Default, Clone, Serialize, Deserialize)]
 pub struct ActivityDetails {
     #[serde(rename = "Items")]
     pub items: Vec<Item>,
@@ -13,7 +13,7 @@ pub struct ActivityDetails {
     pub start_index: i64,
 }
 
-#[derive(Default, Serialize, Deserialize)]
+#[derive(Default, Clone, Serialize, Deserialize)]
 pub struct Item {
     #[serde(rename = "Id")]
     pub id: i64,
@@ -55,5 +55,23 @@ impl ActivityDetails {
             ]);
         }
         println!("{table}");
+    }
+
+    pub fn print_as_csv(activities: ActivityDetails) -> String{
+        // first print the headers
+        let mut data: String = "Date,User,Type,Severity,Name,ShortOverview,Overview\n".to_owned();
+        for activity in activities.items {
+            let piece = format!("{},{},{},{},{},{},{}\n",
+                &activity.date,
+                &activity.id.to_string(),
+                &activity.type_field,
+                &activity.severity,
+                &activity.name,
+                &activity.short_overview,
+                &activity.overview
+            );
+            data.push_str(&piece);
+        }
+        data
     }
 }
