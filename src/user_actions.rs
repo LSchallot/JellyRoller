@@ -214,6 +214,11 @@ impl UserList {
         Ok(serde_json::from_str(response.text()?.as_str())?)
     }
     
+    pub fn get_current_user_information(self) -> Result<UserDetails, Box<dyn std::error::Error>> {
+        let response = simple_get(self.server_url, self.api_key, Vec::new());
+        Ok(response.json::<UserDetails>()?)
+    }
+
     pub fn update_user_config_bool(self, user_info: &Policy, id: &str, username: &str) -> Result<(), Box<dyn std::error::Error>> {
         let body = serde_json::to_string_pretty(user_info)?;
         let response = simple_post(

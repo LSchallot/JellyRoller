@@ -1,6 +1,6 @@
 use crate::entities::{task_details::TaskDetails, activity_details::ActivityDetails};
 
-use super::{ DeviceDetails, DeviceRootJson, LibraryDetails, LibraryRootJson, LogDetails, responder::{ simple_get, simple_post } };
+use super::{ DeviceDetails, DeviceRootJson, LibraryDetails, LibraryRootJson, LogDetails, MediaDetails, responder::{ simple_get, simple_post } };
 use reqwest::{blocking::Client, StatusCode};
 use serde_json::Value;
 
@@ -109,6 +109,25 @@ impl ServerInfo {
         Ok(details)
     }
 
+    pub fn export_library(self, user_id: &str) -> Result<MediaDetails, Box<dyn std::error::Error>> {
+        let query = 
+            vec![
+                ("SortBy", "SortName,ProductionYear"),
+                ("IncludeItemTypes", "Movie"),
+                ("Recursive", "true")
+            ];
+        let response = simple_get(self.server_url.replace("{userId}", user_id), self.api_key, query);
+        match response.status() {
+            StatusCode::OK => {
+                let details = response.json::<MediaDetails>()?;
+                Ok(details)
+            } _ => {
+                println!("Status Code: {}", response.status());
+                std::process::exit(0)
+            }
+        }
+    }
+
     pub fn get_activity(self, limit: &str) -> Result<ActivityDetails, Box<dyn std::error::Error>> {
         let query = vec![("limit", limit)];
         let response = simple_get(self.server_url, self.api_key, query);
@@ -129,6 +148,7 @@ impl ServerInfo {
             StatusCode::OK => {
                 let tasks = response.json::<ScheduledTasksVec>()?;
                 for task in tasks {
+                    
                     if task.name.to_lowercase() == taskname.to_lowercase() {
                         return Ok(task.id);
                     }

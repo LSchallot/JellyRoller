@@ -18,6 +18,7 @@ use entities::log_details::LogDetails;
 use entities::library_details::{LibraryDetails, LibraryRootJson};
 use entities::plugin_details::{PluginDetails, PluginRootJson};
 use entities::activity_details::{ActivityDetails};
+use entities::media_details::{MediaDetails};
 mod utils;
 use utils::output_writer::export_data;
 
@@ -413,7 +414,6 @@ fn main() -> Result<(), confy::ConfyError> {
             ServerInfo::get_server_info(ServerInfo::new("/System/Info", &cfg.server_url, &cfg.api_key))
                 .expect("Unable to gather server information.");
         },
-
         Commands::ListLogs { json } => {
             let logs = 
                 match ServerInfo::get_log_filenames(ServerInfo::new("/System/Logs", &cfg.server_url, &cfg.api_key)) {
@@ -554,7 +554,23 @@ fn main() -> Result<(), confy::ConfyError> {
                     }
                 },
                 ReportType::Media => {
-                    println!("Media");
+                    let user_id: String = 
+                        match UserList::get_current_user_information(UserList::new("/Users/Me", &cfg.server_url, cfg.api_key.to_owned())) {
+                            Err(e) => {
+                                eprintln!("Unable to gather information about current user, {e}");
+                                std::process::exit(0);
+                            },
+                            Ok(i) => i.id
+                        };
+                    let media: MediaDetails = 
+                        match ServerInfo::export_library(ServerInfo::new("/Users/{userId}/Items", &cfg.server_url, &cfg.api_key), &user_id) {
+                            Err(e) => {
+                                eprintln!("Unable to export library, {e}");
+                                std::process::exit(0);
+                            },
+                            Ok(i) => i
+                        };
+                    MediaDetails::table_print(media);
                 }
             }
         }
