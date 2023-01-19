@@ -114,7 +114,8 @@ impl ServerInfo {
             vec![
                 ("SortBy", "SortName,ProductionYear"),
                 ("IncludeItemTypes", "Movie"),
-                ("Recursive", "true")
+                ("Recursive", "true"),
+                ("fields", "Genres,DateCreated,Width,Height,Path")
             ];
         let response = simple_get(self.server_url.replace("{userId}", user_id), self.api_key, query);
         match response.status() {
