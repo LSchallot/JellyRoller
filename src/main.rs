@@ -548,8 +548,7 @@ fn main() -> Result<(), confy::ConfyError> {
                         let csv = ActivityDetails::print_as_csv(activities.clone());
                         export_data(&csv, filename);
                         println!("Export complete.");
-                    }
-                    else {
+                    } else {
                         ActivityDetails::table_print(activities);
                     }
                 },
@@ -562,7 +561,7 @@ fn main() -> Result<(), confy::ConfyError> {
                             },
                             Ok(i) => i.id
                         };
-                    let movie: MovieDetails = 
+                    let movies: MovieDetails = 
                         match ServerInfo::export_library(ServerInfo::new("/Users/{userId}/Items", &cfg.server_url, &cfg.api_key), &user_id) {
                             Err(e) => {
                                 eprintln!("Unable to export library, {e}");
@@ -570,7 +569,14 @@ fn main() -> Result<(), confy::ConfyError> {
                             },
                             Ok(i) => i
                         };
-                    MovieDetails::table_print(movie);
+                    if filename != "" {
+                        println!("Exporting Movie information to {}.....", &filename);
+                        let csv = MovieDetails::print_as_csv(movies.clone());
+                        export_data(&csv, filename);
+                        println!("Export complete.");
+                    } else {
+                        MovieDetails::table_print(movies);
+                    }
                 }
             }
         }
