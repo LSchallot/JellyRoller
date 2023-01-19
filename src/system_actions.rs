@@ -1,6 +1,6 @@
 use crate::entities::{task_details::TaskDetails, activity_details::ActivityDetails};
 
-use super::{ DeviceDetails, DeviceRootJson, LibraryDetails, LibraryRootJson, LogDetails, MediaDetails, responder::{ simple_get, simple_post } };
+use super::{ DeviceDetails, DeviceRootJson, LibraryDetails, LibraryRootJson, LogDetails, MovieDetails, responder::{ simple_get, simple_post } };
 use reqwest::{blocking::Client, StatusCode};
 use serde_json::Value;
 
@@ -109,7 +109,7 @@ impl ServerInfo {
         Ok(details)
     }
 
-    pub fn export_library(self, user_id: &str) -> Result<MediaDetails, Box<dyn std::error::Error>> {
+    pub fn export_library(self, user_id: &str) -> Result<MovieDetails, Box<dyn std::error::Error>> {
         let query = 
             vec![
                 ("SortBy", "SortName,ProductionYear"),
@@ -120,7 +120,7 @@ impl ServerInfo {
         let response = simple_get(self.server_url.replace("{userId}", user_id), self.api_key, query);
         match response.status() {
             StatusCode::OK => {
-                let details = response.json::<MediaDetails>()?;
+                let details = response.json::<MovieDetails>()?;
                 Ok(details)
             } _ => {
                 println!("Status Code: {}", response.status());

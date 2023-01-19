@@ -18,7 +18,7 @@ use entities::log_details::LogDetails;
 use entities::library_details::{LibraryDetails, LibraryRootJson};
 use entities::plugin_details::{PluginDetails, PluginRootJson};
 use entities::activity_details::{ActivityDetails};
-use entities::media_details::{MediaDetails};
+use entities::movie_details::{MovieDetails};
 mod utils;
 use utils::output_writer::export_data;
 
@@ -196,9 +196,9 @@ struct Cli {
         #[clap(required = true, value_parser)]
         inputfile: String
     },
-    /// Creates a report of either activity or available media items
+    /// Creates a report of either activity or available movie items
     CreateReport {
-        /// Type of report (activity or media)
+        /// Type of report (activity or movie)
         #[clap(required = true, arg_enum)]
         report_type: ReportType,
         /// Total number of records to return (defaults to 100)
@@ -220,7 +220,7 @@ enum Detail {
 #[derive(ValueEnum, Clone, Debug, PartialEq)]
 enum ReportType {
     Activity,
-    Media
+    Movie
 }
 
 fn main() -> Result<(), confy::ConfyError> {
@@ -553,7 +553,7 @@ fn main() -> Result<(), confy::ConfyError> {
                         ActivityDetails::table_print(activities);
                     }
                 },
-                ReportType::Media => {
+                ReportType::Movie => {
                     let user_id: String = 
                         match UserList::get_current_user_information(UserList::new("/Users/Me", &cfg.server_url, cfg.api_key.to_owned())) {
                             Err(e) => {
@@ -562,7 +562,7 @@ fn main() -> Result<(), confy::ConfyError> {
                             },
                             Ok(i) => i.id
                         };
-                    let media: MediaDetails = 
+                    let movie: MovieDetails = 
                         match ServerInfo::export_library(ServerInfo::new("/Users/{userId}/Items", &cfg.server_url, &cfg.api_key), &user_id) {
                             Err(e) => {
                                 eprintln!("Unable to export library, {e}");
@@ -570,7 +570,7 @@ fn main() -> Result<(), confy::ConfyError> {
                             },
                             Ok(i) => i
                         };
-                    MediaDetails::table_print(media);
+                    MovieDetails::table_print(movie);
                 }
             }
         }
