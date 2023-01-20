@@ -543,9 +543,9 @@ fn main() -> Result<(), confy::ConfyError> {
                             },
                             Ok(i) => i
                         };
-                    if filename != "" {
+                    if !filename.is_empty() {
                         println!("Exporting Activity information to {}.....", &filename);
-                        let csv = ActivityDetails::print_as_csv(activities.clone());
+                        let csv = ActivityDetails::print_as_csv(activities);
                         export_data(&csv, filename);
                         println!("Export complete.");
                     } else {
@@ -569,9 +569,9 @@ fn main() -> Result<(), confy::ConfyError> {
                             },
                             Ok(i) => i
                         };
-                    if filename != "" {
+                    if !filename.is_empty() {
                         println!("Exporting Movie information to {}.....", &filename);
-                        let csv = MovieDetails::print_as_csv(movies.clone());
+                        let csv = MovieDetails::print_as_csv(movies);
                         export_data(&csv, filename);
                         println!("Export complete.");
                     } else {

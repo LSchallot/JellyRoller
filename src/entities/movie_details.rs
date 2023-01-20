@@ -7,10 +7,6 @@ use comfy_table::{ Table, ContentArrangement };
 pub struct MovieDetails {
     #[serde(rename = "Items")]
     pub items: Vec<Item>,
-    #[serde(rename = "TotalRecordCount")]
-    pub total_record_count: i64,
-    #[serde(rename = "StartIndex")]
-    pub start_index: i64,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -50,20 +46,16 @@ impl MovieDetails {
             .set_header(vec!["Name", "Date Added", "Premiere Date", "Release Year", "Genres", "Parental Rating", "Community Rating", 
                 "Runtime (in minutes)", "Resolution", "Subtitles", "Path "]);
         for movie in movies.items {
-            let string = &movie.genres.iter().map(|x| x.to_string() + ";").collect::<String>();
-            let string = string.trim_end_matches(",");
-            let ticks = &movie.run_time_ticks / 10000000 / 60;
-            let resolution = format!("{} * {}", &movie.width.to_string(), &movie.height.to_string());
             table.add_row(vec![
                 &movie.name,
                 &movie.date_created,
                 &movie.premiere_date,
                 &movie.production_year.to_string(),
-                &string.to_string(),
+                &Self::genres_to_string(&movie),
                 &movie.official_rating,
                 &movie.community_rating.to_string(),
-                &ticks.to_string(),
-                &resolution,
+                &Self::ticks_to_minutes(&movie.run_time_ticks).to_string(),
+                &Self::format_resolution(movie.width.to_string(), movie.height.to_string()),
                 &movie.has_subtitles.to_string(),
                 &movie.path
             ]);
@@ -71,29 +63,37 @@ impl MovieDetails {
         println!("{table}");
     }
 
-    pub fn print_as_csv(movies: MovieDetails) -> String{
-        // first print the headers
+    pub fn print_as_csv(movies: MovieDetails) -> String {
         let mut data: String = "Name,Date Added,Premiere Date,Release Year,Genres,Parental Rating,Community Rating,Runtime (in minutes),Resolution,Subtitles,Path\n".to_owned();
         for movie in movies.items {
-            let string = &movie.genres.iter().map(|x| x.to_string() + ";").collect::<String>();
-            let string = string.trim_end_matches(",");
-            let ticks = &movie.run_time_ticks / 10000000 / 60;
-            let resolution = format!("{} * {}", &movie.width.to_string(), &movie.height.to_string());
             let piece = format!("{},{},{},{},{},{},{},{},{},{},{}\n",
-                &movie.name,
-                &movie.date_created,
-                &movie.premiere_date,
-                &movie.production_year.to_string(),
-                &string.to_string(),
-                &movie.official_rating,
-                &movie.community_rating.to_string(),
-                &ticks.to_string(),
-                &resolution,
-                &movie.has_subtitles.to_string(),
-                &movie.path
+                movie.name,
+                movie.date_created,
+                movie.premiere_date,
+                movie.production_year,
+                Self::genres_to_string(&movie),
+                movie.official_rating,
+                movie.community_rating,
+                Self::ticks_to_minutes(&movie.run_time_ticks),
+                Self::format_resolution(movie.width.to_string(), movie.height.to_string()),
+                movie.has_subtitles,
+                movie.path
             );
             data.push_str(&piece);
         }
         data
+    }
+
+    fn ticks_to_minutes(ticks: &i64) -> i64 {
+        ticks / 10000000 / 60
+    }
+
+    fn genres_to_string(movie: &Item) -> String {
+        let string = &movie.genres.iter().map(|x| x.to_string() + ";").collect::<String>();
+        return string.trim_end_matches(',').to_string();
+    }
+
+    fn format_resolution(width: String, height: String) -> String {
+        format!("{} * {}", width, height)
     }
 }
