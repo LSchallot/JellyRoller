@@ -1,6 +1,6 @@
-use crate::entities::task_details::TaskDetails;
+use crate::entities::{task_details::TaskDetails, activity_details::ActivityDetails};
 
-use super::{ DeviceDetails, DeviceRootJson, LibraryDetails, LibraryRootJson, LogDetails, responder::{simple_get, simple_post}};
+use super::{ DeviceDetails, DeviceRootJson, LibraryDetails, LibraryRootJson, LogDetails, MovieDetails, responder::{ simple_get, simple_post } };
 use reqwest::{blocking::Client, StatusCode};
 use serde_json::Value;
 
@@ -23,7 +23,7 @@ impl ServerInfo {
 
     // Currently used for server-info, restart-jellyfin, shutdown-jellyfin
     pub fn get_server_info(self) -> Result<(), Box<dyn std::error::Error>> {
-        let response = simple_get(self.server_url, self.api_key);
+        let response = simple_get(self.server_url, self.api_key, Vec::new());
         match response.status() {
             StatusCode::OK => {
                 let body: Value = response.json()?;
@@ -52,7 +52,7 @@ impl ServerInfo {
     }
 
     pub fn get_log_filenames(self) -> Result<Vec<LogDetails>, Box<dyn std::error::Error>> {
-        let response = simple_get(self.server_url, self.api_key);
+        let response = simple_get(self.server_url, self.api_key, Vec::new());
         let mut details = Vec::new();
         match response.status() {
             StatusCode::OK => {
@@ -71,7 +71,7 @@ impl ServerInfo {
     }
 
     pub fn get_devices(self) -> Result<Vec<DeviceDetails>, Box<dyn std::error::Error>> {
-        let response = simple_get(self.server_url, self.api_key);
+        let response = simple_get(self.server_url, self.api_key, Vec::new());
             let mut details = Vec::new();
             match response.status() {
             StatusCode::OK => {
@@ -91,7 +91,7 @@ impl ServerInfo {
     }
 
     pub fn get_libraries(self) -> Result<Vec<LibraryDetails>, Box<dyn std::error::Error>> {
-        let response = simple_get(self.server_url, self.api_key);
+        let response = simple_get(self.server_url, self.api_key, Vec::new());
         let mut details = Vec::new();
         match response.status() {
             StatusCode::OK => {
@@ -108,13 +108,48 @@ impl ServerInfo {
         }
         Ok(details)
     }
+
+    pub fn export_library(self, user_id: &str) -> Result<MovieDetails, Box<dyn std::error::Error>> {
+        let query = 
+            vec![
+                ("SortBy", "SortName,ProductionYear"),
+                ("IncludeItemTypes", "Movie"),
+                ("Recursive", "true"),
+                ("fields", "Genres,DateCreated,Width,Height,Path")
+            ];
+        let response = simple_get(self.server_url.replace("{userId}", user_id), self.api_key, query);
+        match response.status() {
+            StatusCode::OK => {
+                let details = response.json::<MovieDetails>()?;
+                Ok(details)
+            } _ => {
+                println!("Status Code: {}", response.status());
+                std::process::exit(0)
+            }
+        }
+    }
+
+    pub fn get_activity(self, limit: &str) -> Result<ActivityDetails, Box<dyn std::error::Error>> {
+        let query = vec![("limit", limit)];
+        let response = simple_get(self.server_url, self.api_key, query);
+        match response.status() {
+            StatusCode::OK => {
+                let activities = response.json::<ActivityDetails>()?;
+                Ok(activities)
+            } _ => {
+                println!("Status Code: {}", response.status());
+                std::process::exit(0);
+            }
+        }
+    }
     
     pub fn get_taskid_by_taskname(self, taskname: &str) -> Result<String, Box<dyn std::error::Error>> {
-        let response = simple_get(self.server_url, self.api_key);
+        let response = simple_get(self.server_url, self.api_key, Vec::new());
         match response.status() {
             StatusCode::OK => {
                 let tasks = response.json::<ScheduledTasksVec>()?;
                 for task in tasks {
+                    
                     if task.name.to_lowercase() == taskname.to_lowercase() {
                         return Ok(task.id);
                     }
@@ -142,7 +177,7 @@ impl ServerInfo {
     }
     
     pub fn get_deviceid_by_username(self, username: &str) -> Result<Vec<String>, Box<dyn std::error::Error>> {
-        let response = simple_get(self.server_url, self.api_key);
+        let response = simple_get(self.server_url, self.api_key, Vec::new());
         let mut filtered = Vec::new();
         match response.status() {
             StatusCode::OK => {
@@ -183,7 +218,7 @@ impl ServerInfo {
     }
 
     pub fn get_scheduled_tasks(self) -> Result<Vec<TaskDetails>, reqwest::Error> {
-        let response = simple_get(self.server_url, self.api_key);
+        let response = simple_get(self.server_url, self.api_key, Vec::new());
         let mut details = Vec::new();
         match response.status() {
             StatusCode::OK => {

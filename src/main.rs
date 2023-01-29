@@ -17,6 +17,8 @@ use entities::task_details::TaskDetails;
 use entities::log_details::LogDetails;
 use entities::library_details::{LibraryDetails, LibraryRootJson};
 use entities::plugin_details::{PluginDetails, PluginRootJson};
+use entities::activity_details::{ActivityDetails};
+use entities::movie_details::{MovieDetails};
 mod utils;
 use utils::output_writer::export_data;
 
@@ -65,8 +67,8 @@ struct Cli {
     command: Commands,
 }
 
-#[derive(Debug, Subcommand)]
-enum Commands {
+    #[derive(Debug, Subcommand)]
+    enum Commands {
     /// Creates a new user
     #[clap(arg_required_else_help = true)]
     AddUser {
@@ -193,6 +195,19 @@ enum Commands {
         /// File that contains the user JSON information.
         #[clap(required = true, value_parser)]
         inputfile: String
+    },
+    /// Creates a report of either activity or available movie items
+    CreateReport {
+        /// Type of report (activity or movie)
+        #[clap(required = true, arg_enum)]
+        report_type: ReportType,
+        /// Total number of records to return (defaults to 100)
+        #[clap(required = false, short, long, default_value="100")]
+        limit: String,
+        /// Output filename
+        #[clap(required = false, short, long, default_value="")]
+        filename: String
+        
     }
 }
 
@@ -200,6 +215,12 @@ enum Commands {
 enum Detail {
     User,
     Server
+}
+
+#[derive(ValueEnum, Clone, Debug, PartialEq)]
+enum ReportType {
+    Activity,
+    Movie
 }
 
 fn main() -> Result<(), confy::ConfyError> {
@@ -393,7 +414,6 @@ fn main() -> Result<(), confy::ConfyError> {
             ServerInfo::get_server_info(ServerInfo::new("/System/Info", &cfg.server_url, &cfg.api_key))
                 .expect("Unable to gather server information.");
         },
-
         Commands::ListLogs { json } => {
             let logs = 
                 match ServerInfo::get_log_filenames(ServerInfo::new("/System/Logs", &cfg.server_url, &cfg.api_key)) {
@@ -510,8 +530,56 @@ fn main() -> Result<(), confy::ConfyError> {
             } else {
                 PluginDetails::table_print(plugins);
             }
+        },
+        Commands::CreateReport { report_type, limit, filename} => {
+            match report_type {
+                ReportType::Activity => {
+                    println!("Gathering Activity information.....");
+                    let activities: ActivityDetails =
+                        match ServerInfo::get_activity(ServerInfo::new("/System/ActivityLog/Entries", &cfg.server_url, &cfg.api_key), &limit) {
+                            Err(e) => {
+                                eprintln!("Unable to gather activity log entries, {e}");
+                                std::process::exit(0);
+                            },
+                            Ok(i) => i
+                        };
+                    if !filename.is_empty() {
+                        println!("Exporting Activity information to {}.....", &filename);
+                        let csv = ActivityDetails::print_as_csv(activities);
+                        export_data(&csv, filename);
+                        println!("Export complete.");
+                    } else {
+                        ActivityDetails::table_print(activities);
+                    }
+                },
+                ReportType::Movie => {
+                    let user_id: String = 
+                        match UserList::get_current_user_information(UserList::new("/Users/Me", &cfg.server_url, cfg.api_key.to_owned())) {
+                            Err(e) => {
+                                eprintln!("Unable to gather information about current user, {e}");
+                                std::process::exit(0);
+                            },
+                            Ok(i) => i.id
+                        };
+                    let movies: MovieDetails = 
+                        match ServerInfo::export_library(ServerInfo::new("/Users/{userId}/Items", &cfg.server_url, &cfg.api_key), &user_id) {
+                            Err(e) => {
+                                eprintln!("Unable to export library, {e}");
+                                std::process::exit(0);
+                            },
+                            Ok(i) => i
+                        };
+                    if !filename.is_empty() {
+                        println!("Exporting Movie information to {}.....", &filename);
+                        let csv = MovieDetails::print_as_csv(movies);
+                        export_data(&csv, filename);
+                        println!("Export complete.");
+                    } else {
+                        MovieDetails::table_print(movies);
+                    }
+                }
+            }
         }
-        
     }
     
     Ok(())
