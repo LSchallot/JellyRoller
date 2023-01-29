@@ -1,6 +1,6 @@
 # JellyRoller - The CLI Jellyfin Controller Utility for Linux and Windows
 
-JellyRoller is an open source CLI Jellyfin Controller written in Rust that works on Windows and Linux.  It's primary purpose is to allow administration of a Jellyfin application from the command line.
+JellyRoller is an open source CLI Jellyfin Controller written in Rust that works on Windows and Linux.  Its primary purpose is to allow administration of a Jellyfin application from the command line.
 
 ## How it works
 Currently, JellyRoller authenticates as a user (admin rights required) and stores the authentication token within its configuration, similar to how an API key would be stored.  Due to some issues with API keys in Jellyfin this is the only supported method of authentication.  Once authenticated, JellyRoller uses the Jellyfin API to manage the server.
@@ -55,4 +55,4 @@ cargo build
 ### Downloading Release
 See Releases for binaries.  I can currently supply builds for x86_64 Windows and x86_64 Linux.  Please open an issue if you would like to request an additional format.
 ## Roadmap
-I will be organizing ideas into issues and releases in the coming days.  I am a firm believer in "dogfooding" so the commands I felt were needed (ones I will most often use) for an initial release are in place.  Please feel free to open feature requests via an issue or contacting me in the JellyRoller Matrix room (https://matrix.to/#/#jellyroller:matrix.org).  I am also freely open to coding suggestions.
+Please open issues for feature requests or enhancements.
