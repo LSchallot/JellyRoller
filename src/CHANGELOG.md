@@ -1,7 +1,17 @@
 # Change Log
 All notable changes to this project will be documented in this file.
  
-## [0.2.0] - Work-In-Progress
+## [0.2.1] - In progress
+
+### Added
+- New commands added
+    + Export activity
+    + Export Movies
+
+### Fixed
+- Dependency updates
+
+## [0.2.0] - 2022-09-12
  
 ### Added
 - Project repository structure corrections

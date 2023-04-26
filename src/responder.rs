@@ -1,10 +1,11 @@
 use reqwest::{blocking::Client, blocking::Response, header::CONTENT_TYPE};
 
-pub fn simple_get(server_url: String, api_key: String) -> Response {
+pub fn simple_get(server_url: String, api_key: String, query: Vec<(&str, &str)>) -> Response {
     let client = Client::new();
     let response = client
         .get(server_url)
         .header("X-Emby-Token", api_key)
+        .query(&query)
         .send();
     if let Ok(resp) = response { resp } else {
         println!("Post response error.");

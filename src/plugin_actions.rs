@@ -16,7 +16,7 @@ impl PluginInfo {
     }
 
     pub fn get_plugins(self) -> Result<Vec<PluginDetails>, Box<dyn std::error::Error>> {
-        let response = simple_get(self.server_url, self.api_key);
+        let response = simple_get(self.server_url, self.api_key, Vec::new());
         match response.status() {
             StatusCode::OK => {
                 let json = response.text()?;
