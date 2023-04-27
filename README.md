@@ -1,14 +1,16 @@
 # JellyRoller - The CLI Jellyfin Controller Utility for Linux and Windows
 
-JellyRoller is an open source CLI Jellyfin Controller written in Rust that works on Windows and Linux.  Its primary purpose is to allow administration of a Jellyfin application from the command line.
+JellyRoller is an open source CLI Jellyfin Controller written in Rust that works on Windows and Linux. Its primary purpose is to allow administration of a Jellyfin application from the command line.
 
 ## How it works
-Currently, JellyRoller authenticates as a user (admin rights required) and stores the authentication token within its configuration, similar to how an API key would be stored.  Due to some issues with API keys in Jellyfin this is the only supported method of authentication.  Once authenticated, JellyRoller uses the Jellyfin API to manage the server.
+
+Currently, JellyRoller authenticates as a user (admin rights required) and stores the authentication token within its configuration, similar to how an API key would be stored. Due to some issues with API keys in Jellyfin this is the only supported method of authentication. Once authenticated, JellyRoller uses the Jellyfin API to manage the server.
 
 ## Usage Information
+
 ```
-jellyroller 
-A CLI controller for managing Jellyfin  
+jellyroller
+A CLI controller for managing Jellyfin
 
 USAGE:
     jellyroller <SUBCOMMAND>
@@ -44,15 +46,32 @@ SUBCOMMANDS:
 ```
 
 ## Installation
-**Note:**  All installation instructions assume the end-user can handle adding the application to their user's PATH.
+
+**Note:** All installation instructions assume the end-user can handle adding the application to their user's PATH.
+
 ### Building From Source
-Currently built with rustc 1.63.0.  If building on a Linux machine, you may need to install openssl-devel.
+
+Currently built with rustc 1.68.0. If building on a Linux machine, you may need to install openssl-devel.
+
 ```
 git clone <git location>
 cd jellyroller
 cargo build
 ```
+
+### Initial Configuration
+
+When running JellyRoller for the first time, you will be prompted to configure against your Jellyfin instance. You will be prompted for various items which are described below.
+| Prompt | Description |
+| ------------- | ------------- |
+| Please enter your Jellyfin URL: | The URL to your Jellyfin instance. Depending on your setup, you may need to provide the port. Examples include http://myjellyfin.lab or http://localhost:8096. |
+| Please enter your Jellyfin username: | Username with admin rights that JellyRoller will use to execute commands. |
+| Please enter your Jellyfin password: | Password associated with the username being used. |
+
 ### Downloading Release
-See Releases for binaries.  I can currently supply builds for x86_64 Windows and x86_64 Linux.  Please open an issue if you would like to request an additional format.
+
+See Releases for binaries. I can currently supply builds for x86_64 Windows and x86_64 Linux. Please open an issue if you would like to request an additional format.
+
 ## Roadmap
+
 Please open issues for feature requests or enhancements.

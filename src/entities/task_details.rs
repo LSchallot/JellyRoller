@@ -6,14 +6,15 @@ pub struct TaskDetails {
     pub name: String,
     #[serde(rename = "State")]
     pub state: String,
-    #[serde(rename = "CurrentProgressPercentage")]
-    pub percent_complete: Option<String>,
+    #[serde(rename = "CurrentProgressPercentage", default)]
+    //pub percent_complete: Option<String>,
+    pub percent_complete: f32,
     #[serde(rename = "Id")]
     pub id: String
 }
 
 impl TaskDetails {
-    pub fn new(name: String, state: String, percent_complete: Option<String>, id: String) -> TaskDetails {
+    pub fn new(name: String, state: String, percent_complete: f32, id: String) -> TaskDetails {
         TaskDetails{
             name,
             state,
@@ -33,7 +34,12 @@ impl TaskDetails {
             .set_width(120)
             .set_header(vec!["Task Name", "State", "% Complete", "Id"]);
         for task in tasks {
-            table.add_row(vec![task.name, task.state, task.percent_complete.unwrap_or_else(|| "".to_owned()), task.id]);
+            let mut per_comp: String = "".to_string();
+            if task.percent_complete > 0.0 {
+                per_comp = task.percent_complete.to_string();
+            }
+            // table.add_row(vec![task.name, task.state, task.percent_complete.unwrap_or_else(|| "".to_owned()), task.id]);
+            table.add_row(vec![task.name, task.state, per_comp, task.id]);
         }
         println!("{table}");
     }
