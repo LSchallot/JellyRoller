@@ -9,7 +9,7 @@ pub fn simple_get(server_url: String, api_key: String, query: Vec<(&str, &str)>)
         .send();
     if let Ok(resp) = response { resp } else {
         println!("Post response error.");
-        std::process::exit(0);
+        std::process::exit(1);
     }
 }
 
@@ -23,6 +23,6 @@ pub fn simple_post(server_url: String, api_key: String, body: String) -> Respons
         .send();
     if let Ok(resp) = response { resp } else {
         println!("Post response error.");
-        std::process::exit(0);
+        std::process::exit(1);
     }
 }

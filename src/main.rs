@@ -248,7 +248,7 @@ fn main() -> Result<(), confy::ConfyError> {
                     match UserList::list_users(UserList::new(USERS, &cfg.server_url, cfg.api_key)) {
                         Err(_) => {
                             eprintln!("Unable to gather users.");
-                            std::process::exit(0);
+                            std::process::exit(1);
                         },
                         Ok(i) => i
                     };
@@ -261,7 +261,7 @@ fn main() -> Result<(), confy::ConfyError> {
                         match serde_json::to_string_pretty(&users) {
                             Err(_) => {
                                 eprintln!("Unable to convert user information into JSON.");
-                                std::process::exit(0);
+                                std::process::exit(1);
                             },
                             Ok(i) => i
                         };
@@ -281,7 +281,7 @@ fn main() -> Result<(), confy::ConfyError> {
                         match serde_json::to_string_pretty(&user) {
                             Err(_) => {
                                 eprintln!("Unable to convert user information into JSON.");
-                                std::process::exit(0);
+                                std::process::exit(1);
                             },
                             Ok(i) => i
                         };
@@ -296,7 +296,7 @@ fn main() -> Result<(), confy::ConfyError> {
             match ResetPass::reset(ResetPass::new(&user_id, password, &cfg.server_url, &cfg.api_key)) {
                 Err(_) => {
                     eprintln!("Unable to convert user information into JSON.");
-                    std::process::exit(0);
+                    std::process::exit(1);
                 },
                 Ok(i) => i
                         
@@ -364,7 +364,7 @@ fn main() -> Result<(), confy::ConfyError> {
                 match fs::read_to_string(inputfile) {
                     Err(_) => {
                         eprintln!("Unable to process input file.");
-                        std::process::exit(0);
+                        std::process::exit(1);
                     },
                     Ok(i) => i
                 };
@@ -373,7 +373,7 @@ fn main() -> Result<(), confy::ConfyError> {
                     match serde_json::from_str::<Vec<UserDetails>>(&data) {
                         Err(_) => {
                             eprintln!("Unable to convert user details JSON..");
-                            std::process::exit(0);
+                            std::process::exit(1);
                         },
                         Ok(i) => i
                     };
@@ -393,7 +393,7 @@ fn main() -> Result<(), confy::ConfyError> {
                     match serde_json::from_str::<UserDetails>(&data) {
                         Err(_) => {
                             eprintln!("Unable to convert user details JSON.");
-                            std::process::exit(0);
+                            std::process::exit(1);
                         },
                         Ok(i) => i
                     };
@@ -419,7 +419,7 @@ fn main() -> Result<(), confy::ConfyError> {
                 match ServerInfo::get_log_filenames(ServerInfo::new("/System/Logs", &cfg.server_url, &cfg.api_key)) {
                     Err(_) => {
                         eprintln!("Unable to get get log filenames.");
-                        std::process::exit(0);
+                        std::process::exit(1);
                     },
                     Ok(i) => i
                 };
@@ -441,7 +441,7 @@ fn main() -> Result<(), confy::ConfyError> {
                 match ServerInfo::get_devices(ServerInfo::new(DEVICES, &cfg.server_url, &cfg.api_key)) {
                     Err(_) => {
                         eprintln!("Unable to get devices.");
-                        std::process::exit(0);
+                        std::process::exit(1);
                     },
                     Ok(i) => i
             };
@@ -456,7 +456,7 @@ fn main() -> Result<(), confy::ConfyError> {
              match ServerInfo::get_libraries(ServerInfo::new("/Library/VirtualFolders", &cfg.server_url, &cfg.api_key)) {
                 Err(_) => {
                     eprintln!("Unable to get libraries.");
-                    std::process::exit(0);
+                    std::process::exit(1);
                 },
                 Ok(i) => i
              };
@@ -469,9 +469,9 @@ fn main() -> Result<(), confy::ConfyError> {
         Commands::GetScheduledTasks { json } => {
             let tasks: Vec<TaskDetails> = 
                 match ServerInfo::get_scheduled_tasks(ServerInfo::new("/ScheduledTasks", &cfg.server_url, &cfg.api_key)) {
-                    Err(_) => {
-                        eprintln!("Unable to get scheduled tasks.");
-                        std::process::exit(0);
+                    Err(e) => {
+                        eprintln!("Unable to get scheduled tasks, {e}");
+                        std::process::exit(1);
                     },
                     Ok(i) => i
                 };
@@ -485,9 +485,9 @@ fn main() -> Result<(), confy::ConfyError> {
         Commands::ExecuteTaskByName { task } => {
             let taskid: String = 
                 match ServerInfo::get_taskid_by_taskname(ServerInfo::new("/ScheduledTasks", &cfg.server_url, &cfg.api_key), &task) {
-                    Err(_) => {
-                        eprintln!("Unable to get task id by taskname.");
-                        std::process::exit(0);
+                    Err(e) => {
+                        eprintln!("Unable to get task id by taskname, {e}");
+                        std::process::exit(1);
                     },
                     Ok(i) => i
                 };
@@ -501,7 +501,7 @@ fn main() -> Result<(), confy::ConfyError> {
                 match ServerInfo::get_deviceid_by_username(ServerInfo::new(DEVICES, &cfg.server_url, &cfg.api_key), &username) {
                     Err(_) => {
                         eprintln!("Unable to get device id by username.");
-                        std::process::exit(0);
+                        std::process::exit(1);
                     },
                     Ok(i) => i
                 };
@@ -521,7 +521,7 @@ fn main() -> Result<(), confy::ConfyError> {
                 match PluginInfo::get_plugins(PluginInfo::new("/Plugins", &cfg.server_url, cfg.api_key)) {
                     Err(_) => {
                         eprintln!("Unable to get plugin information.");
-                        std::process::exit(0);
+                        std::process::exit(1);
                     },
                     Ok(i) => i
                 };
@@ -539,7 +539,7 @@ fn main() -> Result<(), confy::ConfyError> {
                         match ServerInfo::get_activity(ServerInfo::new("/System/ActivityLog/Entries", &cfg.server_url, &cfg.api_key), &limit) {
                             Err(e) => {
                                 eprintln!("Unable to gather activity log entries, {e}");
-                                std::process::exit(0);
+                                std::process::exit(1);
                             },
                             Ok(i) => i
                         };
@@ -557,7 +557,7 @@ fn main() -> Result<(), confy::ConfyError> {
                         match UserList::get_current_user_information(UserList::new("/Users/Me", &cfg.server_url, cfg.api_key.to_owned())) {
                             Err(e) => {
                                 eprintln!("Unable to gather information about current user, {e}");
-                                std::process::exit(0);
+                                std::process::exit(1);
                             },
                             Ok(i) => i.id
                         };
@@ -565,7 +565,7 @@ fn main() -> Result<(), confy::ConfyError> {
                         match ServerInfo::export_library(ServerInfo::new("/Users/{userId}/Items", &cfg.server_url, &cfg.api_key), &user_id) {
                             Err(e) => {
                                 eprintln!("Unable to export library, {e}");
-                                std::process::exit(0);
+                                std::process::exit(1);
                             },
                             Ok(i) => i
                         };
@@ -596,7 +596,7 @@ fn gather_user_information(cfg: &AppConfig, username: &String, id: &str) -> User
     match UserList::get_user_information(UserList::new(USER_ID, &cfg.server_url, cfg.api_key.clone()), id) {
         Err(_) => {
             println!("Unable to get user id for {}", username);
-            std::process::exit(0);
+            std::process::exit(1);
         },
         Ok(ul) => ul,
     }

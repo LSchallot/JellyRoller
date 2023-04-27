@@ -124,7 +124,7 @@ impl ServerInfo {
                 Ok(details)
             } _ => {
                 println!("Status Code: {}", response.status());
-                std::process::exit(0)
+                std::process::exit(1)
             }
         }
     }
@@ -138,7 +138,7 @@ impl ServerInfo {
                 Ok(activities)
             } _ => {
                 println!("Status Code: {}", response.status());
-                std::process::exit(0);
+                std::process::exit(1);
             }
         }
     }
@@ -149,7 +149,6 @@ impl ServerInfo {
             StatusCode::OK => {
                 let tasks = response.json::<ScheduledTasksVec>()?;
                 for task in tasks {
-                    
                     if task.name.to_lowercase() == taskname.to_lowercase() {
                         return Ok(task.id);
                     }
