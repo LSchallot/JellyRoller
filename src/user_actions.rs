@@ -1,5 +1,11 @@
 use super::{ UserDetails, Policy, responder::{simple_get, simple_post}, handle_others, handle_unauthorized } ;
-use reqwest::{StatusCode, blocking::Client, header::CONTENT_TYPE};
+use reqwest::{StatusCode, blocking::Client, header::{CONTENT_TYPE, CONTENT_LENGTH}};
+
+
+#[derive(Serialize, Deserialize)]
+pub struct ApiKey {
+
+}
 
 #[derive(Serialize, Deserialize)]
 pub struct ResetPass {
@@ -158,6 +164,8 @@ impl UserAuth {
             }
         }
     }
+
+    
 }
 
 #[derive(Clone)]
@@ -171,6 +179,26 @@ impl UserList {
         UserList{
             server_url: format!("{}{}",server_url, endpoint),
             api_key
+        }
+    }
+
+    pub fn create_api_token(self) {
+        let client = Client::new();
+        let response = client
+            .post(self.server_url)
+            .header("x-emby-token", self.api_key)
+            .header(CONTENT_LENGTH, 0)
+            .query(&[("app", "JellyRoller")])
+            .send()
+            .unwrap();
+        
+        match response.status() {
+            StatusCode::NO_CONTENT => {
+                println!("API key created.");
+            } _ => {
+                handle_others(response);
+            }
+            
         }
     }
 

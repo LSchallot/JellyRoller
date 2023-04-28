@@ -231,6 +231,9 @@ fn main() -> Result<(), confy::ConfyError> {
         println!("Application is not configured!");
         initial_config(cfg);
         std::process::exit(0);
+    } else if cfg.token == "Unknown" {
+        println!("Username/Password detected.  Reconfiguring to use API key.");
+        token_to_api(cfg.clone());
     }
     let args = Cli::parse();
     match args.command {
@@ -641,4 +644,15 @@ fn initial_config(mut cfg: AppConfig) {
     cfg.status = "configured".to_owned();
     confy::store("jellyroller", cfg)
         .expect("[ERROR] Unable to store configuration.");
+}
+
+///
+/// Due to an issue with api key processing in Jellyfin, JellyRoller was initially relied on using auto tokens to communicate.
+/// Now that the issue has been fixed, the auto tokens need to be converted to an API key.  The single purpose of this function
+/// is to handle the conversion with no input required from the user.
+/// 
+
+fn token_to_api(mut cfg: AppConfig) {
+    println!("[INFO] Attempting to auto convert user auth token to API key.....");
+    UserList::create_api_token(UserList::new("/Auth/Keys", &cfg.server_url, cfg.api_key));
 }
