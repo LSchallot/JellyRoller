@@ -21,6 +21,7 @@ use entities::activity_details::{ActivityDetails};
 use entities::movie_details::{MovieDetails};
 mod utils;
 use utils::output_writer::export_data;
+use utils::status_handler::{handle_others, handle_unauthorized};
 
 #[macro_use]
 extern crate serde_derive;
