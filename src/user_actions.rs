@@ -1,4 +1,4 @@
-use super::{ UserDetails, Policy, responder::{simple_get, simple_post}} ;
+use super::{ UserDetails, Policy, responder::{simple_get, simple_post}, handle_others, handle_unauthorized } ;
 use reqwest::{StatusCode, blocking::Client, header::CONTENT_TYPE};
 
 #[derive(Serialize, Deserialize)]
@@ -28,9 +28,9 @@ impl ResetPass {
             StatusCode::NO_CONTENT => {
                 println!("Password updated successfully.");
             } StatusCode::UNAUTHORIZED => {
-                println!("Authentication failed.  Try reconfiguring with \"jellyroller reconfigure\"");
+                handle_unauthorized();
             } _ => {
-                println!("Status Code: {}", response.status());
+                handle_others(response);
             }
         }
 
@@ -65,9 +65,9 @@ impl UserAdd {
             StatusCode::OK => {
                 println!("User \"{}\" successfully created.", &self.name);
             } StatusCode::UNAUTHORIZED => {
-                println!("Authentication failed.  Try reconfiguring with \"jellyroller reconfigure\"");
+                handle_unauthorized();
             } _ => {
-                println!("Status Code: {}", response.status());
+                handle_others(response);
             }
         }
         
@@ -101,9 +101,9 @@ impl UserDel {
             StatusCode::NO_CONTENT => {
                 println!("User \"{}\" successfully removed.", &self.username);
             } StatusCode::UNAUTHORIZED => {
-                println!("Authentication failed.  Try reconfiguring with \"jellyroller reconfigure\"");
+                handle_unauthorized();
             } _ => {
-                println!("Status Code: {}", response.status());
+                handle_others(response);
             }
         }
 
@@ -181,9 +181,9 @@ impl UserList {
             StatusCode::OK => {
                 users = response.json::<UserInfoVec>()?;
             } StatusCode::UNAUTHORIZED => {
-                println!("Authentication failed.  Try reconfiguring with \"jellyroller reconfigure\"");
+                handle_unauthorized();
             } _ => {
-                println!("Status Code: {}", response.status());
+                handle_others(response);
             }
         }
         

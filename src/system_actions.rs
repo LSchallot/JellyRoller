@@ -1,6 +1,6 @@
 use crate::entities::{task_details::TaskDetails, activity_details::ActivityDetails};
 
-use super::{ DeviceDetails, DeviceRootJson, LibraryDetails, LibraryRootJson, LogDetails, MovieDetails, responder::{ simple_get, simple_post } };
+use super::{ DeviceDetails, DeviceRootJson, LibraryDetails, LibraryRootJson, LogDetails, MovieDetails, responder::{ simple_get, simple_post }, handle_unauthorized, handle_others };
 use reqwest::{blocking::Client, StatusCode};
 use serde_json::Value;
 
@@ -29,9 +29,9 @@ impl ServerInfo {
                 let body: Value = response.json()?;
                 println!("{:#}", body);
             } StatusCode::UNAUTHORIZED => {
-                println!("Authentication failed.  Try reconfiguring with \"jellyroller reconfigure\"");
+                handle_unauthorized();
             } _ => {
-                println!("Status Code: {}", response.status());
+                handle_others(response);
             }
         }
 
@@ -44,9 +44,9 @@ impl ServerInfo {
             StatusCode::NO_CONTENT => {
                 println!("Command successful.");
             } StatusCode::UNAUTHORIZED => {
-                println!("Authentication failed.  Try reconfiguring with \"jellyroller reconfigure\"");
+                handle_unauthorized();
             } _ => {
-                println!("Status Code: {}", response.status());
+                handle_others(response);
             }
         }
     }
@@ -61,9 +61,9 @@ impl ServerInfo {
                     details.push(LogDetails::new(log.date_created, log.date_modified, log.name, log.size/1024));
                 }
             } StatusCode::UNAUTHORIZED => {
-                println!("Authentication failed.  Try reconfiguring with \"jellyroller reconfigure\"");
+                handle_unauthorized();
             } _ => {
-                println!("Status Code: {}", response.status());
+                handle_others(response);
             }
         }
 
@@ -81,9 +81,9 @@ impl ServerInfo {
                     details.push(DeviceDetails::new(device.id, device.name, device.lastusername));
                 }
             } StatusCode::UNAUTHORIZED => {
-                println!("Authentication failed.  Try reconfiguring with \"jellyroller reconfigure\"");
+                handle_unauthorized();
             } _ => {
-                println!("Status Code: {}", response.status());
+                handle_others(response);
             }
         }
 
@@ -101,9 +101,9 @@ impl ServerInfo {
                     details.push(LibraryDetails::new(library.name, library.collection_type, library.item_id, library.refresh_status));
                 }
             } StatusCode::UNAUTHORIZED => {
-                println!("Authentication failed.  Try reconfiguring with \"jellyroller reconfigure\"");
+                handle_unauthorized();
             } _ => {
-                println!("Status Code: {}", response.status());
+                handle_others(response);
             }
         }
         Ok(details)
@@ -123,7 +123,7 @@ impl ServerInfo {
                 let details = response.json::<MovieDetails>()?;
                 Ok(details)
             } _ => {
-                println!("Status Code: {}", response.status());
+                handle_others(response);
                 std::process::exit(1)
             }
         }
@@ -137,7 +137,7 @@ impl ServerInfo {
                 let activities = response.json::<ActivityDetails>()?;
                 Ok(activities)
             } _ => {
-                println!("Status Code: {}", response.status());
+                handle_others(response);
                 std::process::exit(1);
             }
         }
@@ -154,9 +154,9 @@ impl ServerInfo {
                     }
                 }
             } StatusCode::UNAUTHORIZED => {
-                println!("Authentication failed.  Try reconfiguring with \"jellyroller reconfigure\"");
+                handle_unauthorized();
             } _ => {
-                println!("Status Code: {}", response.status());
+                handle_others(response);
             }
         }
         Ok(String::new())
@@ -168,9 +168,9 @@ impl ServerInfo {
             StatusCode::NO_CONTENT => {
                 println!("Task \"{}\" initiated.", taskname);
             } StatusCode::UNAUTHORIZED => {
-                println!("Authentication failed.  Try reconfiguring with \"jellyroller reconfigure\"");
+                handle_unauthorized();
             } _ => {
-                println!("Status Code: {}", response.status());
+                handle_others(response);
             }
         }
     }
@@ -188,9 +188,9 @@ impl ServerInfo {
                     }
                 }
             } StatusCode::UNAUTHORIZED => {
-                println!("Authentication failed.  Try reconfiguring with \"jellyroller reconfigure\"");
+                handle_unauthorized();
             } _ => {
-                println!("Status Code: {}", response.status());
+                handle_others(response);
             }
         }
 
@@ -208,9 +208,9 @@ impl ServerInfo {
                 StatusCode::NO_CONTENT => {
                     println!("\t Removes device with id = {}.", id);
                 } StatusCode::UNAUTHORIZED => {
-                    println!("Authentication failed.  Try reconfiguring with \"jellyroller reconfigure\"");
+                    handle_unauthorized();
                 } _ => {
-                    println!("Status Code: {}", response.status());
+                    handle_others(response);
                 }
             }
         Ok(())
@@ -226,9 +226,9 @@ impl ServerInfo {
                     details.push(TaskDetails::new(task.name, task.state, task.percent_complete, task.id));
                 }
             } StatusCode::UNAUTHORIZED => {
-                println!("Authentication failed.  Try reconfiguring with \"jellyroller reconfigure\"");
+                handle_unauthorized();
             } _ => {
-                println!("Status Code: {}", response.status());
+                handle_others(response);
             }
         }
 
@@ -244,9 +244,9 @@ impl ServerInfo {
             StatusCode::NO_CONTENT => {
                 println!("Library scan initiated.");
             } StatusCode::UNAUTHORIZED => {
-                println!("Authentication failed.  Try reconfiguring with \"jellyroller reconfigure\"");
+                handle_unauthorized();
             } _ => {
-                println!("Status Code: {}", response.status());
+                handle_others(response);
             }
         }
     }
@@ -279,9 +279,9 @@ impl LogFile {
                 let body = response.text();
                 println!("{:#}", body?);
             } StatusCode::UNAUTHORIZED => {
-                println!("Authentication failed.  Try reconfiguring with \"jellyroller reconfigure\"");
+                handle_unauthorized();
             } _ => {
-                println!("Status Code: {}", response.status());
+                handle_others(response);
             }
         }
         Ok(())

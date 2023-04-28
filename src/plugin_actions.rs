@@ -1,4 +1,4 @@
-use super::{ PluginRootJson, PluginDetails, responder::simple_get };
+use super::{ PluginRootJson, PluginDetails, responder::simple_get, handle_others, handle_unauthorized };
 use reqwest::StatusCode;
 
 #[derive(Clone)]
@@ -23,9 +23,10 @@ impl PluginInfo {
                 let plugins = serde_json::from_str::<PluginRootJson>(&json)?;
                 return Ok(plugins)
             } StatusCode::UNAUTHORIZED => {
-                println!("Authentication failed.  Try reconfiguring with \"jellyroller reconfigure\"");
+                handle_unauthorized();
             } _ => {
-                println!("Status Code: {}", response.status());
+                handle_others(response);
+                
             }
         }
 
