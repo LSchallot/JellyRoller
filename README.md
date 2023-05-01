@@ -3,8 +3,9 @@
 JellyRoller is an open source CLI Jellyfin Controller written in Rust that works on Windows and Linux. Its primary purpose is to allow administration of a Jellyfin application from the command line.
 
 ## How it works
+On the first execution, JellyRoller prompts for information to authenticate as an admin user.  Once this authentication has succeeded, an API key is created and stored within the JellyrRoller configuration.  JellyRoller then uses the Jellyfin API to manage the server.
 
-Currently, JellyRoller authenticates as a user (admin rights required) and stores the authentication token within its configuration, similar to how an API key would be stored. Due to some issues with API keys in Jellyfin this is the only supported method of authentication. Once authenticated, JellyRoller uses the Jellyfin API to manage the server.
+Any previous user auth tokens will be converted to an API key upon next execution when upgrading from JellyRoller < 0.3.
 
 ## Usage Information
 
@@ -51,7 +52,7 @@ SUBCOMMANDS:
 
 ### Building From Source
 
-Currently built with rustc 1.68.0. If building on a Linux machine, you may need to install openssl-devel.
+Currently built with rustc 1.69.0. If building on a Linux machine, you may need to install openssl-devel.
 
 ```
 git clone <git location>
