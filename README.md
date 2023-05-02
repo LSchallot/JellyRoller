@@ -10,18 +10,20 @@ Any previous user auth tokens will be converted to an API key upon next executio
 ## Usage Information
 
 ```
-jellyroller
+jellyroller 0.3.0
 A CLI controller for managing Jellyfin
 
 USAGE:
-    jellyroller <SUBCOMMAND>
+    jellyroller.exe <SUBCOMMAND>
 
 OPTIONS:
-    -h, --help    Print help information
+    -h, --help       Print help information
+    -V, --version    Print version information
 
 SUBCOMMANDS:
     add-user                     Creates a new user
     add-users                    Uses the supplied file to mass create new users
+    create-report                Creates a report of either activity or available movie items
     delete-user                  Deletes an existing user
     disable-user                 Disable a user
     enable-user                  Enable a user
@@ -40,6 +42,7 @@ SUBCOMMANDS:
     restart-jellyfin             Restarts Jellyfin
     revoke-admin                 Revokes admin rights from the specified user
     scan-library                 Start a library scan
+    search-media                 Executes a search of your media
     server-info                  Displays the server information
     show-log                     Displays the requested logfile
     shutdown-jellyfin            Shuts down Jellyfin
