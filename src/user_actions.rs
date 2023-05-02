@@ -176,10 +176,10 @@ pub struct UserList {
 }
 
 impl UserList {
-    pub fn new(endpoint: &str, server_url: &str, api_key: String) -> UserList{
+    pub fn new(endpoint: &str, server_url: &str, api_key: &str) -> UserList{
         UserList{
             server_url: format!("{}{}",server_url, endpoint),
-            api_key
+            api_key: api_key.to_string()
         }
     }
 
@@ -201,12 +201,7 @@ impl UserList {
 
     // TODO: Standardize the GET request?
     pub fn get_user_id(self, username: &String) -> String {
-        let client = Client::new();
-        let response = client
-            .get(self.server_url)
-            .header("X-Emby-Token", self.api_key)
-            .send()
-            .unwrap();
+        let response = simple_get(self.server_url, self.api_key, Vec::new());
         let users = response.json::<UserInfoVec>().unwrap();
         for user in users {
             if user.name == *username {
@@ -250,6 +245,8 @@ impl UserList {
     pub fn update_user_info(self, id: &str, info: &UserDetails) -> Result<(), Box<dyn std::error::Error>> {
         let body = serde_json::to_string_pretty(&info)?;
         // So we have to update the Policy and the user info separate even though they are the same JSON object :/
+
+        // First we will update the Policy
         let policy_url = format!("{}/Policy",self.server_url);
         let user_response = simple_post(self.server_url.replace("{userId}", id), self.api_key.clone(), body);
         if user_response.status() == StatusCode::NO_CONTENT {} else {

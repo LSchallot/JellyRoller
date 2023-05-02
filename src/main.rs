@@ -19,6 +19,7 @@ use entities::library_details::{LibraryDetails, LibraryRootJson};
 use entities::plugin_details::{PluginDetails, PluginRootJson};
 use entities::activity_details::{ActivityDetails};
 use entities::movie_details::{MovieDetails};
+use entities::media_details::{MediaRoot};
 use entities::server_info::ServerInfo;
 mod utils;
 use utils::output_writer::export_data;
@@ -210,6 +211,15 @@ struct Cli {
         #[clap(required = false, short, long, default_value="")]
         filename: String
         
+    },
+    /// Executes a search of your media
+    SearchMedia {
+        /// Search term
+        #[clap(required = true, short, long)]
+        term: String,
+        /// Filter for media type
+        #[clap(required = false, short, long, default_value="all")]
+        mediatype: String
     }
 }
 
@@ -256,7 +266,7 @@ fn main() -> Result<(), confy::ConfyError> {
         Commands::ListUsers { export, mut output, username} => {
             if username.is_empty() {
                 let users: Vec<UserDetails> = 
-                    match UserList::list_users(UserList::new(USERS, &cfg.server_url, cfg.api_key)) {
+                    match UserList::list_users(UserList::new(USERS, &cfg.server_url, &cfg.api_key)) {
                         Err(_) => {
                             eprintln!("Unable to gather users.");
                             std::process::exit(1);
@@ -281,7 +291,7 @@ fn main() -> Result<(), confy::ConfyError> {
                     UserDetails::json_print_users(&users);
                 } 
             } else {
-                let user_id = UserList::get_user_id(UserList::new(USERS, &cfg.server_url, cfg.api_key.clone()), &username);
+                let user_id = UserList::get_user_id(UserList::new(USERS, &cfg.server_url, &cfg.api_key), &username);
                 let user = gather_user_information(&cfg, &username, &user_id);
                 if export {
                     println!("Exporting user information.....");
@@ -304,7 +314,7 @@ fn main() -> Result<(), confy::ConfyError> {
         },
         Commands::ResetPassword { username, password } => {
             // Get usename
-            let user_id = UserList::get_user_id(UserList::new(USERS, &cfg.server_url, cfg.api_key.clone()), &username);
+            let user_id = UserList::get_user_id(UserList::new(USERS, &cfg.server_url, &cfg.api_key), &username);
             // Setup the endpoint
             let server_path = format!("{}/Users{}/Password", &cfg.server_url, user_id);
             match UserWithPass::resetpass(UserWithPass::new(None, Some(password), server_path, cfg.api_key)) {
@@ -320,7 +330,7 @@ fn main() -> Result<(), confy::ConfyError> {
             let mut user_info = gather_user_information(&cfg, &username, &id);
             user_info.policy.is_disabled = true;
             UserList::update_user_config_bool(
-                UserList::new(USER_POLICY, &cfg.server_url, cfg.api_key),
+                UserList::new(USER_POLICY, &cfg.server_url, &cfg.api_key),
                 &user_info.policy, 
                 &id,
                 &username)
@@ -331,7 +341,7 @@ fn main() -> Result<(), confy::ConfyError> {
             let mut user_info = gather_user_information(&cfg, &username, &id);
             user_info.policy.is_disabled = false;
             UserList::update_user_config_bool(
-                UserList::new(USER_POLICY, &cfg.server_url, cfg.api_key),
+                UserList::new(USER_POLICY, &cfg.server_url, &cfg.api_key),
                 &user_info.policy, 
                 &id,
                 &username)
@@ -342,7 +352,7 @@ fn main() -> Result<(), confy::ConfyError> {
             let mut user_info = gather_user_information(&cfg, &username, &id);
             user_info.policy.is_administrator = true;
             UserList::update_user_config_bool(
-                UserList::new(USER_POLICY, &cfg.server_url, cfg.api_key),
+                UserList::new(USER_POLICY, &cfg.server_url, &cfg.api_key),
                 &user_info.policy, 
                 &id,
                 &username)
@@ -353,7 +363,7 @@ fn main() -> Result<(), confy::ConfyError> {
             let mut user_info = gather_user_information(&cfg, &username, &id);
             user_info.policy.is_administrator = false;
             UserList::update_user_config_bool(
-                UserList::new(USER_POLICY, &cfg.server_url, cfg.api_key),
+                UserList::new(USER_POLICY, &cfg.server_url, &cfg.api_key),
                 &user_info.policy, 
                 &id,
                 &username)
@@ -392,7 +402,7 @@ fn main() -> Result<(), confy::ConfyError> {
                     };
                 for item in info {
                     match UserList::update_user_info(
-                        UserList::new(USER_ID, &cfg.server_url, cfg.api_key.clone()),
+                        UserList::new(USER_ID, &cfg.server_url, &cfg.api_key),
                         &item.id,
                         &item
                     ) {
@@ -412,7 +422,7 @@ fn main() -> Result<(), confy::ConfyError> {
                     };
                 let user_id = get_user_id(&cfg, &info.name);
                 match UserList::update_user_info(
-                    UserList::new(USER_ID, &cfg.server_url, cfg.api_key),
+                    UserList::new(USER_ID, &cfg.server_url, &cfg.api_key),
                     &user_id,
                     &info
                 ) {
@@ -571,7 +581,7 @@ fn main() -> Result<(), confy::ConfyError> {
                 },
                 ReportType::Movie => {
                     let user_id: String = 
-                        match UserList::get_current_user_information(UserList::new("/Users/Me", &cfg.server_url, cfg.api_key.to_owned())) {
+                        match UserList::get_current_user_information(UserList::new("/Users/Me", &cfg.server_url, &cfg.api_key)) {
                             Err(e) => {
                                 eprintln!("Unable to gather information about current user, {e}");
                                 std::process::exit(1);
@@ -596,6 +606,26 @@ fn main() -> Result<(), confy::ConfyError> {
                     }
                 }
             }
+        },
+        Commands::SearchMedia { term, mediatype } => {
+            let mut query = 
+                vec![
+                    ("SortBy", "SortName,ProductionYear"),
+                    ("Recursive", "true"),
+                    ("searchTerm", &term)
+                ];
+            if mediatype != "all" {
+                query.push(("IncludeItemTypes", &mediatype));
+            }
+            let search: MediaRoot =
+                match get_search_results(ServerInfo::new("/Items", &cfg.server_url, &cfg.api_key), query) {
+                    Err(e) => {
+                        eprintln!("Unable to execute search, {e}");
+                        std::process::exit(1);
+                    },
+                    Ok(i) => i
+                };
+            MediaRoot::table_print(search);
         }
     }
     
@@ -606,11 +636,11 @@ fn main() -> Result<(), confy::ConfyError> {
 /// Retrieve the id for the specified user.  Most API calls require the id of the user rather than the username.
 /// 
 fn get_user_id(cfg: &AppConfig, username: &String) -> String {
-    UserList::get_user_id(UserList::new("/Users", &cfg.server_url, cfg.api_key.clone()), username)
+    UserList::get_user_id(UserList::new("/Users", &cfg.server_url, &cfg.api_key), username)
 }
 
 fn gather_user_information(cfg: &AppConfig, username: &String, id: &str) -> UserDetails {
-    match UserList::get_user_information(UserList::new(USER_ID, &cfg.server_url, cfg.api_key.clone()), id) {
+    match UserList::get_user_information(UserList::new(USER_ID, &cfg.server_url, &cfg.api_key), id) {
         Err(_) => {
             println!("Unable to get user id for {}", username);
             std::process::exit(1);

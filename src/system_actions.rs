@@ -1,4 +1,4 @@
-use crate::entities::{task_details::TaskDetails, activity_details::ActivityDetails};
+use crate::entities::{task_details::TaskDetails, activity_details::ActivityDetails, media_details::MediaRoot};
 
 use super::{ ServerInfo, DeviceDetails, DeviceRootJson, LibraryDetails, LibraryRootJson, LogDetails, MovieDetails, responder::{ simple_get, simple_post }, handle_unauthorized, handle_others };
 use reqwest::{blocking::Client, StatusCode};
@@ -237,7 +237,25 @@ pub fn scan_library(server_info: ServerInfo) {
     }
 }
 
-
+pub fn get_search_results(server_info: ServerInfo, query: Vec<(&str, &str)>) -> Result<MediaRoot, Box< dyn std::error::Error>> {
+    let response = simple_get(
+        server_info.server_url,
+        server_info.api_key,
+        query
+    );
+    match response.status() {
+        StatusCode::OK => {
+            let media = response.json::<MediaRoot>()?;
+            Ok(media)
+        } StatusCode::UNAUTHORIZED => {
+            handle_unauthorized();
+            std::process::exit(1);
+        } _ => {
+            handle_others(response);
+            std::process::exit(1);
+        }
+    }
+}
 pub struct LogFile {
     server_info: ServerInfo,
     logname: String
