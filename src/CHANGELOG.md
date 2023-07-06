@@ -1,15 +1,20 @@
 # Change Log
 All notable changes to this project will be documented in this file.
  
-## [0.2.1] - In progress
+## [0.3.0] - In progress
 
 ### Added
 - New commands added
     + Export activity
     + Export Movies
+    + Search Media
+- Added api key support
+    + All existing instances will be migrated on next execution
 
 ### Fixed
 - Dependency updates
+- Issue with executing tasks while background tasks were running
+- Documentation clarity
 
 ## [0.2.0] - 2022-09-12
  

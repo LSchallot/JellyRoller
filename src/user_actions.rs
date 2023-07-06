@@ -1,28 +1,32 @@
+use crate::entities::token_details::TokenDetails;
+
 use super::{ UserDetails, Policy, responder::{simple_get, simple_post}, handle_others, handle_unauthorized } ;
-use reqwest::{StatusCode, blocking::Client, header::CONTENT_TYPE};
+use reqwest::{StatusCode, blocking::Client, header::{CONTENT_TYPE, CONTENT_LENGTH}};
 
 #[derive(Serialize, Deserialize)]
-pub struct ResetPass {
-    username: String,
-    newpw: String,
+pub struct UserWithPass {
+    #[serde(rename = "Name")]
+    username: Option<String>,
+    #[serde(rename = "Password")]
+    pass: Option<String>,
     server_url: String,
-    api_key: String
+    auth_key: String
 }
 
-impl ResetPass {
-    pub fn new(username: &str, newpw: String, server_url: &str, api_key: &str) -> ResetPass{
-        ResetPass{
-            username: username.to_owned(),
-            newpw,
-            server_url: format!("{}/Users/{}/Password", server_url, username),
-            api_key: api_key.to_owned()
+impl UserWithPass {
+    pub fn new(username: Option<String>, pass: Option<String>, server_url: String, auth_key: String) -> UserWithPass {
+        UserWithPass{
+            username: Some(username.unwrap_or_else(|| {String::new()})),
+            pass: Some(pass.unwrap_or_else(|| {String::new()})),
+            server_url,
+            auth_key
         }
     }
-    
-    pub fn reset(self)  -> Result<(), Box<dyn std::error::Error>> {
+
+    pub fn resetpass(self) -> Result<(), Box<dyn std::error::Error>> {
         let response = simple_post(
             self.server_url.clone(), 
-            self.api_key.clone(), 
+            self.auth_key.clone(), 
             serde_json::to_string_pretty(&self)?);
         match response.status() {
             StatusCode::NO_CONTENT => {
@@ -36,34 +40,15 @@ impl ResetPass {
 
         Ok(())
     }
-}
 
-#[derive(Serialize, Deserialize)]
-pub struct UserAdd {
-    name: String,
-    password: String,
-    server_url: String,
-    api_key: String
-}
-
-impl UserAdd {
-    pub fn new(username: String, password: String, server_url: &str, api_key: String) -> UserAdd{
-        UserAdd{
-            name: username,
-            password,
-            server_url: format!("{}/Users/New",server_url),
-            api_key
-        }
-    }
-
-    pub fn create(self) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn create_user(self) -> Result<(), Box< dyn std::error::Error>> {
         let response = simple_post(
             self.server_url.clone(), 
-            self.api_key.clone(), 
+            self.auth_key.clone(), 
             serde_json::to_string_pretty(&self)?);
         match response.status() {
             StatusCode::OK => {
-                println!("User \"{}\" successfully created.", &self.name);
+                println!("User \"{}\" successfully created.", &self.username.unwrap());
             } StatusCode::UNAUTHORIZED => {
                 handle_unauthorized();
             } _ => {
@@ -73,33 +58,17 @@ impl UserAdd {
         
         Ok(())
     }
-}
 
-pub struct UserDel {
-    server_url: String,
-    api_key: String,
-    username: String
-}
-
-impl UserDel {
-    pub fn new(username: String, server_url: &str, api_key: String) -> UserDel{
-        UserDel{
-            server_url: format!("{}/Users/{}",server_url,&username),
-            api_key,
-            username
-        }
-    }
-
-    pub fn remove(self) -> Result<(), reqwest::Error> {
+    pub fn delete_user(self) -> Result<(), Box<dyn std::error::Error>> {
         let client = reqwest::blocking::Client::new();
         let response = client
             .delete(self.server_url)
-            .header("X-Emby-Token", self.api_key)
+            .header("X-Emby-Token", self.auth_key)
             .header(CONTENT_TYPE, "application/json")
             .send()?;
             match response.status() {
             StatusCode::NO_CONTENT => {
-                println!("User \"{}\" successfully removed.", &self.username);
+                println!("User \"{}\" successfully removed.", &self.username.unwrap());
             } StatusCode::UNAUTHORIZED => {
                 handle_unauthorized();
             } _ => {
@@ -108,7 +77,45 @@ impl UserDel {
         }
 
         Ok(())
+    }
+
+    pub fn create_api_token(self) {
+        let client = Client::new();
+        let response = client
+            .post(self.server_url)
+            .header("x-emby-token", self.auth_key)
+            .header(CONTENT_LENGTH, 0)
+            .query(&[("app", "JellyRoller")])
+            .send()
+            .unwrap();
         
+        match response.status() {
+            StatusCode::NO_CONTENT => {
+                println!("API key created.");
+            } _ => {
+                handle_others(response);
+            }
+            
+        }
+    }
+
+    pub fn retrieve_api_token(self) -> Result<String, Box<dyn std::error::Error>> {
+        let response = simple_get(self.server_url, self.auth_key, Vec::new());
+        match response.status() {
+            StatusCode::OK => {
+                let tokens = serde_json::from_str::<TokenDetails>(&response.text()?)?;
+                for token in tokens.items {
+                    if token.app_name == "JellyRoller" {
+                        return Ok(token.access_token);
+                    }
+                }
+            } StatusCode::UNAUTHORIZED => {
+                handle_unauthorized();
+            } _ => {
+                handle_others(response);
+            }
+        }
+        Ok(String::new())
     }
 }
 
@@ -150,7 +157,7 @@ impl UserAuth {
         match response.status() {
             StatusCode::OK => {
                 let result = response.json::<UserAuthJson>()?;
-                println!("User authenticated successfully.");
+                println!("[INFO] User authenticated successfully.");
                 Ok(result.access_token)
             } _ => {
                 // Panic since the application requires an authenticated user
@@ -158,6 +165,8 @@ impl UserAuth {
             }
         }
     }
+
+    
 }
 
 #[derive(Clone)]
@@ -167,10 +176,10 @@ pub struct UserList {
 }
 
 impl UserList {
-    pub fn new(endpoint: &str, server_url: &str, api_key: String) -> UserList{
+    pub fn new(endpoint: &str, server_url: &str, api_key: &str) -> UserList{
         UserList{
             server_url: format!("{}{}",server_url, endpoint),
-            api_key
+            api_key: api_key.to_string()
         }
     }
 
@@ -192,12 +201,7 @@ impl UserList {
 
     // TODO: Standardize the GET request?
     pub fn get_user_id(self, username: &String) -> String {
-        let client = Client::new();
-        let response = client
-            .get(self.server_url)
-            .header("X-Emby-Token", self.api_key)
-            .send()
-            .unwrap();
+        let response = simple_get(self.server_url, self.api_key, Vec::new());
         let users = response.json::<UserInfoVec>().unwrap();
         for user in users {
             if user.name == *username {
@@ -241,6 +245,8 @@ impl UserList {
     pub fn update_user_info(self, id: &str, info: &UserDetails) -> Result<(), Box<dyn std::error::Error>> {
         let body = serde_json::to_string_pretty(&info)?;
         // So we have to update the Policy and the user info separate even though they are the same JSON object :/
+
+        // First we will update the Policy
         let policy_url = format!("{}/Policy",self.server_url);
         let user_response = simple_post(self.server_url.replace("{userId}", id), self.api_key.clone(), body);
         if user_response.status() == StatusCode::NO_CONTENT {} else {

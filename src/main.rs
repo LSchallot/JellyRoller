@@ -4,9 +4,9 @@ use std::io::{self, Write, BufReader, BufRead};
 use clap::{Parser, Subcommand, ValueEnum};
 
 mod user_actions;
-use user_actions::{ResetPass, UserAdd, UserAuth, UserDel, UserList};
+use user_actions::{UserWithPass, UserAuth, UserList};
 mod system_actions;
-use system_actions::{LogFile, ServerInfo};
+use system_actions::*;
 mod plugin_actions;
 use plugin_actions::PluginInfo;
 mod responder;
@@ -19,6 +19,8 @@ use entities::library_details::{LibraryDetails, LibraryRootJson};
 use entities::plugin_details::{PluginDetails, PluginRootJson};
 use entities::activity_details::{ActivityDetails};
 use entities::movie_details::{MovieDetails};
+use entities::media_details::{MediaRoot};
+use entities::server_info::ServerInfo;
 mod utils;
 use utils::output_writer::export_data;
 use utils::status_handler::{handle_others, handle_unauthorized};
@@ -209,6 +211,15 @@ struct Cli {
         #[clap(required = false, short, long, default_value="")]
         filename: String
         
+    },
+    /// Executes a search of your media
+    SearchMedia {
+        /// Search term
+        #[clap(required = true, short, long)]
+        term: String,
+        /// Filter for media type
+        #[clap(required = false, short, long, default_value="all")]
+        mediatype: String
     }
 }
 
@@ -231,6 +242,9 @@ fn main() -> Result<(), confy::ConfyError> {
         println!("Application is not configured!");
         initial_config(cfg);
         std::process::exit(0);
+    } else if cfg.token == "Unknown" {
+        println!("[INFO] Username/Password detected.  Reconfiguring to use API key.");
+        token_to_api(cfg.clone());
     }
     let args = Cli::parse();
     match args.command {
@@ -240,13 +254,19 @@ fn main() -> Result<(), confy::ConfyError> {
         },
         Commands::DeleteUser { username } => {
             let user_id = get_user_id(&cfg, &username);
-            UserDel::remove(UserDel::new(user_id, &cfg.server_url, cfg.api_key))
-                .expect("Unable to delete user.");
+            let server_path = format!("{}/Users/{}", cfg.server_url, user_id);
+            match UserWithPass::delete_user(UserWithPass::new(Some(username), None, server_path, cfg.api_key)) {
+                Err(_) => {
+                    eprintln!("Unable to delete user.");
+                    std::process::exit(1);
+                },
+                Ok(i) => i
+            }
         },
         Commands::ListUsers { export, mut output, username} => {
             if username.is_empty() {
                 let users: Vec<UserDetails> = 
-                    match UserList::list_users(UserList::new(USERS, &cfg.server_url, cfg.api_key)) {
+                    match UserList::list_users(UserList::new(USERS, &cfg.server_url, &cfg.api_key)) {
                         Err(_) => {
                             eprintln!("Unable to gather users.");
                             std::process::exit(1);
@@ -271,7 +291,7 @@ fn main() -> Result<(), confy::ConfyError> {
                     UserDetails::json_print_users(&users);
                 } 
             } else {
-                let user_id = UserList::get_user_id(UserList::new(USERS, &cfg.server_url, cfg.api_key.clone()), &username);
+                let user_id = UserList::get_user_id(UserList::new(USERS, &cfg.server_url, &cfg.api_key), &username);
                 let user = gather_user_information(&cfg, &username, &user_id);
                 if export {
                     println!("Exporting user information.....");
@@ -293,14 +313,16 @@ fn main() -> Result<(), confy::ConfyError> {
             }
         },
         Commands::ResetPassword { username, password } => {
-            let user_id = UserList::get_user_id(UserList::new(USERS, &cfg.server_url, cfg.api_key.clone()), &username);
-            match ResetPass::reset(ResetPass::new(&user_id, password, &cfg.server_url, &cfg.api_key)) {
+            // Get usename
+            let user_id = UserList::get_user_id(UserList::new(USERS, &cfg.server_url, &cfg.api_key), &username);
+            // Setup the endpoint
+            let server_path = format!("{}/Users{}/Password", &cfg.server_url, user_id);
+            match UserWithPass::resetpass(UserWithPass::new(None, Some(password), server_path, cfg.api_key)) {
                 Err(_) => {
                     eprintln!("Unable to convert user information into JSON.");
                     std::process::exit(1);
                 },
                 Ok(i) => i
-                        
             }
         },
         Commands::DisableUser { username } => {
@@ -308,7 +330,7 @@ fn main() -> Result<(), confy::ConfyError> {
             let mut user_info = gather_user_information(&cfg, &username, &id);
             user_info.policy.is_disabled = true;
             UserList::update_user_config_bool(
-                UserList::new(USER_POLICY, &cfg.server_url, cfg.api_key),
+                UserList::new(USER_POLICY, &cfg.server_url, &cfg.api_key),
                 &user_info.policy, 
                 &id,
                 &username)
@@ -319,7 +341,7 @@ fn main() -> Result<(), confy::ConfyError> {
             let mut user_info = gather_user_information(&cfg, &username, &id);
             user_info.policy.is_disabled = false;
             UserList::update_user_config_bool(
-                UserList::new(USER_POLICY, &cfg.server_url, cfg.api_key),
+                UserList::new(USER_POLICY, &cfg.server_url, &cfg.api_key),
                 &user_info.policy, 
                 &id,
                 &username)
@@ -330,7 +352,7 @@ fn main() -> Result<(), confy::ConfyError> {
             let mut user_info = gather_user_information(&cfg, &username, &id);
             user_info.policy.is_administrator = true;
             UserList::update_user_config_bool(
-                UserList::new(USER_POLICY, &cfg.server_url, cfg.api_key),
+                UserList::new(USER_POLICY, &cfg.server_url, &cfg.api_key),
                 &user_info.policy, 
                 &id,
                 &username)
@@ -341,7 +363,7 @@ fn main() -> Result<(), confy::ConfyError> {
             let mut user_info = gather_user_information(&cfg, &username, &id);
             user_info.policy.is_administrator = false;
             UserList::update_user_config_bool(
-                UserList::new(USER_POLICY, &cfg.server_url, cfg.api_key),
+                UserList::new(USER_POLICY, &cfg.server_url, &cfg.api_key),
                 &user_info.policy, 
                 &id,
                 &username)
@@ -380,7 +402,7 @@ fn main() -> Result<(), confy::ConfyError> {
                     };
                 for item in info {
                     match UserList::update_user_info(
-                        UserList::new(USER_ID, &cfg.server_url, cfg.api_key.clone()),
+                        UserList::new(USER_ID, &cfg.server_url, &cfg.api_key),
                         &item.id,
                         &item
                     ) {
@@ -400,7 +422,7 @@ fn main() -> Result<(), confy::ConfyError> {
                     };
                 let user_id = get_user_id(&cfg, &info.name);
                 match UserList::update_user_info(
-                    UserList::new(USER_ID, &cfg.server_url, cfg.api_key),
+                    UserList::new(USER_ID, &cfg.server_url, &cfg.api_key),
                     &user_id,
                     &info
                 ) {
@@ -412,12 +434,12 @@ fn main() -> Result<(), confy::ConfyError> {
 
         // Server based commands
         Commands::ServerInfo {} => {
-            ServerInfo::get_server_info(ServerInfo::new("/System/Info", &cfg.server_url, &cfg.api_key))
+            get_server_info(ServerInfo::new("/System/Info", &cfg.server_url, &cfg.api_key))
                 .expect("Unable to gather server information.");
         },
         Commands::ListLogs { json } => {
             let logs = 
-                match ServerInfo::get_log_filenames(ServerInfo::new("/System/Logs", &cfg.server_url, &cfg.api_key)) {
+                match get_log_filenames(ServerInfo::new("/System/Logs", &cfg.server_url, &cfg.api_key)) {
                     Err(_) => {
                         eprintln!("Unable to get get log filenames.");
                         std::process::exit(1);
@@ -431,7 +453,11 @@ fn main() -> Result<(), confy::ConfyError> {
             }     
         },
         Commands::ShowLog { logfile } => {
-            LogFile::get_logfile(LogFile::new("/System/Logs/Log", &cfg.server_url, cfg.api_key, logfile))
+            LogFile::get_logfile(
+                LogFile::new(
+                    ServerInfo::new("/System/Logs/Log", &cfg.server_url, &cfg.api_key), 
+                    logfile
+                ))
                 .expect("Unable to retrieve the specified logfile.");
         },
         Commands::Reconfigure {} => {
@@ -439,7 +465,7 @@ fn main() -> Result<(), confy::ConfyError> {
         },
         Commands::GetDevices { json } => {
             let devices: Vec<DeviceDetails> = 
-                match ServerInfo::get_devices(ServerInfo::new(DEVICES, &cfg.server_url, &cfg.api_key)) {
+                match get_devices(ServerInfo::new(DEVICES, &cfg.server_url, &cfg.api_key)) {
                     Err(_) => {
                         eprintln!("Unable to get devices.");
                         std::process::exit(1);
@@ -454,7 +480,7 @@ fn main() -> Result<(), confy::ConfyError> {
         },
         Commands::GetLibraries { json } => {
             let libraries: Vec<LibraryDetails> = 
-             match ServerInfo::get_libraries(ServerInfo::new("/Library/VirtualFolders", &cfg.server_url, &cfg.api_key)) {
+             match get_libraries(ServerInfo::new("/Library/VirtualFolders", &cfg.server_url, &cfg.api_key)) {
                 Err(_) => {
                     eprintln!("Unable to get libraries.");
                     std::process::exit(1);
@@ -469,7 +495,7 @@ fn main() -> Result<(), confy::ConfyError> {
         },
         Commands::GetScheduledTasks { json } => {
             let tasks: Vec<TaskDetails> = 
-                match ServerInfo::get_scheduled_tasks(ServerInfo::new("/ScheduledTasks", &cfg.server_url, &cfg.api_key)) {
+                match get_scheduled_tasks(ServerInfo::new("/ScheduledTasks", &cfg.server_url, &cfg.api_key)) {
                     Err(e) => {
                         eprintln!("Unable to get scheduled tasks, {e}");
                         std::process::exit(1);
@@ -485,21 +511,21 @@ fn main() -> Result<(), confy::ConfyError> {
         },
         Commands::ExecuteTaskByName { task } => {
             let taskid: String = 
-                match ServerInfo::get_taskid_by_taskname(ServerInfo::new("/ScheduledTasks", &cfg.server_url, &cfg.api_key), &task) {
+                match get_taskid_by_taskname(ServerInfo::new("/ScheduledTasks", &cfg.server_url, &cfg.api_key), &task) {
                     Err(e) => {
                         eprintln!("Unable to get task id by taskname, {e}");
                         std::process::exit(1);
                     },
                     Ok(i) => i
                 };
-            ServerInfo::execute_task_by_id(ServerInfo::new("/ScheduledTasks/Running/{taskId}", &cfg.server_url, &cfg.api_key), &task, &taskid);
+            execute_task_by_id(ServerInfo::new("/ScheduledTasks/Running/{taskId}", &cfg.server_url, &cfg.api_key), &task, &taskid);
         }
         Commands::ScanLibrary {} => {
-            ServerInfo::scan_library(ServerInfo::new("/Library/Refresh", &cfg.server_url, &cfg.api_key));
+            scan_library(ServerInfo::new("/Library/Refresh", &cfg.server_url, &cfg.api_key));
         },
         Commands::RemoveDeviceByUsername { username } => {
             let filtered: Vec<String> = 
-                match ServerInfo::get_deviceid_by_username(ServerInfo::new(DEVICES, &cfg.server_url, &cfg.api_key), &username) {
+                match get_deviceid_by_username(ServerInfo::new(DEVICES, &cfg.server_url, &cfg.api_key), &username) {
                     Err(_) => {
                         eprintln!("Unable to get device id by username.");
                         std::process::exit(1);
@@ -507,15 +533,15 @@ fn main() -> Result<(), confy::ConfyError> {
                     Ok(i) => i
                 };
             for item in filtered {
-                ServerInfo::remove_device(ServerInfo::new(DEVICES, &cfg.server_url, &cfg.api_key), &item)
+                remove_device(ServerInfo::new(DEVICES, &cfg.server_url, &cfg.api_key), &item)
                     .expect("Unable to delete specified id.");
             }
         },
         Commands::RestartJellyfin {} => {
-            ServerInfo::restart_or_shutdown(ServerInfo::new("/System/Restart", &cfg.server_url, &cfg.api_key));
+            restart_or_shutdown(ServerInfo::new("/System/Restart", &cfg.server_url, &cfg.api_key));
         },
         Commands::ShutdownJellyfin {} => {
-            ServerInfo::restart_or_shutdown(ServerInfo::new("/System/Shutdown", &cfg.server_url, &cfg.api_key));
+            restart_or_shutdown(ServerInfo::new("/System/Shutdown", &cfg.server_url, &cfg.api_key));
         },
         Commands::GetPlugins { json } => {
             let plugins: Vec<PluginDetails> = 
@@ -537,7 +563,7 @@ fn main() -> Result<(), confy::ConfyError> {
                 ReportType::Activity => {
                     println!("Gathering Activity information.....");
                     let activities: ActivityDetails =
-                        match ServerInfo::get_activity(ServerInfo::new("/System/ActivityLog/Entries", &cfg.server_url, &cfg.api_key), &limit) {
+                        match get_activity(ServerInfo::new("/System/ActivityLog/Entries", &cfg.server_url, &cfg.api_key), &limit) {
                             Err(e) => {
                                 eprintln!("Unable to gather activity log entries, {e}");
                                 std::process::exit(1);
@@ -555,7 +581,7 @@ fn main() -> Result<(), confy::ConfyError> {
                 },
                 ReportType::Movie => {
                     let user_id: String = 
-                        match UserList::get_current_user_information(UserList::new("/Users/Me", &cfg.server_url, cfg.api_key.to_owned())) {
+                        match UserList::get_current_user_information(UserList::new("/Users/Me", &cfg.server_url, &cfg.api_key)) {
                             Err(e) => {
                                 eprintln!("Unable to gather information about current user, {e}");
                                 std::process::exit(1);
@@ -563,7 +589,7 @@ fn main() -> Result<(), confy::ConfyError> {
                             Ok(i) => i.id
                         };
                     let movies: MovieDetails = 
-                        match ServerInfo::export_library(ServerInfo::new("/Users/{userId}/Items", &cfg.server_url, &cfg.api_key), &user_id) {
+                        match export_library(ServerInfo::new("/Users/{userId}/Items", &cfg.server_url, &cfg.api_key), &user_id) {
                             Err(e) => {
                                 eprintln!("Unable to export library, {e}");
                                 std::process::exit(1);
@@ -580,6 +606,26 @@ fn main() -> Result<(), confy::ConfyError> {
                     }
                 }
             }
+        },
+        Commands::SearchMedia { term, mediatype } => {
+            let mut query = 
+                vec![
+                    ("SortBy", "SortName,ProductionYear"),
+                    ("Recursive", "true"),
+                    ("searchTerm", &term)
+                ];
+            if mediatype != "all" {
+                query.push(("IncludeItemTypes", &mediatype));
+            }
+            let search: MediaRoot =
+                match get_search_results(ServerInfo::new("/Items", &cfg.server_url, &cfg.api_key), query) {
+                    Err(e) => {
+                        eprintln!("Unable to execute search, {e}");
+                        std::process::exit(1);
+                    },
+                    Ok(i) => i
+                };
+            MediaRoot::table_print(search);
         }
     }
     
@@ -590,11 +636,11 @@ fn main() -> Result<(), confy::ConfyError> {
 /// Retrieve the id for the specified user.  Most API calls require the id of the user rather than the username.
 /// 
 fn get_user_id(cfg: &AppConfig, username: &String) -> String {
-    UserList::get_user_id(UserList::new("/Users", &cfg.server_url, cfg.api_key.clone()), username)
+    UserList::get_user_id(UserList::new("/Users", &cfg.server_url, &cfg.api_key), username)
 }
 
 fn gather_user_information(cfg: &AppConfig, username: &String, id: &str) -> UserDetails {
-    match UserList::get_user_information(UserList::new(USER_ID, &cfg.server_url, cfg.api_key.clone()), id) {
+    match UserList::get_user_information(UserList::new(USER_ID, &cfg.server_url, &cfg.api_key), id) {
         Err(_) => {
             println!("Unable to get user id for {}", username);
             std::process::exit(1);
@@ -607,8 +653,14 @@ fn gather_user_information(cfg: &AppConfig, username: &String, id: &str) -> User
 /// Helper function to standardize the call for adding a user with a password.
 /// 
 fn add_user(cfg: &AppConfig, username: String, password: String) {
-    UserAdd::create(UserAdd::new(username, password, &cfg.server_url, cfg.api_key.clone()))
-                .expect("Unable to add user.");
+    let server_path = format!("{}/Users/New", cfg.server_url);
+    match UserWithPass::create_user(UserWithPass::new(Some(username), Some(password), server_path, cfg.api_key.clone())) {
+        Err(_) => {
+            println!("Unable to create user");
+            std::process::exit(1);
+        },
+        Ok(i) => i
+    }
 }
 
 ///
@@ -634,11 +686,30 @@ fn initial_config(mut cfg: AppConfig) {
     io::stdin().read_line(&mut username)
         .expect("[ERROR] Could not read Jellyfin username");
     let password = rpassword::prompt_password("Please enter your Jellyfin password: ").unwrap();
-    println!("Attempting to authenticate user.");
+    println!("[INFO] Attempting to authenticate user.");
     cfg.api_key = UserAuth::auth_user(UserAuth::new(&cfg.server_url, username.trim(), password))
         .expect("Unable to generate user auth token.  Please assure your configuration information was input correctly\n"); 
-
+    
     cfg.status = "configured".to_owned();
+    token_to_api(cfg);
+}
+
+///
+/// Due to an issue with api key processing in Jellyfin, JellyRoller was initially relied on using auto tokens to communicate.
+/// Now that the issue has been fixed, the auto tokens need to be converted to an API key.  The single purpose of this function
+/// is to handle the conversion with no input required from the user.
+/// 
+
+fn token_to_api(mut cfg: AppConfig) {
+    println!("[INFO] Attempting to auto convert user auth token to API key.....");
+    // Check if api key already exists
+    if UserWithPass::retrieve_api_token(UserWithPass::new(None, None, format!("{}/Auth/Keys", cfg.server_url), cfg.api_key.clone())).unwrap().is_empty() {
+        UserWithPass::create_api_token(UserWithPass::new(None, None, format!("{}/Auth/Keys", cfg.server_url), cfg.api_key.clone()));        
+    }
+    cfg.api_key = UserWithPass::retrieve_api_token(UserWithPass::new(None, None, format!("{}/Auth/Keys", cfg.server_url), cfg.api_key)).unwrap();
+    cfg.token = "apiKey".to_string();
     confy::store("jellyroller", cfg)
-        .expect("[ERROR] Unable to store configuration.");
+        .expect("[ERROR] Unable to store updated configuration.");
+    println!("[INFO] Auth token successfully converted to API key.");
+
 }
