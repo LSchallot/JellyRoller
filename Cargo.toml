@@ -6,12 +6,12 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-clap = { version = "3.2.17", features = ["derive", "yaml"] }
-confy = "0.4.0"
+clap = { version = "4.3.19", features = ["derive"] }
+confy = "0.5.1"
 serde = "1.0.144"
 serde_derive = "1.0.144"
 serde_json = "1.0.85"
 reqwest = { version = "0.11.11", features = ["blocking", "json"] }
 rpassword = "7.0.0"
 url = "2.2.2"
-comfy-table = "6.0.0"
+comfy-table = "7.0.1"

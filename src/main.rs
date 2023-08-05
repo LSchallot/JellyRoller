@@ -17,9 +17,9 @@ use entities::task_details::TaskDetails;
 use entities::log_details::LogDetails;
 use entities::library_details::{LibraryDetails, LibraryRootJson};
 use entities::plugin_details::{PluginDetails, PluginRootJson};
-use entities::activity_details::{ActivityDetails};
-use entities::movie_details::{MovieDetails};
-use entities::media_details::{MediaRoot};
+use entities::activity_details::ActivityDetails;
+use entities::movie_details::MovieDetails;
+use entities::media_details::MediaRoot;
 use entities::server_info::ServerInfo;
 mod utils;
 use utils::output_writer::export_data;
@@ -202,7 +202,7 @@ struct Cli {
     /// Creates a report of either activity or available movie items
     CreateReport {
         /// Type of report (activity or movie)
-        #[clap(required = true, arg_enum)]
+        #[clap(required = true)]
         report_type: ReportType,
         /// Total number of records to return (defaults to 100)
         #[clap(required = false, short, long, default_value="100")]
@@ -237,7 +237,7 @@ enum ReportType {
 
 fn main() -> Result<(), confy::ConfyError> {
     
-    let cfg: AppConfig = confy::load("jellyroller")?;
+    let cfg: AppConfig = confy::load("jellyroller", "jellyroller")?;
     if cfg.status == "not configured" {
         println!("Application is not configured!");
         initial_config(cfg);
@@ -708,7 +708,7 @@ fn token_to_api(mut cfg: AppConfig) {
     }
     cfg.api_key = UserWithPass::retrieve_api_token(UserWithPass::new(None, None, format!("{}/Auth/Keys", cfg.server_url), cfg.api_key)).unwrap();
     cfg.token = "apiKey".to_string();
-    confy::store("jellyroller", cfg)
+    confy::store("jellyroller", "jellyroller", cfg)
         .expect("[ERROR] Unable to store updated configuration.");
     println!("[INFO] Auth token successfully converted to API key.");
 
