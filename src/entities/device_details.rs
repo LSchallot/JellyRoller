@@ -2,13 +2,17 @@ use comfy_table::{ Table, ContentArrangement };
 
 #[derive(Serialize, Deserialize)]
 pub struct DeviceRootJson {
+    #[serde(rename = "Items")]
     pub items: Vec<DeviceDetails>
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct DeviceDetails {
+    #[serde(rename = "Id")]
     pub id: String,
+    #[serde(rename = "Name")]
     pub name: String,
+    #[serde(rename = "LastUserName")]
     pub lastusername: String
 }
 

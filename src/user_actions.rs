@@ -9,15 +9,18 @@ pub struct UserWithPass {
     username: Option<String>,
     #[serde(rename = "Password")]
     pass: Option<String>,
+    #[serde(rename = "CurrentPwd")]
+    currentpwd: Option<String>,
     server_url: String,
     auth_key: String
 }
 
 impl UserWithPass {
-    pub fn new(username: Option<String>, pass: Option<String>, server_url: String, auth_key: String) -> UserWithPass {
+    pub fn new(username: Option<String>, pass: Option<String>, currentpwd: Option<String>, server_url: String, auth_key: String) -> UserWithPass {
         UserWithPass{
             username: Some(username.unwrap_or_else(|| {String::new()})),
             pass: Some(pass.unwrap_or_else(|| {String::new()})),
+            currentpwd: Some(currentpwd.unwrap_or_else(|| {String::new()})),
             server_url,
             auth_key
         }
@@ -34,6 +37,7 @@ impl UserWithPass {
             } StatusCode::UNAUTHORIZED => {
                 handle_unauthorized();
             } _ => {
+                println!("{}", response.status()    );
                 handle_others(response);
             }
         }

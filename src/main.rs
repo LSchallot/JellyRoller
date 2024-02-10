@@ -255,7 +255,7 @@ fn main() -> Result<(), confy::ConfyError> {
         Commands::DeleteUser { username } => {
             let user_id = get_user_id(&cfg, &username);
             let server_path = format!("{}/Users/{}", cfg.server_url, user_id);
-            match UserWithPass::delete_user(UserWithPass::new(Some(username), None, server_path, cfg.api_key)) {
+            match UserWithPass::delete_user(UserWithPass::new(Some(username), None, None, server_path, cfg.api_key)) {
                 Err(_) => {
                     eprintln!("Unable to delete user.");
                     std::process::exit(1);
@@ -316,8 +316,8 @@ fn main() -> Result<(), confy::ConfyError> {
             // Get usename
             let user_id = UserList::get_user_id(UserList::new(USERS, &cfg.server_url, &cfg.api_key), &username);
             // Setup the endpoint
-            let server_path = format!("{}/Users{}/Password", &cfg.server_url, user_id);
-            match UserWithPass::resetpass(UserWithPass::new(None, Some(password), server_path, cfg.api_key)) {
+            let server_path = format!("{}/Users/{}/Password", &cfg.server_url, user_id);
+            match UserWithPass::resetpass(UserWithPass::new(None, Some(password), Some("".to_string()), server_path, cfg.api_key)) {
                 Err(_) => {
                     eprintln!("Unable to convert user information into JSON.");
                     std::process::exit(1);
@@ -466,8 +466,8 @@ fn main() -> Result<(), confy::ConfyError> {
         Commands::GetDevices { json } => {
             let devices: Vec<DeviceDetails> = 
                 match get_devices(ServerInfo::new(DEVICES, &cfg.server_url, &cfg.api_key)) {
-                    Err(_) => {
-                        eprintln!("Unable to get devices.");
+                    Err(e) => {
+                        eprintln!("Unable to get devices, {e}");
                         std::process::exit(1);
                     },
                     Ok(i) => i
@@ -654,7 +654,7 @@ fn gather_user_information(cfg: &AppConfig, username: &String, id: &str) -> User
 /// 
 fn add_user(cfg: &AppConfig, username: String, password: String) {
     let server_path = format!("{}/Users/New", cfg.server_url);
-    match UserWithPass::create_user(UserWithPass::new(Some(username), Some(password), server_path, cfg.api_key.clone())) {
+    match UserWithPass::create_user(UserWithPass::new(Some(username), Some(password), None, server_path, cfg.api_key.clone())) {
         Err(_) => {
             println!("Unable to create user");
             std::process::exit(1);
@@ -703,10 +703,10 @@ fn initial_config(mut cfg: AppConfig) {
 fn token_to_api(mut cfg: AppConfig) {
     println!("[INFO] Attempting to auto convert user auth token to API key.....");
     // Check if api key already exists
-    if UserWithPass::retrieve_api_token(UserWithPass::new(None, None, format!("{}/Auth/Keys", cfg.server_url), cfg.api_key.clone())).unwrap().is_empty() {
-        UserWithPass::create_api_token(UserWithPass::new(None, None, format!("{}/Auth/Keys", cfg.server_url), cfg.api_key.clone()));        
+    if UserWithPass::retrieve_api_token(UserWithPass::new(None, None, None, format!("{}/Auth/Keys", cfg.server_url), cfg.api_key.clone())).unwrap().is_empty() {
+        UserWithPass::create_api_token(UserWithPass::new(None, None, None, format!("{}/Auth/Keys", cfg.server_url), cfg.api_key.clone()));        
     }
-    cfg.api_key = UserWithPass::retrieve_api_token(UserWithPass::new(None, None, format!("{}/Auth/Keys", cfg.server_url), cfg.api_key)).unwrap();
+    cfg.api_key = UserWithPass::retrieve_api_token(UserWithPass::new(None, None, None, format!("{}/Auth/Keys", cfg.server_url), cfg.api_key)).unwrap();
     cfg.token = "apiKey".to_string();
     confy::store("jellyroller", "jellyroller", cfg)
         .expect("[ERROR] Unable to store updated configuration.");
