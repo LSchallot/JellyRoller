@@ -185,9 +185,10 @@ pub fn get_deviceid_by_username(server_info: ServerInfo, username: &str) -> Resu
 
 pub fn remove_device(server_info: ServerInfo, id: &str) -> Result<(), reqwest::Error> {
     let client = Client::new();
+    let apikey = server_info.api_key;
     let response = client
         .delete(server_info.server_url)
-        .header("X-Emby-Token", server_info.api_key)
+        .header("Authorization", format!("MediaBrowser Token=\"{apikey}\""))
         .query(&[("id", &id)])
         .send()?;
         match response.status() {
@@ -271,10 +272,11 @@ impl LogFile {
 
     pub fn get_logfile(self) -> Result<(), reqwest::Error> {
         let client = Client::new();
+        let apikey = self.server_info.api_key;
         let response = client
             .get(self.server_info.server_url)
             .query(&[("name", self.logname)])
-            .header("X-Emby-Token", self.server_info.api_key)
+            .header("Authorization", format!("MediaBrowser Token=\"{apikey}\""))
             .send()?;
         match response.status() {
             StatusCode::OK => {
