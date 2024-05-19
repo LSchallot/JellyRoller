@@ -1,3 +1,4 @@
 /target
 *.code-workspace
 exported*
+/.idea
