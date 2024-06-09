@@ -1,6 +1,6 @@
 use crate::entities::{task_details::TaskDetails, activity_details::ActivityDetails, media_details::MediaRoot};
 
-use super::{ ServerInfo, DeviceDetails, DeviceRootJson, LibraryDetails, LibraryRootJson, LogDetails, MovieDetails, responder::{ simple_get, simple_post }, handle_unauthorized, handle_others };
+use super::{ ServerInfo, DeviceDetails, DeviceRootJson, LibraryDetails, LibraryRootJson, LogDetails, MovieDetails, ImageType, responder::{ simple_get, simple_post, simple_post_image }, handle_unauthorized, handle_others };
 use reqwest::{blocking::Client, StatusCode};
 use serde_json::Value;
 
@@ -230,6 +230,22 @@ pub fn scan_library(server_info: ServerInfo) {
     match response.status() {
         StatusCode::NO_CONTENT => {
             println!("Library scan initiated.");
+        } StatusCode::UNAUTHORIZED => {
+            handle_unauthorized();
+        } _ => {
+            handle_others(response);
+        }
+    }
+}
+
+pub fn update_image(server_info: ServerInfo, id: String, imagetype: &ImageType, img_base64: &String) {
+    let response = simple_post_image(
+        server_info.server_url.replace("{itemId}", id.as_str()).replace("{imageType}", imagetype.to_string().as_str()),
+        server_info.api_key,
+        img_base64.to_string());
+    match response.status() {
+        StatusCode::NO_CONTENT => {
+            println!("Image successfully updated.");
         } StatusCode::UNAUTHORIZED => {
             handle_unauthorized();
         } _ => {

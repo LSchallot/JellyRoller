@@ -26,3 +26,17 @@ pub fn simple_post(server_url: String, api_key: String, body: String) -> Respons
         std::process::exit(1);
     }
 }
+
+pub fn simple_post_image(server_url: String, api_key: String, body: String) -> Response {
+    let client = Client::new();
+    let response = client
+        .post(server_url)
+        .header(CONTENT_TYPE, "image/png")
+        .header("Authorization", format!("MediaBrowser Token=\"{api_key}\""))
+        .body(body)
+        .send();
+    if let Ok(resp) = response { resp } else {
+        println!("Post response error.");
+        std::process::exit(1);
+    }
+}

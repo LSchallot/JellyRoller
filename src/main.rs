@@ -1,7 +1,10 @@
 use std::fs::{File, self};
 use std::env;
-use std::io::{self, Write, BufReader, BufRead};
+use std::io::{self, Cursor, Write, BufReader, BufRead};
+use std::fmt;
 use clap::{Parser, Subcommand, ValueEnum};
+use image::ImageFormat;
+use base64::{engine::general_purpose, Engine as _};
 
 mod user_actions;
 use user_actions::{UserWithPass, UserAuth, UserList};
@@ -9,7 +12,7 @@ mod system_actions;
 use system_actions::*;
 mod plugin_actions;
 use plugin_actions::PluginInfo;
-mod responder;
+mod responder;  
 mod entities;
 use entities::user_details::{UserDetails, Policy};
 use entities::device_details::{DeviceDetails, DeviceRootJson};
@@ -220,6 +223,28 @@ struct Cli {
         /// Filter for media type
         #[clap(required = false, short, long, default_value="all")]
         mediatype: String
+    },
+    /// Updates image of specified file by name
+    UpdateImageByName {
+        /// Attempt to update based on title.  Requires unique search term.
+        #[clap(required = true, short, long)]
+        title: String,
+        /// Path to the image that will be used.
+        #[clap(required = true, short, long)]
+        path: String,
+        #[clap(required = true, short, long)]
+        imagetype: ImageType
+    },
+    /// Updates image of specified file by id
+    UpdateImageById {
+        /// Attempt to update based on item id.
+        #[clap(required = true, short = 'i', long)]
+        id: String,
+        /// Path to the image that will be used.
+        #[clap(required = true, short, long)]
+        path: String,
+        #[clap(required = true, short = 'I', long)]
+        imagetype: ImageType
     }
 }
 
@@ -235,6 +260,22 @@ enum ReportType {
     Movie
 }
 
+#[derive(ValueEnum, Clone, Debug, PartialEq)]
+enum ImageType {
+    Primary,
+    Art,
+    Backdrop,
+    Banner,
+    Logo,
+    Thumb,
+    Disc,
+    Box,
+    Screenshot,
+    Menu,
+    BoxRear,
+    Profile
+}
+
 fn main() -> Result<(), confy::ConfyError> {
     
     let cfg: AppConfig = confy::load("jellyroller", "jellyroller")?;
@@ -248,6 +289,39 @@ fn main() -> Result<(), confy::ConfyError> {
     }
     let args = Cli::parse();
     match args.command {
+        Commands::UpdateImageByName { title, path, imagetype } => {
+            let search: MediaRoot = execute_search(&title, "all".to_string(), &cfg);
+            if search.total_record_count > 1 {
+                eprintln!("Too many results found.  Updating by name requires a unique search term.");
+                std::process::exit(1);
+            }
+
+            let base_img = image::open(path).unwrap();
+            let mut image_data: Vec<u8> = Vec::new();
+            base_img.write_to(&mut Cursor::new(&mut image_data), ImageFormat::Png).unwrap();
+            let img_base64 = general_purpose::STANDARD.encode(image_data);
+            for item in search.items {
+                update_image(
+                    ServerInfo::new("/Items/{itemId}/Images/{imageType}", &cfg.server_url, &cfg.api_key),
+                    item.id,
+                    &imagetype,
+                    &img_base64
+                );
+            }
+        },
+        Commands::UpdateImageById { id, path, imagetype} => {
+            let base_img = image::open(path).unwrap();
+            let mut image_data: Vec<u8> = Vec::new();
+            base_img.write_to(&mut Cursor::new(&mut image_data), ImageFormat::Png).unwrap();
+            let img_base64 = general_purpose::STANDARD.encode(image_data);
+            update_image(
+                ServerInfo::new("/Items/{itemId}/Images/{imageType}", &cfg.server_url, &cfg.api_key),
+                id,
+                &imagetype,
+                &img_base64
+            );
+        },
+
         // User based commands
         Commands::AddUser { username, password } => {
             add_user(&cfg, username, password);
@@ -617,19 +691,31 @@ fn main() -> Result<(), confy::ConfyError> {
             if mediatype != "all" {
                 query.push(("IncludeItemTypes", &mediatype));
             }
-            let search: MediaRoot =
-                match get_search_results(ServerInfo::new("/Items", &cfg.server_url, &cfg.api_key), query) {
-                    Err(e) => {
-                        eprintln!("Unable to execute search, {e}");
-                        std::process::exit(1);
-                    },
-                    Ok(i) => i
-                };
-            MediaRoot::table_print(search);
+            MediaRoot::table_print(execute_search(&term, mediatype, &cfg));
         }
     }
     
     Ok(())
+}
+
+fn execute_search(term: &String, mediatype: String, cfg: &AppConfig) -> MediaRoot {
+    let mut query =
+        vec![
+            ("SortBy", "SortName,ProductionYear"),
+            ("Recursive", "true"),
+            ("searchTerm", term)
+        ];
+    if mediatype != "all" {
+        query.push(("IncludeItemTypes", &mediatype));
+    }
+
+    match get_search_results(ServerInfo::new("/Items", &cfg.server_url, &cfg.api_key), query) {
+        Err(e) => {
+            eprintln!("Unable to execute search, {e}");
+            std::process::exit(1);
+        },
+        Ok(i) => i
+    }
 }
 
 ///
@@ -712,4 +798,23 @@ fn token_to_api(mut cfg: AppConfig) {
         .expect("[ERROR] Unable to store updated configuration.");
     println!("[INFO] Auth token successfully converted to API key.");
 
+}
+
+impl fmt::Display for ImageType {
+    fn fmt (&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self{
+            ImageType::Primary => write!(f, "Primary"),
+            ImageType::Art => write!(f, "Art"),
+            ImageType::Backdrop => write!(f, "Backdrop"),
+            ImageType::Banner => write!(f, "Banner"),
+            ImageType::Logo => write!(f, "Logo"),
+            ImageType::Thumb => write!(f, "Thumb"),
+            ImageType::Disc => write!(f, "Disc"),
+            ImageType::Box => write!(f, "Box"),
+            ImageType::Screenshot => write!(f, "Screenshot"),
+            ImageType::Menu => write!(f, "Menu"),
+            ImageType::BoxRear => write!(f, "BoxRear"),
+            ImageType::Profile => write!(f, "Profile"),
+        }
+    }
 }
