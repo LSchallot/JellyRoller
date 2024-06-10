@@ -343,7 +343,8 @@ fn main() -> Result<(), confy::ConfyError> {
                 if export {
                     println!("Exporting all user information.....");
                     if output.is_empty() {
-                        output = "exported-user-info.json".to_owned();
+                        "exported-user-info.json".clone_into(&mut output);
+
                     }
                     let data: String = 
                         match serde_json::to_string_pretty(&users) {
@@ -755,7 +756,7 @@ fn add_user(cfg: &AppConfig, username: String, password: String) {
 /// 
 fn initial_config(mut cfg: AppConfig) {
     println!("[INFO] Attempting to determine Jellyfin information.....");
-    cfg.os = env::consts::OS.to_owned();
+    env::consts::OS.clone_into(&mut cfg.os);
     println!("[INFO] OS detected as {}.", cfg.os);
     
     print!("[INPUT] Please enter your Jellyfin URL:  ");
@@ -763,7 +764,7 @@ fn initial_config(mut cfg: AppConfig) {
     let mut server_url_input = String::new();
     io::stdin().read_line(&mut server_url_input)
         .expect("Could not read server url information");
-    cfg.server_url = server_url_input.trim().to_owned();
+    server_url_input.trim().clone_into(&mut cfg.server_url);
     
     print!("[INPUT] Please enter your Jellyfin username:  ");
     io::stdout().flush().expect("Unable to get username.");
@@ -775,7 +776,7 @@ fn initial_config(mut cfg: AppConfig) {
     cfg.api_key = UserAuth::auth_user(UserAuth::new(&cfg.server_url, username.trim(), password))
         .expect("Unable to generate user auth token.  Please assure your configuration information was input correctly\n"); 
     
-    cfg.status = "configured".to_owned();
+    "configured".clone_into(&mut cfg.status);
     token_to_api(cfg);
 }
 
@@ -806,7 +807,7 @@ fn image_to_base64(path: String) -> String {
     let base_img = image::open(path).unwrap();
     let mut image_data: Vec<u8> = Vec::new();
     base_img.write_to(&mut Cursor::new(&mut image_data), ImageFormat::Png).unwrap();
-    return general_purpose::STANDARD.encode(image_data);
+    general_purpose::STANDARD.encode(image_data)
 }
 
 ///
