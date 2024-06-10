@@ -157,7 +157,7 @@ impl UserAuth {
         let response = client
             .post(self.server_url.clone())
             .header(CONTENT_TYPE, "application/json")
-            .header("X-Emby-Authorization", "MediaBrowser Client=\"JellyRoller\", Device=\"jellyroller\", DeviceId=\"1\", Version=\"0.0.1\"")
+            .header("Authorization", "MediaBrowser Client=\"JellyRoller\", Device=\"jellyroller\", DeviceId=\"1\", Version=\"0.0.1\"")
             .body(serde_json::to_string_pretty(&self)?)
             .send()?;
         match response.status() {
@@ -167,6 +167,7 @@ impl UserAuth {
                 Ok(result.access_token)
             } _ => {
                 // Panic since the application requires an authenticated user
+                handle_others(response);
                 panic!("[ERROR] Unable to authenticate user.  Please assure your configuration information is correct.\n");
             }
         }
