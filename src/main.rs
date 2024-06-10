@@ -295,11 +295,7 @@ fn main() -> Result<(), confy::ConfyError> {
                 eprintln!("Too many results found.  Updating by name requires a unique search term.");
                 std::process::exit(1);
             }
-
-            let base_img = image::open(path).unwrap();
-            let mut image_data: Vec<u8> = Vec::new();
-            base_img.write_to(&mut Cursor::new(&mut image_data), ImageFormat::Png).unwrap();
-            let img_base64 = general_purpose::STANDARD.encode(image_data);
+            let img_base64 = image_to_base64(path);
             for item in search.items {
                 update_image(
                     ServerInfo::new("/Items/{itemId}/Images/{imageType}", &cfg.server_url, &cfg.api_key),
@@ -310,10 +306,7 @@ fn main() -> Result<(), confy::ConfyError> {
             }
         },
         Commands::UpdateImageById { id, path, imagetype} => {
-            let base_img = image::open(path).unwrap();
-            let mut image_data: Vec<u8> = Vec::new();
-            base_img.write_to(&mut Cursor::new(&mut image_data), ImageFormat::Png).unwrap();
-            let img_base64 = general_purpose::STANDARD.encode(image_data);
+            let img_base64 = image_to_base64(path);
             update_image(
                 ServerInfo::new("/Items/{itemId}/Images/{imageType}", &cfg.server_url, &cfg.api_key),
                 id,
@@ -698,6 +691,9 @@ fn main() -> Result<(), confy::ConfyError> {
     Ok(())
 }
 
+///
+/// Executes a search with the passed parameters.
+/// 
 fn execute_search(term: &String, mediatype: String, cfg: &AppConfig) -> MediaRoot {
     let mut query =
         vec![
@@ -725,6 +721,9 @@ fn get_user_id(cfg: &AppConfig, username: &String) -> String {
     UserList::get_user_id(UserList::new("/Users", &cfg.server_url, &cfg.api_key), username)
 }
 
+///
+/// Gathers user information.
+/// 
 fn gather_user_information(cfg: &AppConfig, username: &String, id: &str) -> UserDetails {
     match UserList::get_user_information(UserList::new(USER_ID, &cfg.server_url, &cfg.api_key), id) {
         Err(_) => {
@@ -800,6 +799,20 @@ fn token_to_api(mut cfg: AppConfig) {
 
 }
 
+///
+/// Function that converts an image into a base64 png image.
+/// 
+fn image_to_base64(path: String) -> String {
+    let base_img = image::open(path).unwrap();
+    let mut image_data: Vec<u8> = Vec::new();
+    base_img.write_to(&mut Cursor::new(&mut image_data), ImageFormat::Png).unwrap();
+    return general_purpose::STANDARD.encode(image_data);
+}
+
+///
+/// Custom implementation to convert the ImageType enum into Strings
+/// for easy comparison.
+/// 
 impl fmt::Display for ImageType {
     fn fmt (&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self{
