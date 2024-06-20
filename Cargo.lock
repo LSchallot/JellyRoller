@@ -847,7 +847,7 @@ checksum = "b1a46d1a171d865aa5f83f92695765caa047a9b4cbae2cbf37dbd613a793fd4c"
 
 [[package]]
 name = "jellyroller"
-version = "0.4.0-DEV"
+version = "0.4.0"
 dependencies = [
  "base64",
  "clap",
