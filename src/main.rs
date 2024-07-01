@@ -1,7 +1,10 @@
 use std::fs::{File, self};
 use std::env;
-use std::io::{self, Write, BufReader, BufRead};
+use std::io::{self, Cursor, Write, BufReader, BufRead};
+use std::fmt;
 use clap::{Parser, Subcommand, ValueEnum};
+use image::ImageFormat;
+use base64::{engine::general_purpose, Engine as _};
 
 mod user_actions;
 use user_actions::{UserWithPass, UserAuth, UserList};
@@ -9,7 +12,7 @@ mod system_actions;
 use system_actions::*;
 mod plugin_actions;
 use plugin_actions::PluginInfo;
-mod responder;
+mod responder;  
 mod entities;
 use entities::user_details::{UserDetails, Policy};
 use entities::device_details::{DeviceDetails, DeviceRootJson};
@@ -220,6 +223,28 @@ struct Cli {
         /// Filter for media type
         #[clap(required = false, short, long, default_value="all")]
         mediatype: String
+    },
+    /// Updates image of specified file by name
+    UpdateImageByName {
+        /// Attempt to update based on title.  Requires unique search term.
+        #[clap(required = true, short, long)]
+        title: String,
+        /// Path to the image that will be used.
+        #[clap(required = true, short, long)]
+        path: String,
+        #[clap(required = true, short, long)]
+        imagetype: ImageType
+    },
+    /// Updates image of specified file by id
+    UpdateImageById {
+        /// Attempt to update based on item id.
+        #[clap(required = true, short = 'i', long)]
+        id: String,
+        /// Path to the image that will be used.
+        #[clap(required = true, short, long)]
+        path: String,
+        #[clap(required = true, short = 'I', long)]
+        imagetype: ImageType
     }
 }
 
@@ -235,6 +260,22 @@ enum ReportType {
     Movie
 }
 
+#[derive(ValueEnum, Clone, Debug, PartialEq)]
+enum ImageType {
+    Primary,
+    Art,
+    Backdrop,
+    Banner,
+    Logo,
+    Thumb,
+    Disc,
+    Box,
+    Screenshot,
+    Menu,
+    BoxRear,
+    Profile
+}
+
 fn main() -> Result<(), confy::ConfyError> {
     
     let cfg: AppConfig = confy::load("jellyroller", "jellyroller")?;
@@ -248,6 +289,32 @@ fn main() -> Result<(), confy::ConfyError> {
     }
     let args = Cli::parse();
     match args.command {
+        Commands::UpdateImageByName { title, path, imagetype } => {
+            let search: MediaRoot = execute_search(&title, "all".to_string(), &cfg);
+            if search.total_record_count > 1 {
+                eprintln!("Too many results found.  Updating by name requires a unique search term.");
+                std::process::exit(1);
+            }
+            let img_base64 = image_to_base64(path);
+            for item in search.items {
+                update_image(
+                    ServerInfo::new("/Items/{itemId}/Images/{imageType}", &cfg.server_url, &cfg.api_key),
+                    item.id,
+                    &imagetype,
+                    &img_base64
+                );
+            }
+        },
+        Commands::UpdateImageById { id, path, imagetype} => {
+            let img_base64 = image_to_base64(path);
+            update_image(
+                ServerInfo::new("/Items/{itemId}/Images/{imageType}", &cfg.server_url, &cfg.api_key),
+                id,
+                &imagetype,
+                &img_base64
+            );
+        },
+
         // User based commands
         Commands::AddUser { username, password } => {
             add_user(&cfg, username, password);
@@ -276,7 +343,8 @@ fn main() -> Result<(), confy::ConfyError> {
                 if export {
                     println!("Exporting all user information.....");
                     if output.is_empty() {
-                        output = "exported-user-info.json".to_owned();
+                        "exported-user-info.json".clone_into(&mut output);
+
                     }
                     let data: String = 
                         match serde_json::to_string_pretty(&users) {
@@ -617,19 +685,34 @@ fn main() -> Result<(), confy::ConfyError> {
             if mediatype != "all" {
                 query.push(("IncludeItemTypes", &mediatype));
             }
-            let search: MediaRoot =
-                match get_search_results(ServerInfo::new("/Items", &cfg.server_url, &cfg.api_key), query) {
-                    Err(e) => {
-                        eprintln!("Unable to execute search, {e}");
-                        std::process::exit(1);
-                    },
-                    Ok(i) => i
-                };
-            MediaRoot::table_print(search);
+            MediaRoot::table_print(execute_search(&term, mediatype, &cfg));
         }
     }
     
     Ok(())
+}
+
+///
+/// Executes a search with the passed parameters.
+/// 
+fn execute_search(term: &String, mediatype: String, cfg: &AppConfig) -> MediaRoot {
+    let mut query =
+        vec![
+            ("SortBy", "SortName,ProductionYear"),
+            ("Recursive", "true"),
+            ("searchTerm", term)
+        ];
+    if mediatype != "all" {
+        query.push(("IncludeItemTypes", &mediatype));
+    }
+
+    match get_search_results(ServerInfo::new("/Items", &cfg.server_url, &cfg.api_key), query) {
+        Err(e) => {
+            eprintln!("Unable to execute search, {e}");
+            std::process::exit(1);
+        },
+        Ok(i) => i
+    }
 }
 
 ///
@@ -639,6 +722,9 @@ fn get_user_id(cfg: &AppConfig, username: &String) -> String {
     UserList::get_user_id(UserList::new("/Users", &cfg.server_url, &cfg.api_key), username)
 }
 
+///
+/// Gathers user information.
+/// 
 fn gather_user_information(cfg: &AppConfig, username: &String, id: &str) -> UserDetails {
     match UserList::get_user_information(UserList::new(USER_ID, &cfg.server_url, &cfg.api_key), id) {
         Err(_) => {
@@ -670,7 +756,7 @@ fn add_user(cfg: &AppConfig, username: String, password: String) {
 /// 
 fn initial_config(mut cfg: AppConfig) {
     println!("[INFO] Attempting to determine Jellyfin information.....");
-    cfg.os = env::consts::OS.to_owned();
+    env::consts::OS.clone_into(&mut cfg.os);
     println!("[INFO] OS detected as {}.", cfg.os);
     
     print!("[INPUT] Please enter your Jellyfin URL:  ");
@@ -678,7 +764,7 @@ fn initial_config(mut cfg: AppConfig) {
     let mut server_url_input = String::new();
     io::stdin().read_line(&mut server_url_input)
         .expect("Could not read server url information");
-    cfg.server_url = server_url_input.trim().to_owned();
+    server_url_input.trim().clone_into(&mut cfg.server_url);
     
     print!("[INPUT] Please enter your Jellyfin username:  ");
     io::stdout().flush().expect("Unable to get username.");
@@ -690,7 +776,7 @@ fn initial_config(mut cfg: AppConfig) {
     cfg.api_key = UserAuth::auth_user(UserAuth::new(&cfg.server_url, username.trim(), password))
         .expect("Unable to generate user auth token.  Please assure your configuration information was input correctly\n"); 
     
-    cfg.status = "configured".to_owned();
+    "configured".clone_into(&mut cfg.status);
     token_to_api(cfg);
 }
 
@@ -712,4 +798,37 @@ fn token_to_api(mut cfg: AppConfig) {
         .expect("[ERROR] Unable to store updated configuration.");
     println!("[INFO] Auth token successfully converted to API key.");
 
+}
+
+///
+/// Function that converts an image into a base64 png image.
+/// 
+fn image_to_base64(path: String) -> String {
+    let base_img = image::open(path).unwrap();
+    let mut image_data: Vec<u8> = Vec::new();
+    base_img.write_to(&mut Cursor::new(&mut image_data), ImageFormat::Png).unwrap();
+    general_purpose::STANDARD.encode(image_data)
+}
+
+///
+/// Custom implementation to convert the ImageType enum into Strings
+/// for easy comparison.
+/// 
+impl fmt::Display for ImageType {
+    fn fmt (&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self{
+            ImageType::Primary => write!(f, "Primary"),
+            ImageType::Art => write!(f, "Art"),
+            ImageType::Backdrop => write!(f, "Backdrop"),
+            ImageType::Banner => write!(f, "Banner"),
+            ImageType::Logo => write!(f, "Logo"),
+            ImageType::Thumb => write!(f, "Thumb"),
+            ImageType::Disc => write!(f, "Disc"),
+            ImageType::Box => write!(f, "Box"),
+            ImageType::Screenshot => write!(f, "Screenshot"),
+            ImageType::Menu => write!(f, "Menu"),
+            ImageType::BoxRear => write!(f, "BoxRear"),
+            ImageType::Profile => write!(f, "Profile"),
+        }
+    }
 }

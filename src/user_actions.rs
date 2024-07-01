@@ -65,9 +65,10 @@ impl UserWithPass {
 
     pub fn delete_user(self) -> Result<(), Box<dyn std::error::Error>> {
         let client = reqwest::blocking::Client::new();
+        let apikey = self.auth_key;
         let response = client
             .delete(self.server_url)
-            .header("X-Emby-Token", self.auth_key)
+            .header("Authorization", format!("MediaBrowser Token=\"{apikey}\""))
             .header(CONTENT_TYPE, "application/json")
             .send()?;
             match response.status() {
@@ -85,9 +86,10 @@ impl UserWithPass {
 
     pub fn create_api_token(self) {
         let client = Client::new();
+        let apikey = self.auth_key;
         let response = client
             .post(self.server_url)
-            .header("x-emby-token", self.auth_key)
+            .header("Authorization", format!("MediaBrowser Token=\"{apikey}\""))
             .header(CONTENT_LENGTH, 0)
             .query(&[("app", "JellyRoller")])
             .send()
@@ -155,7 +157,7 @@ impl UserAuth {
         let response = client
             .post(self.server_url.clone())
             .header(CONTENT_TYPE, "application/json")
-            .header("X-Emby-Authorization", "MediaBrowser Client=\"JellyRoller\", Device=\"jellyroller\", DeviceId=\"1\", Version=\"0.0.1\"")
+            .header("Authorization", "MediaBrowser Client=\"JellyRoller\", Device=\"jellyroller\", DeviceId=\"1\", Version=\"0.0.1\"")
             .body(serde_json::to_string_pretty(&self)?)
             .send()?;
         match response.status() {
@@ -165,6 +167,7 @@ impl UserAuth {
                 Ok(result.access_token)
             } _ => {
                 // Panic since the application requires an authenticated user
+                handle_others(response);
                 panic!("[ERROR] Unable to authenticate user.  Please assure your configuration information is correct.\n");
             }
         }

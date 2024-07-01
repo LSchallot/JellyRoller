@@ -1,6 +1,6 @@
 use crate::entities::{task_details::TaskDetails, activity_details::ActivityDetails, media_details::MediaRoot};
 
-use super::{ ServerInfo, DeviceDetails, DeviceRootJson, LibraryDetails, LibraryRootJson, LogDetails, MovieDetails, responder::{ simple_get, simple_post }, handle_unauthorized, handle_others };
+use super::{ ServerInfo, DeviceDetails, DeviceRootJson, LibraryDetails, LibraryRootJson, LogDetails, MovieDetails, ImageType, responder::{ simple_get, simple_post, simple_post_image }, handle_unauthorized, handle_others };
 use reqwest::{blocking::Client, StatusCode};
 use serde_json::Value;
 
@@ -185,9 +185,10 @@ pub fn get_deviceid_by_username(server_info: ServerInfo, username: &str) -> Resu
 
 pub fn remove_device(server_info: ServerInfo, id: &str) -> Result<(), reqwest::Error> {
     let client = Client::new();
+    let apikey = server_info.api_key;
     let response = client
         .delete(server_info.server_url)
-        .header("X-Emby-Token", server_info.api_key)
+        .header("Authorization", format!("MediaBrowser Token=\"{apikey}\""))
         .query(&[("id", &id)])
         .send()?;
         match response.status() {
@@ -237,6 +238,22 @@ pub fn scan_library(server_info: ServerInfo) {
     }
 }
 
+pub fn update_image(server_info: ServerInfo, id: String, imagetype: &ImageType, img_base64: &String) {
+    let response = simple_post_image(
+        server_info.server_url.replace("{itemId}", id.as_str()).replace("{imageType}", imagetype.to_string().as_str()),
+        server_info.api_key,
+        img_base64.to_string());
+    match response.status() {
+        StatusCode::NO_CONTENT => {
+            println!("Image successfully updated.");
+        } StatusCode::UNAUTHORIZED => {
+            handle_unauthorized();
+        } _ => {
+            handle_others(response);
+        }
+    }
+}
+
 pub fn get_search_results(server_info: ServerInfo, query: Vec<(&str, &str)>) -> Result<MediaRoot, Box< dyn std::error::Error>> {
     let response = simple_get(
         server_info.server_url,
@@ -271,10 +288,11 @@ impl LogFile {
 
     pub fn get_logfile(self) -> Result<(), reqwest::Error> {
         let client = Client::new();
+        let apikey = self.server_info.api_key;
         let response = client
             .get(self.server_info.server_url)
             .query(&[("name", self.logname)])
-            .header("X-Emby-Token", self.server_info.api_key)
+            .header("Authorization", format!("MediaBrowser Token=\"{apikey}\""))
             .send()?;
         match response.status() {
             StatusCode::OK => {

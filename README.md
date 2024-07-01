@@ -10,7 +10,7 @@ Any previous user auth tokens will be converted to an API key upon next executio
 ## Usage Information
 
 ```
-jellyroller 0.3.0
+jellyroller 0.4.0
 A CLI controller for managing Jellyfin
 
 USAGE:
@@ -20,33 +20,36 @@ OPTIONS:
     -h, --help       Print help information
     -V, --version    Print version information
 
-SUBCOMMANDS:
-    add-user                     Creates a new user
-    add-users                    Uses the supplied file to mass create new users
-    create-report                Creates a report of either activity or available movie items
-    delete-user                  Deletes an existing user
-    disable-user                 Disable a user
-    enable-user                  Enable a user
-    execute-task-by-name         Executes a scheduled task by name
-    get-devices                  Show all active devices
-    get-libraries                Gets the libraries available to the configured user
-    get-plugins                  Returns a list of installed plugins
-    get-scheduled-tasks          Show all scheduled tasks and their status
-    grant-admin                  Grants the specified user admin rights
-    help                         Print this message or the help of the given subcommand(s)
-    list-logs                    Displays the available system logs
-    list-users                   Lists the current users with basic information
-    reconfigure                  Reconfigure the connection information
-    remove-device-by-username    Removes all devices associated with the specified user
-    reset-password               Resets a user's password
-    restart-jellyfin             Restarts Jellyfin
-    revoke-admin                 Revokes admin rights from the specified user
-    scan-library                 Start a library scan
-    search-media                 Executes a search of your media
-    server-info                  Displays the server information
-    show-log                     Displays the requested logfile
-    shutdown-jellyfin            Shuts down Jellyfin
-    update-users                 Mass update users in the supplied file
+Commands:
+  add-user                   Creates a new user
+  delete-user                Deletes an existing user
+  list-users                 Lists the current users with basic information
+  reset-password             Resets a user's password
+  server-info                Displays the server information
+  list-logs                  Displays the available system logs
+  show-log                   Displays the requested logfile
+  reconfigure                Reconfigure the connection information
+  get-devices                Show all active devices
+  remove-device-by-username  Removes all devices associated with the specified user
+  get-scheduled-tasks        Show all scheduled tasks and their status
+  execute-task-by-name       Executes a scheduled task by name
+  scan-library               Start a library scan
+  disable-user               Disable a user
+  enable-user                Enable a user
+  grant-admin                Grants the specified user admin rights
+  revoke-admin               Revokes admin rights from the specified user
+  restart-jellyfin           Restarts Jellyfin
+  shutdown-jellyfin          Shuts down Jellyfin
+  get-libraries              Gets the libraries available to the configured user
+  get-plugins                Returns a list of installed plugins
+  add-users                  Uses the supplied file to mass create new users
+  update-users               Mass update users in the supplied file
+  create-report              Creates a report of either activity or available movie items
+  search-media               Executes a search of your media
+  update-image-by-name       Updates image of specified file by name
+  update-image-by-id         Updates image of specified file by id
+  help                       Print this message or the help of the given subcommand(s)
+
 ```
 
 ## Installation
@@ -55,7 +58,7 @@ SUBCOMMANDS:
 
 ### Building From Source
 
-Currently built with rustc 1.69.0. If building on a Linux machine, you may need to install openssl-devel.
+Currently built with rustc 1.79.0. If building on a Linux machine, you may need to install openssl-devel.
 
 ```
 git clone <git location>
