@@ -10,7 +10,7 @@ Any previous user auth tokens will be converted to an API key upon next executio
 ## Usage Information
 
 ```
-jellyroller 0.4.0
+jellyroller 0.4.1
 A CLI controller for managing Jellyfin
 
 USAGE:
