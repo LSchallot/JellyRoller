@@ -7,9 +7,9 @@ use reqwest::{StatusCode, blocking::Client, header::{CONTENT_TYPE, CONTENT_LENGT
 pub struct UserWithPass {
     #[serde(rename = "Name")]
     username: Option<String>,
-    #[serde(rename = "Password")]
+    #[serde(rename = "NewPw")]
     pass: Option<String>,
-    #[serde(rename = "CurrentPwd")]
+    #[serde(rename = "CurrentPw")]
     currentpwd: Option<String>,
     server_url: String,
     auth_key: String
@@ -59,6 +59,7 @@ impl UserWithPass {
                 handle_others(response);
             }
         }
+
         
         Ok(())
     }
