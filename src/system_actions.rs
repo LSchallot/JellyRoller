@@ -254,6 +254,22 @@ pub fn update_image(server_info: ServerInfo, id: String, imagetype: &ImageType, 
     }
 }
 
+pub fn update_metadata(server_info: ServerInfo, id: String, json: String) {
+    let response = simple_post(
+        server_info.server_url.replace("{itemId}", id.as_str()),
+        server_info.api_key,
+        json);
+    match response.status() {
+        StatusCode::NO_CONTENT => {
+            println!("Metadata successfully updated.");
+        } StatusCode::UNAUTHORIZED => {
+            handle_unauthorized(); 
+        } _ => {
+            handle_others(response);
+        }
+    }
+}
+
 pub fn get_search_results(server_info: ServerInfo, query: Vec<(&str, &str)>) -> Result<MediaRoot, Box< dyn std::error::Error>> {
     let response = simple_get(
         server_info.server_url,
