@@ -245,6 +245,15 @@ struct Cli {
         path: String,
         #[clap(required = true, short = 'I', long)]
         imagetype: ImageType
+    },
+    /// Updates metadata of specified id with metadata provided by specified file
+    UpdateMetadata {
+        /// ID of the file to update
+        #[clap(required = true, short = 'i', long)]
+        id: String,
+        /// File that contains the metadata to upload to the server
+        #[clap(required = true, short = 'f', long)]
+        filename: String
     }
 }
 
@@ -289,6 +298,16 @@ fn main() -> Result<(), confy::ConfyError> {
     }
     let args = Cli::parse();
     match args.command {
+        Commands::UpdateMetadata { id, filename } => {
+            // Read the JSON file and prepare it for upload.
+            let json: String = fs::read_to_string(filename).unwrap();
+            update_metadata(
+                ServerInfo::new("/Items/{itemId}", &cfg.server_url, &cfg.api_key),
+                id,
+                json
+            );
+            
+        },
         Commands::UpdateImageByName { title, path, imagetype } => {
             let search: MediaRoot = execute_search(&title, "all".to_string(), &cfg);
             if search.total_record_count > 1 {
