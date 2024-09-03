@@ -247,7 +247,16 @@ struct Cli {
         imagetype: ImageType
     },
     /// Generate a report for an issue.
-    GenerateReport {}
+    GenerateReport {},
+    /// Updates metadata of specified id with metadata provided by specified file
+    UpdateMetadata {
+        /// ID of the file to update
+        #[clap(required = true, short = 'i', long)]
+        id: String,
+        /// File that contains the metadata to upload to the server
+        #[clap(required = true, short = 'f', long)]
+        filename: String
+    }
 }
 
 #[derive(ValueEnum, Clone, Debug, PartialEq)]
@@ -291,6 +300,7 @@ fn main() -> Result<(), confy::ConfyError> {
     }
     let args = Cli::parse();
     match args.command {
+
         Commands::GenerateReport {} => {
             let info = return_server_info(ServerInfo::new("/System/Info", &cfg.server_url, &cfg.api_key));
             let json: serde_json::Value = serde_json::from_str(info.as_str()).expect("failed");
@@ -308,6 +318,18 @@ fn main() -> Result<(), confy::ConfyError> {
                 json.get("OperatingSystem").expect("Unable to extract Jellyfin OS information."),
                 json.get("SystemArchitecture").expect("Unable to extract Jellyfin System Architecture.")
             );
+        },
+
+        Commands::UpdateMetadata { id, filename } => {
+            // Read the JSON file and prepare it for upload.
+            let json: String = fs::read_to_string(filename).unwrap();
+            update_metadata(
+                ServerInfo::new("/Items/{itemId}", &cfg.server_url, &cfg.api_key),
+                id,
+                json
+            );
+            
+
         },
         Commands::UpdateImageByName { title, path, imagetype } => {
             let search: MediaRoot = execute_search(&title, "all".to_string(), &cfg);
