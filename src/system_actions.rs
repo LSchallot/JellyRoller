@@ -24,6 +24,20 @@ pub fn get_server_info(server_info: ServerInfo) -> Result<(), Box<dyn std::error
     Ok(())
 }
 
+//pub fn return_server_info(server_info: ServerInfo) -> Result<String, Box<dyn std::error::Error>> {
+pub fn return_server_info(server_info: ServerInfo) -> String {
+    let response = simple_get(server_info.server_url, server_info.api_key, Vec::new());
+    match response.status() {
+        StatusCode::OK => {
+            let body: Value = response.json().unwrap();
+            body.to_string()
+        } _ => {
+            handle_others(response);
+            "".to_string()
+        }
+    }
+}
+
 pub fn restart_or_shutdown(server_info: ServerInfo) {
     let response = simple_post(server_info.server_url, server_info.api_key, String::new());
     match response.status() {
