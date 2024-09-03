@@ -245,7 +245,9 @@ struct Cli {
         path: String,
         #[clap(required = true, short = 'I', long)]
         imagetype: ImageType
-    }
+    },
+    /// Generate a report for an issue.
+    GenerateReport {}
 }
 
 #[derive(ValueEnum, Clone, Debug, PartialEq)]
@@ -289,6 +291,24 @@ fn main() -> Result<(), confy::ConfyError> {
     }
     let args = Cli::parse();
     match args.command {
+        Commands::GenerateReport {} => {
+            let info = return_server_info(ServerInfo::new("/System/Info", &cfg.server_url, &cfg.api_key));
+            let json: serde_json::Value = serde_json::from_str(info.as_str()).expect("failed");
+            println!("\
+                Please copy/paste the following information to any issue that is being opened:\n\
+                JellyRoller Version: {}\n\
+                JellyRoller OS: {}\n\
+                Jellyfin Version: {}\n\
+                Jellyfin Host OK: {}\n\
+                Jellyfin Server Architecture: {}\
+                ", 
+                env!("CARGO_PKG_VERSION"), 
+                env::consts::OS,
+                json.get("Version").expect("Unable to extract Jellyfin version."),
+                json.get("OperatingSystem").expect("Unable to extract Jellyfin OS information."),
+                json.get("SystemArchitecture").expect("Unable to extract Jellyfin System Architecture.")
+            );
+        },
         Commands::UpdateImageByName { title, path, imagetype } => {
             let search: MediaRoot = execute_search(&title, "all".to_string(), &cfg);
             if search.total_record_count > 1 {
