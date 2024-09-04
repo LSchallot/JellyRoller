@@ -1,4 +1,4 @@
-use crate::entities::{task_details::TaskDetails, activity_details::ActivityDetails, media_details::MediaRoot};
+use crate:: entities::{activity_details::ActivityDetails, media_details::MediaRoot, task_details::TaskDetails };
 
 use super::{ ServerInfo, DeviceDetails, DeviceRootJson, LibraryDetails, LibraryRootJson, LogDetails, MovieDetails, ImageType, responder::{ simple_get, simple_post, simple_post_image }, handle_unauthorized, handle_others };
 use reqwest::{blocking::Client, StatusCode};
@@ -244,6 +244,23 @@ pub fn scan_library(server_info: ServerInfo) {
     match response.status() {
         StatusCode::NO_CONTENT => {
             println!("Library scan initiated.");
+        } StatusCode::UNAUTHORIZED => {
+            handle_unauthorized();
+        } _ => {
+            handle_others(response);
+        }
+    }
+}
+
+pub fn register_library(server_info: ServerInfo, json_contents: String) {
+    let response = simple_post(
+        server_info.server_url,
+        server_info.api_key,
+        json_contents
+    );
+    match response.status() {
+        StatusCode::NO_CONTENT => {
+            println!("Library successfully added.");
         } StatusCode::UNAUTHORIZED => {
             handle_unauthorized();
         } _ => {

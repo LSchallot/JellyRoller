@@ -6,18 +6,10 @@ pub type LibraryRootJson = Vec<LibraryDetails>;
 pub struct LibraryDetails {
     #[serde(rename = "Name")]
     pub name: String,
-    // #[serde(rename = "Locations")]
-    // pub locations: Vec<String>,
     #[serde(rename = "CollectionType")]
     pub collection_type: String,
-    // #[serde(rename = "LibraryOptions")]
-    // pub library_options: LibraryOptions,
     #[serde(rename = "ItemId")]
     pub item_id: String,
-    // #[serde(rename = "PrimaryImageItemId")]
-    // pub primary_image_item_id: String,
-    // #[serde(rename = "RefreshProgress")]
-    // pub refresh_progress: i64,
     #[serde(rename = "RefreshStatus")]
     pub refresh_status: String,
 }
