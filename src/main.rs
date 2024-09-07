@@ -312,8 +312,18 @@ enum CollectionType {
 }
 
 fn main() -> Result<(), confy::ConfyError> {
-    
-    let cfg: AppConfig = confy::load("jellyroller", "jellyroller")?;
+    let mut current = env::current_exe().unwrap();
+    current.pop();
+    current.push("jellyroller.config");
+
+    let cfg: AppConfig;
+
+    if std::path::Path::new(current.as_path()).exists() {
+        cfg = confy::load_path(current.as_path())?;
+    } else {
+        cfg = confy::load("jellyroller", "jellyroller")?;
+    }
+
     if cfg.status == "not configured" {
         println!("Application is not configured!");
         initial_config(cfg);
