@@ -1,6 +1,6 @@
 use std::fs::{File, self};
 use std::env;
-use std::io::{self, Cursor, Write, BufReader, BufRead};
+use std::io::{self, BufRead, BufReader, Cursor, Read, Write};
 use std::fmt;
 use clap::{Parser, Subcommand, ValueEnum};
 use image::ImageFormat;
@@ -256,6 +256,18 @@ struct Cli {
         /// File that contains the metadata to upload to the server
         #[clap(required = true, short = 'f', long)]
         filename: String
+    },
+    /// Registers a new library.
+    RegisterLibrary {
+        /// Name of the new library
+        #[clap(required = true, short = 'n', long)]
+        name: String,
+        /// Collection Type of the new library
+        #[clap(required = true, short = 'c', long)]
+        collectiontype: CollectionType,
+        /// Path to file that contains the JSON for the library
+        #[clap(required = true, short = 'f', long)]
+        filename: String
     }
 }
 
@@ -287,6 +299,18 @@ enum ImageType {
     Profile
 }
 
+#[derive(ValueEnum, Clone, Debug, PartialEq)]
+enum CollectionType {
+    Movies,
+    TVShows,
+    Music,
+    MusicVideos,
+    HomeVideos,
+    BoxSets,
+    Books,
+    Mixed
+}
+
 fn main() -> Result<(), confy::ConfyError> {
     
     let cfg: AppConfig = confy::load("jellyroller", "jellyroller")?;
@@ -300,6 +324,22 @@ fn main() -> Result<(), confy::ConfyError> {
     }
     let args = Cli::parse();
     match args.command {
+
+        //TODO: Create a simple_post variation that allows for query params.
+        Commands::RegisterLibrary { name, collectiontype, filename} => {
+            let mut endpoint= String::from("/Library/VirtualFolders?CollectionType=");
+            endpoint.push_str(collectiontype.to_string().as_str());
+            endpoint.push_str("&refreshLibrary=true");
+            endpoint.push_str("&name=");
+            endpoint.push_str(name.as_str());
+            let mut file = File::open(filename).expect("Unable to open file.");
+            let mut contents = String::new();
+            file.read_to_string(&mut contents).expect("Unable to read file.");
+            register_library(
+                ServerInfo::new(endpoint.as_str(), &cfg.server_url, &cfg.api_key),
+                contents
+            )
+        },
 
         Commands::GenerateReport {} => {
             let info = return_server_info(ServerInfo::new("/System/Info", &cfg.server_url, &cfg.api_key));
@@ -871,6 +911,24 @@ impl fmt::Display for ImageType {
             ImageType::Menu => write!(f, "Menu"),
             ImageType::BoxRear => write!(f, "BoxRear"),
             ImageType::Profile => write!(f, "Profile"),
+        }
+    }
+}
+
+///
+/// Custom implementation to convert collectiontype enum into Strings
+/// 
+impl fmt::Display for CollectionType {
+    fn fmt (&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            CollectionType::Movies => write!(f, "movies"),
+            CollectionType::TVShows => write!(f, "tvshows"),
+            CollectionType::Music => write!(f, "music"),
+            CollectionType::MusicVideos => write!(f, "musicvideos"),
+            CollectionType::HomeVideos => write!(f, "homevideos"),
+            CollectionType::BoxSets => write!(f, "boxsets"),
+            CollectionType::Books => write!(f, "books"),
+            CollectionType::Mixed => write!(f, "mixed")
         }
     }
 }
