@@ -58,7 +58,7 @@ Commands:
 
 ### Building From Source
 
-Currently built with rustc 1.79.0. If building on a Linux machine, you may need to install openssl-devel.
+Currently built with rustc 1.80.1. If building on a Linux machine, you may need to install openssl-devel.
 
 ```
 git clone <git location>
@@ -74,6 +74,9 @@ When running JellyRoller for the first time, you will be prompted to configure a
 | Please enter your Jellyfin URL: | The URL to your Jellyfin instance. Depending on your setup, you may need to provide the port. Examples include http://myjellyfin.lab or http://localhost:8096. |
 | Please enter your Jellyfin username: | Username with admin rights that JellyRoller will use to execute commands. |
 | Please enter your Jellyfin password: | Password associated with the username being used. |
+
+### Custom Configuration
+As of 0.5.0, it is possible to keep your configuration file alongside of the JellyRoller executable.  Simply save your configuration in the same directory with the name "jellyroller.config" and it will be used automatically.  Keep in mind that this configurtion file will contain your API key, so secure the file as needed.
 
 ### Downloading Release
 
