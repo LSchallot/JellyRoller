@@ -1,6 +1,6 @@
 use crate:: entities::{activity_details::ActivityDetails, media_details::MediaRoot, task_details::TaskDetails };
 
-use super::{ ServerInfo, DeviceDetails, DeviceRootJson, LibraryDetails, LibraryRootJson, LogDetails, MovieDetails, ImageType, responder::{ simple_get, simple_post, simple_post_image }, handle_unauthorized, handle_others };
+use super::{ ServerInfo, DeviceDetails, DeviceRootJson, LibraryDetails, LibraryRootJson, LogDetails, MovieDetails, ImageType, responder::{ simple_get, simple_post, simple_post_with_query, simple_post_image }, handle_unauthorized, handle_others };
 use reqwest::{blocking::Client, StatusCode};
 use serde_json::Value;
 
@@ -236,7 +236,24 @@ pub fn get_scheduled_tasks(server_info: ServerInfo) -> Result<Vec<TaskDetails>, 
     Ok(details)
 }
 
-pub fn scan_library(server_info: ServerInfo) {
+pub fn scan_library(server_info: ServerInfo, scan_options: Vec<(&str, &str)>, library_id: String) {
+    let response = simple_post_with_query(
+        server_info.server_url.replace("{library_id}", library_id.as_str()), 
+        server_info.api_key, 
+        String::new(),
+        scan_options);
+    match response.status() {
+        StatusCode::NO_CONTENT => {
+            println!("Library scan initiated.");
+        } StatusCode::UNAUTHORIZED => {
+            handle_unauthorized();
+        } _ => {
+            handle_others(response);
+        }
+    }
+}
+
+pub fn scan_library_all(server_info: ServerInfo) {
     let response = simple_post(
         server_info.server_url, 
         server_info.api_key, 

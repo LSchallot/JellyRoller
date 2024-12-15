@@ -153,7 +153,14 @@ struct Cli {
         task: String
     },
     /// Start a library scan.
-    ScanLibrary {},
+    ScanLibrary {
+        /// Library ID
+        #[clap(required = false, value_parser, default_value="all")]
+        library_id: String,
+        /// Type of scan
+        #[clap(required = false, default_value="all")]
+        scan_type: ScanType,
+    },
     /// Disable a user.
     DisableUser {
         #[clap(required = true, value_parser)]
@@ -278,6 +285,14 @@ enum Detail {
 }
 
 #[derive(ValueEnum, Clone, Debug, PartialEq)]
+enum ScanType {
+    NewUpdated,
+    MissingMetadata,
+    ReplaceMetadata,
+    All
+}
+
+#[derive(ValueEnum, Clone, Debug, PartialEq)]
 enum ReportType {
     Activity,
     Movie
@@ -316,13 +331,11 @@ fn main() -> Result<(), confy::ConfyError> {
     current.pop();
     current.push("jellyroller.config");
 
-    let cfg: AppConfig;
-
-    if std::path::Path::new(current.as_path()).exists() {
-        cfg = confy::load_path(current.as_path())?;
+    let cfg: AppConfig = if std::path::Path::new(current.as_path()).exists() {
+        confy::load_path(current.as_path())?
     } else {
-        cfg = confy::load("jellyroller", "jellyroller")?;
-    }
+        confy::load("jellyroller", "jellyroller")?
+    };
 
     if cfg.status == "not configured" {
         println!("Application is not configured!");
@@ -680,8 +693,45 @@ fn main() -> Result<(), confy::ConfyError> {
                 };
             execute_task_by_id(ServerInfo::new("/ScheduledTasks/Running/{taskId}", &cfg.server_url, &cfg.api_key), &task, &taskid);
         }
-        Commands::ScanLibrary {} => {
-            scan_library(ServerInfo::new("/Library/Refresh", &cfg.server_url, &cfg.api_key));
+        Commands::ScanLibrary {library_id, scan_type} => {
+            if library_id == "all" {
+                scan_library_all(ServerInfo::new("/Library/Refresh", &cfg.server_url, &cfg.api_key));
+            } else {
+                let query_info = match scan_type {
+                    ScanType::NewUpdated => {
+                            vec![
+                                ("Recursive", "true"),
+                                ("ImageRefreshMode", "Default"),
+                                ("MetadataRefreshMode", "Default"),
+                                ("ReplaceAllImages", "false"),
+                                ("RegenerateTrickplay", "false"),
+                                ("ReplaceAllMetadata", "false")
+                            ]
+                    }, 
+                    ScanType::MissingMetadata => {
+                            vec![
+                                ("Recursive", "true"),
+                                ("ImageRefreshMode", "FullRefresh"),
+                                ("MetadataRefreshMode", "FullRefresh"),
+                                ("ReplaceAllImages", "false"),
+                                ("RegenerateTrickplay", "false"),
+                                ("ReplaceAllMetadata", "false")
+                            ]
+                    }, 
+                    ScanType::ReplaceMetadata => {
+                            vec![
+                                ("Recursive", "true"),
+                                ("ImageRefreshMode", "FullRefresh"),
+                                ("MetadataRefreshMode", "FullRefresh"),
+                                ("ReplaceAllImages", "false"),
+                                ("RegenerateTrickplay", "false"),
+                                ("ReplaceAllMetadata", "true")
+                            ]
+                    }, 
+                    _ => std::process::exit(1)
+                };
+                scan_library(ServerInfo::new("/Items/{library_id}/Refresh", &cfg.server_url, &cfg.api_key), query_info, library_id);
+            }
         },
         Commands::RemoveDeviceByUsername { username } => {
             let filtered: Vec<String> = 
@@ -908,7 +958,7 @@ fn image_to_base64(path: String) -> String {
 /// 
 impl fmt::Display for ImageType {
     fn fmt (&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self{
+        match self {
             ImageType::Primary => write!(f, "Primary"),
             ImageType::Art => write!(f, "Art"),
             ImageType::Backdrop => write!(f, "Backdrop"),
