@@ -130,7 +130,7 @@ struct Cli {
     },
     /// Reconfigure the connection information.
     Reconfigure {},
-    /// Show all active devices.
+    /// Show all devices.
     GetDevices {
         /// Print information as json.
         #[clap(long, required = false)]
