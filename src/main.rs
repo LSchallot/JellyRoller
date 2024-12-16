@@ -837,7 +837,7 @@ fn main() -> Result<(), confy::ConfyError> {
 ///
 /// Executes a search with the passed parameters.
 /// 
-fn execute_search(term: &String, mediatype: String, cfg: &AppConfig) -> MediaRoot {
+fn execute_search(term: &str, mediatype: String, cfg: &AppConfig) -> MediaRoot {
     let mut query =
         vec![
             ("SortBy", "SortName,ProductionYear"),
@@ -927,7 +927,6 @@ fn initial_config(mut cfg: AppConfig) {
 /// Now that the issue has been fixed, the auto tokens need to be converted to an API key.  The single purpose of this function
 /// is to handle the conversion with no input required from the user.
 /// 
-
 fn token_to_api(mut cfg: AppConfig) {
     println!("[INFO] Attempting to auto convert user auth token to API key.....");
     // Check if api key already exists
