@@ -1,6 +1,6 @@
-use crate::entities::{task_details::TaskDetails, activity_details::ActivityDetails, media_details::MediaRoot};
+use crate:: entities::{activity_details::ActivityDetails, media_details::MediaRoot, task_details::TaskDetails };
 
-use super::{ ServerInfo, DeviceDetails, DeviceRootJson, LibraryDetails, LibraryRootJson, LogDetails, MovieDetails, ImageType, responder::{ simple_get, simple_post, simple_post_image }, handle_unauthorized, handle_others };
+use super::{ ServerInfo, DeviceDetails, DeviceRootJson, LibraryDetails, LibraryRootJson, LogDetails, MovieDetails, ImageType, responder::{ simple_get, simple_post, simple_post_with_query, simple_post_image }, handle_unauthorized, handle_others };
 use reqwest::{blocking::Client, StatusCode};
 use serde_json::Value;
 
@@ -22,6 +22,20 @@ pub fn get_server_info(server_info: ServerInfo) -> Result<(), Box<dyn std::error
     }
 
     Ok(())
+}
+
+//pub fn return_server_info(server_info: ServerInfo) -> Result<String, Box<dyn std::error::Error>> {
+pub fn return_server_info(server_info: ServerInfo) -> String {
+    let response = simple_get(server_info.server_url, server_info.api_key, Vec::new());
+    match response.status() {
+        StatusCode::OK => {
+            let body: Value = response.json().unwrap();
+            body.to_string()
+        } _ => {
+            handle_others(response);
+            "".to_string()
+        }
+    }
 }
 
 pub fn restart_or_shutdown(server_info: ServerInfo) {
@@ -222,7 +236,24 @@ pub fn get_scheduled_tasks(server_info: ServerInfo) -> Result<Vec<TaskDetails>, 
     Ok(details)
 }
 
-pub fn scan_library(server_info: ServerInfo) {
+pub fn scan_library(server_info: ServerInfo, scan_options: Vec<(&str, &str)>, library_id: String) {
+    let response = simple_post_with_query(
+        server_info.server_url.replace("{library_id}", library_id.as_str()), 
+        server_info.api_key, 
+        String::new(),
+        scan_options);
+    match response.status() {
+        StatusCode::NO_CONTENT => {
+            println!("Library scan initiated.");
+        } StatusCode::UNAUTHORIZED => {
+            handle_unauthorized();
+        } _ => {
+            handle_others(response);
+        }
+    }
+}
+
+pub fn scan_library_all(server_info: ServerInfo) {
     let response = simple_post(
         server_info.server_url, 
         server_info.api_key, 
@@ -230,6 +261,23 @@ pub fn scan_library(server_info: ServerInfo) {
     match response.status() {
         StatusCode::NO_CONTENT => {
             println!("Library scan initiated.");
+        } StatusCode::UNAUTHORIZED => {
+            handle_unauthorized();
+        } _ => {
+            handle_others(response);
+        }
+    }
+}
+
+pub fn register_library(server_info: ServerInfo, json_contents: String) {
+    let response = simple_post(
+        server_info.server_url,
+        server_info.api_key,
+        json_contents
+    );
+    match response.status() {
+        StatusCode::NO_CONTENT => {
+            println!("Library successfully added.");
         } StatusCode::UNAUTHORIZED => {
             handle_unauthorized();
         } _ => {
@@ -248,6 +296,22 @@ pub fn update_image(server_info: ServerInfo, id: String, imagetype: &ImageType, 
             println!("Image successfully updated.");
         } StatusCode::UNAUTHORIZED => {
             handle_unauthorized();
+        } _ => {
+            handle_others(response);
+        }
+    }
+}
+
+pub fn update_metadata(server_info: ServerInfo, id: String, json: String) {
+    let response = simple_post(
+        server_info.server_url.replace("{itemId}", id.as_str()),
+        server_info.api_key,
+        json);
+    match response.status() {
+        StatusCode::NO_CONTENT => {
+            println!("Metadata successfully updated.");
+        } StatusCode::UNAUTHORIZED => {
+            handle_unauthorized(); 
         } _ => {
             handle_others(response);
         }

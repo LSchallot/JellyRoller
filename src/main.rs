@@ -1,6 +1,6 @@
 use std::fs::{File, self};
 use std::env;
-use std::io::{self, Cursor, Write, BufReader, BufRead};
+use std::io::{self, BufRead, BufReader, Cursor, Read, Write};
 use std::fmt;
 use clap::{Parser, Subcommand, ValueEnum};
 use image::ImageFormat;
@@ -130,7 +130,7 @@ struct Cli {
     },
     /// Reconfigure the connection information.
     Reconfigure {},
-    /// Show all active devices.
+    /// Show all devices.
     GetDevices {
         /// Print information as json.
         #[clap(long, required = false)]
@@ -153,7 +153,14 @@ struct Cli {
         task: String
     },
     /// Start a library scan.
-    ScanLibrary {},
+    ScanLibrary {
+        /// Library ID
+        #[clap(required = false, value_parser, default_value="all")]
+        library_id: String,
+        /// Type of scan
+        #[clap(required = false, default_value="all")]
+        scan_type: ScanType,
+    },
     /// Disable a user.
     DisableUser {
         #[clap(required = true, value_parser)]
@@ -245,6 +252,29 @@ struct Cli {
         path: String,
         #[clap(required = true, short = 'I', long)]
         imagetype: ImageType
+    },
+    /// Generate a report for an issue.
+    GenerateReport {},
+    /// Updates metadata of specified id with metadata provided by specified file
+    UpdateMetadata {
+        /// ID of the file to update
+        #[clap(required = true, short = 'i', long)]
+        id: String,
+        /// File that contains the metadata to upload to the server
+        #[clap(required = true, short = 'f', long)]
+        filename: String
+    },
+    /// Registers a new library.
+    RegisterLibrary {
+        /// Name of the new library
+        #[clap(required = true, short = 'n', long)]
+        name: String,
+        /// Collection Type of the new library
+        #[clap(required = true, short = 'c', long)]
+        collectiontype: CollectionType,
+        /// Path to file that contains the JSON for the library
+        #[clap(required = true, short = 'f', long)]
+        filename: String
     }
 }
 
@@ -252,6 +282,14 @@ struct Cli {
 enum Detail {
     User,
     Server
+}
+
+#[derive(ValueEnum, Clone, Debug, PartialEq)]
+enum ScanType {
+    NewUpdated,
+    MissingMetadata,
+    ReplaceMetadata,
+    All
 }
 
 #[derive(ValueEnum, Clone, Debug, PartialEq)]
@@ -276,9 +314,29 @@ enum ImageType {
     Profile
 }
 
+#[derive(ValueEnum, Clone, Debug, PartialEq)]
+enum CollectionType {
+    Movies,
+    TVShows,
+    Music,
+    MusicVideos,
+    HomeVideos,
+    BoxSets,
+    Books,
+    Mixed
+}
+
 fn main() -> Result<(), confy::ConfyError> {
-    
-    let cfg: AppConfig = confy::load("jellyroller", "jellyroller")?;
+    let mut current = env::current_exe().unwrap();
+    current.pop();
+    current.push("jellyroller.config");
+
+    let cfg: AppConfig = if std::path::Path::new(current.as_path()).exists() {
+        confy::load_path(current.as_path())?
+    } else {
+        confy::load("jellyroller", "jellyroller")?
+    };
+
     if cfg.status == "not configured" {
         println!("Application is not configured!");
         initial_config(cfg);
@@ -289,6 +347,53 @@ fn main() -> Result<(), confy::ConfyError> {
     }
     let args = Cli::parse();
     match args.command {
+
+        //TODO: Create a simple_post variation that allows for query params.
+        Commands::RegisterLibrary { name, collectiontype, filename} => {
+            let mut endpoint= String::from("/Library/VirtualFolders?CollectionType=");
+            endpoint.push_str(collectiontype.to_string().as_str());
+            endpoint.push_str("&refreshLibrary=true");
+            endpoint.push_str("&name=");
+            endpoint.push_str(name.as_str());
+            let mut file = File::open(filename).expect("Unable to open file.");
+            let mut contents = String::new();
+            file.read_to_string(&mut contents).expect("Unable to read file.");
+            register_library(
+                ServerInfo::new(endpoint.as_str(), &cfg.server_url, &cfg.api_key),
+                contents
+            )
+        },
+
+        Commands::GenerateReport {} => {
+            let info = return_server_info(ServerInfo::new("/System/Info", &cfg.server_url, &cfg.api_key));
+            let json: serde_json::Value = serde_json::from_str(info.as_str()).expect("failed");
+            println!("\
+                Please copy/paste the following information to any issue that is being opened:\n\
+                JellyRoller Version: {}\n\
+                JellyRoller OS: {}\n\
+                Jellyfin Version: {}\n\
+                Jellyfin Host OK: {}\n\
+                Jellyfin Server Architecture: {}\
+                ", 
+                env!("CARGO_PKG_VERSION"), 
+                env::consts::OS,
+                json.get("Version").expect("Unable to extract Jellyfin version."),
+                json.get("OperatingSystem").expect("Unable to extract Jellyfin OS information."),
+                json.get("SystemArchitecture").expect("Unable to extract Jellyfin System Architecture.")
+            );
+        },
+
+        Commands::UpdateMetadata { id, filename } => {
+            // Read the JSON file and prepare it for upload.
+            let json: String = fs::read_to_string(filename).unwrap();
+            update_metadata(
+                ServerInfo::new("/Items/{itemId}", &cfg.server_url, &cfg.api_key),
+                id,
+                json
+            );
+            
+
+        },
         Commands::UpdateImageByName { title, path, imagetype } => {
             let search: MediaRoot = execute_search(&title, "all".to_string(), &cfg);
             if search.total_record_count > 1 {
@@ -588,8 +693,45 @@ fn main() -> Result<(), confy::ConfyError> {
                 };
             execute_task_by_id(ServerInfo::new("/ScheduledTasks/Running/{taskId}", &cfg.server_url, &cfg.api_key), &task, &taskid);
         }
-        Commands::ScanLibrary {} => {
-            scan_library(ServerInfo::new("/Library/Refresh", &cfg.server_url, &cfg.api_key));
+        Commands::ScanLibrary {library_id, scan_type} => {
+            if library_id == "all" {
+                scan_library_all(ServerInfo::new("/Library/Refresh", &cfg.server_url, &cfg.api_key));
+            } else {
+                let query_info = match scan_type {
+                    ScanType::NewUpdated => {
+                            vec![
+                                ("Recursive", "true"),
+                                ("ImageRefreshMode", "Default"),
+                                ("MetadataRefreshMode", "Default"),
+                                ("ReplaceAllImages", "false"),
+                                ("RegenerateTrickplay", "false"),
+                                ("ReplaceAllMetadata", "false")
+                            ]
+                    }, 
+                    ScanType::MissingMetadata => {
+                            vec![
+                                ("Recursive", "true"),
+                                ("ImageRefreshMode", "FullRefresh"),
+                                ("MetadataRefreshMode", "FullRefresh"),
+                                ("ReplaceAllImages", "false"),
+                                ("RegenerateTrickplay", "false"),
+                                ("ReplaceAllMetadata", "false")
+                            ]
+                    }, 
+                    ScanType::ReplaceMetadata => {
+                            vec![
+                                ("Recursive", "true"),
+                                ("ImageRefreshMode", "FullRefresh"),
+                                ("MetadataRefreshMode", "FullRefresh"),
+                                ("ReplaceAllImages", "false"),
+                                ("RegenerateTrickplay", "false"),
+                                ("ReplaceAllMetadata", "true")
+                            ]
+                    }, 
+                    _ => std::process::exit(1)
+                };
+                scan_library(ServerInfo::new("/Items/{library_id}/Refresh", &cfg.server_url, &cfg.api_key), query_info, library_id);
+            }
         },
         Commands::RemoveDeviceByUsername { username } => {
             let filtered: Vec<String> = 
@@ -695,7 +837,7 @@ fn main() -> Result<(), confy::ConfyError> {
 ///
 /// Executes a search with the passed parameters.
 /// 
-fn execute_search(term: &String, mediatype: String, cfg: &AppConfig) -> MediaRoot {
+fn execute_search(term: &str, mediatype: String, cfg: &AppConfig) -> MediaRoot {
     let mut query =
         vec![
             ("SortBy", "SortName,ProductionYear"),
@@ -785,7 +927,6 @@ fn initial_config(mut cfg: AppConfig) {
 /// Now that the issue has been fixed, the auto tokens need to be converted to an API key.  The single purpose of this function
 /// is to handle the conversion with no input required from the user.
 /// 
-
 fn token_to_api(mut cfg: AppConfig) {
     println!("[INFO] Attempting to auto convert user auth token to API key.....");
     // Check if api key already exists
@@ -816,7 +957,7 @@ fn image_to_base64(path: String) -> String {
 /// 
 impl fmt::Display for ImageType {
     fn fmt (&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self{
+        match self {
             ImageType::Primary => write!(f, "Primary"),
             ImageType::Art => write!(f, "Art"),
             ImageType::Backdrop => write!(f, "Backdrop"),
@@ -829,6 +970,24 @@ impl fmt::Display for ImageType {
             ImageType::Menu => write!(f, "Menu"),
             ImageType::BoxRear => write!(f, "BoxRear"),
             ImageType::Profile => write!(f, "Profile"),
+        }
+    }
+}
+
+///
+/// Custom implementation to convert collectiontype enum into Strings
+/// 
+impl fmt::Display for CollectionType {
+    fn fmt (&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            CollectionType::Movies => write!(f, "movies"),
+            CollectionType::TVShows => write!(f, "tvshows"),
+            CollectionType::Music => write!(f, "music"),
+            CollectionType::MusicVideos => write!(f, "musicvideos"),
+            CollectionType::HomeVideos => write!(f, "homevideos"),
+            CollectionType::BoxSets => write!(f, "boxsets"),
+            CollectionType::Books => write!(f, "books"),
+            CollectionType::Mixed => write!(f, "mixed")
         }
     }
 }

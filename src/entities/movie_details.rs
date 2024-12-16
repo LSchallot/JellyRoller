@@ -90,7 +90,7 @@ impl MovieDetails {
 
     fn genres_to_string(movie: &Item) -> String {
         let string = &movie.genres.iter().map(|x| x.to_string() + ";").collect::<String>();
-        return string.trim_end_matches(',').to_string();
+        string.trim_end_matches(',').to_string()
     }
 
     fn format_resolution(width: String, height: String) -> String {
