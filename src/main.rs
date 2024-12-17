@@ -132,6 +132,9 @@ struct Cli {
     Reconfigure {},
     /// Show all devices.
     GetDevices {
+        /// Only show devices active in the last hour
+        #[clap(long, required = false)]
+        active: bool,
         /// Print information as json.
         #[clap(long, required = false)]
         json: bool
@@ -636,9 +639,9 @@ fn main() -> Result<(), confy::ConfyError> {
         Commands::Reconfigure {} => {
             initial_config(cfg);
         },
-        Commands::GetDevices { json } => {
+        Commands::GetDevices { active, json } => {
             let devices: Vec<DeviceDetails> = 
-                match get_devices(ServerInfo::new(DEVICES, &cfg.server_url, &cfg.api_key)) {
+                match get_devices(ServerInfo::new(DEVICES, &cfg.server_url, &cfg.api_key), active) {
                     Err(e) => {
                         eprintln!("Unable to get devices, {e}");
                         std::process::exit(1);
