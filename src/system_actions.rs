@@ -1,6 +1,6 @@
-use crate:: entities::{activity_details::ActivityDetails, media_details::MediaRoot, task_details::TaskDetails };
+use crate:: entities::{activity_details::ActivityDetails, media_details::MediaRoot, repository_details::RepositoryDetails, task_details::TaskDetails };
 
-use super::{ ServerInfo, DeviceDetails, DeviceRootJson, LibraryDetails, LibraryRootJson, LogDetails, MovieDetails, ImageType, responder::{ simple_get, simple_post, simple_post_with_query, simple_post_image }, handle_unauthorized, handle_others };
+use super::{ ServerInfo, DeviceDetails, DeviceRootJson, LibraryDetails, LibraryRootJson, LogDetails, MovieDetails, RepositoryDetailsRoot, ImageType, responder::{ simple_get, simple_post, simple_post_with_query, simple_post_image }, handle_unauthorized, handle_others };
 use reqwest::{blocking::Client, StatusCode};
 use serde_json::Value;
 use chrono::{ DateTime, Duration };
@@ -23,6 +23,23 @@ pub fn get_server_info(server_info: ServerInfo) -> Result<(), Box<dyn std::error
     }
 
     Ok(())
+}
+
+pub fn get_repo_info(server_info: ServerInfo) -> Result<Vec<RepositoryDetails>, Box<dyn std::error::Error>> {
+    let response = simple_get(server_info.server_url, server_info.api_key, Vec::new());
+    let mut repos = Vec::new();
+    match response.status() {
+        StatusCode::OK => {
+            repos = response.json::<RepositoryDetailsRoot>()?;
+        } _ => {
+            handle_others(response)
+        }
+    }
+    Ok(repos)
+}
+
+pub fn set_repo_info(server_info: ServerInfo, repos: Vec<RepositoryDetails>) {
+    simple_post(server_info.server_url, server_info.api_key, serde_json::to_string(&repos).unwrap());
 }
 
 //pub fn return_server_info(server_info: ServerInfo) -> Result<String, Box<dyn std::error::Error>> {

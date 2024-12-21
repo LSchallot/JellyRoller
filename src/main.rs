@@ -23,6 +23,7 @@ use entities::plugin_details::{PluginDetails, PluginRootJson};
 use entities::activity_details::ActivityDetails;
 use entities::movie_details::MovieDetails;
 use entities::media_details::MediaRoot;
+use entities::repository_details::{RepositoryDetails, RepositoryDetailsRoot};
 use entities::server_info::ServerInfo;
 mod utils;
 use utils::output_writer::export_data;
@@ -278,6 +279,15 @@ struct Cli {
         /// Path to file that contains the JSON for the library
         #[clap(required = true, short = 'f', long)]
         filename: String
+    },
+    /// Registers a new Plugin Repository
+    RegisterRepository {
+        /// Name of the new repository
+        #[clap(required = true, short = 'n', long = "name")]
+        name: String,
+        /// URL of the new repository
+        #[clap(required = true, short = 'u', long = "url")]
+        path: String
     }
 }
 
@@ -609,6 +619,12 @@ fn main() -> Result<(), confy::ConfyError> {
         }
 
         // Server based commands
+        Commands::RegisterRepository { name, path} => {
+            let mut repos = get_repo_info(ServerInfo::new("/Repositories", &cfg.server_url, &cfg.api_key)).unwrap();
+            repos.push(RepositoryDetails::new(name, path, true));
+            set_repo_info(ServerInfo::new("/Repositories", &cfg.server_url, &cfg.api_key), repos);
+        },
+        
         Commands::ServerInfo {} => {
             get_server_info(ServerInfo::new("/System/Info", &cfg.server_url, &cfg.api_key))
                 .expect("Unable to gather server information.");
