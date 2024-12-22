@@ -288,6 +288,12 @@ struct Cli {
         /// URL of the new repository
         #[clap(required = true, short = 'u', long = "url")]
         path: String
+    },
+    /// Lists all current repositories
+    GetRepositories {
+        /// Print information as json.
+       #[clap(long, required = false)]
+       json: bool 
     }
 }
 
@@ -619,12 +625,21 @@ fn main() -> Result<(), confy::ConfyError> {
         }
 
         // Server based commands
+        Commands::GetRepositories { json } => {
+            let repos = get_repo_info(ServerInfo::new("/Repositories", &cfg.server_url, &cfg.api_key)).unwrap();
+            if json {
+                RepositoryDetails::json_print(&repos);
+            } else {
+                RepositoryDetails::table_print(repos);
+            }
+        }
+        
         Commands::RegisterRepository { name, path} => {
             let mut repos = get_repo_info(ServerInfo::new("/Repositories", &cfg.server_url, &cfg.api_key)).unwrap();
             repos.push(RepositoryDetails::new(name, path, true));
             set_repo_info(ServerInfo::new("/Repositories", &cfg.server_url, &cfg.api_key), repos);
         },
-        
+
         Commands::ServerInfo {} => {
             get_server_info(ServerInfo::new("/System/Info", &cfg.server_url, &cfg.api_key))
                 .expect("Unable to gather server information.");
