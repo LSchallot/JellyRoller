@@ -824,18 +824,6 @@ fn main() -> Result<(), confy::ConfyError> {
             }
         },
         Commands::SearchMedia { term, mediatype, parentid, include_filepath, json } => {
-            /*
-            let mut query = 
-                vec![
-                    ("SortBy", "SortName,ProductionYear"),
-                    ("Recursive", "true"),
-                    ("searchTerm", &term)
-                ];
-            if mediatype != "all" {
-                query.push(("IncludeItemTypes", &mediatype));
-            }
-            */
-
             let search_result = execute_search(&term, mediatype, parentid, include_filepath, &cfg);
 
             if json {
