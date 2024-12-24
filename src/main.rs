@@ -24,6 +24,7 @@ use entities::activity_details::ActivityDetails;
 use entities::movie_details::MovieDetails;
 use entities::media_details::MediaRoot;
 use entities::repository_details::{RepositoryDetails, RepositoryDetailsRoot};
+use entities::package_details::{PackageDetailsRoot, PackageDetails};
 use entities::server_info::ServerInfo;
 mod utils;
 use utils::output_writer::export_data;
@@ -294,6 +295,12 @@ struct Cli {
         /// Print information as json.
        #[clap(long, required = false)]
        json: bool 
+    },
+    /// Lists all available packages
+    GetPackages {
+        /// Print information as json.
+        #[clap(long, required = false)]
+        json: bool
     }
 }
 
@@ -625,6 +632,15 @@ fn main() -> Result<(), confy::ConfyError> {
         }
 
         // Server based commands
+        Commands::GetPackages { json } => {
+            let packages = get_packages_info(ServerInfo::new("/Packages", &cfg.server_url, &cfg.api_key)).unwrap();
+            if json {
+                PackageDetails::json_print(&packages);
+            } else {
+                PackageDetails::table_print(packages);
+            }
+        },
+
         Commands::GetRepositories { json } => {
             let repos = get_repo_info(ServerInfo::new("/Repositories", &cfg.server_url, &cfg.api_key)).unwrap();
             if json {
@@ -632,7 +648,7 @@ fn main() -> Result<(), confy::ConfyError> {
             } else {
                 RepositoryDetails::table_print(repos);
             }
-        }
+        },
         
         Commands::RegisterRepository { name, path} => {
             let mut repos = get_repo_info(ServerInfo::new("/Repositories", &cfg.server_url, &cfg.api_key)).unwrap();
