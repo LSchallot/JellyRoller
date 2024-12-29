@@ -1071,4 +1071,8 @@ impl MediaRoot {
         }
         println!("{table}");
     }
+
+    pub fn json_print(media: MediaRoot) {
+        println!("{}", serde_json::to_string_pretty(&media).unwrap());
+    }
 }

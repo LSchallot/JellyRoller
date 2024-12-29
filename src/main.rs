@@ -234,7 +234,13 @@ struct Cli {
         term: String,
         /// Filter for media type
         #[clap(required = false, short, long, default_value="all")]
-        mediatype: String
+        mediatype: String,
+        #[clap(required = false, short, long, default_value="")]
+        parentid: String,
+        #[clap(long, required = false)]
+        json: bool,
+        #[clap(short = 'f', long, required = false)]
+        include_filepath: bool
     },
     /// Updates image of specified file by name
     UpdateImageByName {
@@ -421,7 +427,7 @@ fn main() -> Result<(), confy::ConfyError> {
 
         },
         Commands::UpdateImageByName { title, path, imagetype } => {
-            let search: MediaRoot = execute_search(&title, "all".to_string(), &cfg);
+            let search: MediaRoot = execute_search(&title, "all".to_string(), "".to_string(), false, &cfg);
             if search.total_record_count > 1 {
                 eprintln!("Too many results found.  Updating by name requires a unique search term.");
                 std::process::exit(1);
@@ -867,27 +873,24 @@ fn main() -> Result<(), confy::ConfyError> {
                 }
             }
         },
-        Commands::SearchMedia { term, mediatype } => {
-            let mut query = 
-                vec![
-                    ("SortBy", "SortName,ProductionYear"),
-                    ("Recursive", "true"),
-                    ("searchTerm", &term)
-                ];
-            if mediatype != "all" {
-                query.push(("IncludeItemTypes", &mediatype));
+        Commands::SearchMedia { term, mediatype, parentid, include_filepath, json } => {
+            let search_result = execute_search(&term, mediatype, parentid, include_filepath, &cfg);
+
+            if json {
+                MediaRoot::json_print(search_result);
+            } else {
+                MediaRoot::table_print(search_result);
             }
-            MediaRoot::table_print(execute_search(&term, mediatype, &cfg));
         }
     }
-    
+
     Ok(())
 }
 
 ///
 /// Executes a search with the passed parameters.
 /// 
-fn execute_search(term: &str, mediatype: String, cfg: &AppConfig) -> MediaRoot {
+fn execute_search(term: &str, mediatype: String, parentid: String, include_filepath: bool, cfg: &AppConfig) -> MediaRoot {
     let mut query =
         vec![
             ("SortBy", "SortName,ProductionYear"),
@@ -896,6 +899,14 @@ fn execute_search(term: &str, mediatype: String, cfg: &AppConfig) -> MediaRoot {
         ];
     if mediatype != "all" {
         query.push(("IncludeItemTypes", &mediatype));
+    }
+
+    if include_filepath {
+        query.push(("fields", "Path"));
+    }
+
+    if parentid != "" {
+        query.push(("parentId", &parentid));
     }
 
     match get_search_results(ServerInfo::new("/Items", &cfg.server_url, &cfg.api_key), query) {
