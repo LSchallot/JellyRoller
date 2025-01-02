@@ -65,6 +65,13 @@ impl Default for AppConfig {
     }
 }
 
+#[derive(ValueEnum, Clone, Debug)]
+enum OutputFormat {
+    Json,
+    Csv,
+    Table
+}
+
 /// CLAP CONFIGURATION
 /// CLI controller for Jellyfin
 #[derive(Debug, Parser)] // requires `derive` feature
@@ -237,10 +244,15 @@ struct Cli {
         mediatype: String,
         #[clap(required = false, short, long, default_value="")]
         parentid: String,
-        #[clap(long, required = false)]
-        json: bool,
+        #[clap(short = 'o', long, value_enum, default_value = "table")]
+        output_format: OutputFormat,
+        /// By default, the server does not include file paths in the search results. Setting this
+        /// will tell the server to include the file path in the search results.
         #[clap(short = 'f', long, required = false)]
-        include_filepath: bool
+        include_filepath: bool,
+        /// Available columns: Name, Id, Type, Path, CriticRating, ProductionYear
+        #[clap(short = 'c', long, value_parser, num_args = 0.., value_delimiter = ',', default_value = "Name,ID,Type")]
+        table_columns: Vec<String>
     },
     /// Updates image of specified file by name
     UpdateImageByName {
@@ -873,13 +885,25 @@ fn main() -> Result<(), confy::ConfyError> {
                 }
             }
         },
-        Commands::SearchMedia { term, mediatype, parentid, include_filepath, json } => {
+        Commands::SearchMedia { term, mediatype, parentid, include_filepath, output_format, table_columns } => {
             let search_result = execute_search(&term, mediatype, parentid, include_filepath, &cfg);
 
-            if json {
-                MediaRoot::json_print(search_result);
-            } else {
-                MediaRoot::table_print(search_result);
+            let mut used_table_columns = table_columns.clone();
+
+            if include_filepath {
+                used_table_columns.push("Path".to_string());
+            }
+
+            match output_format {
+                OutputFormat::Json => {
+                    MediaRoot::json_print(search_result);
+                },
+                OutputFormat::Csv => {
+                    MediaRoot::csv_print(search_result, &used_table_columns);
+                },
+                _ => {
+                    MediaRoot::table_print(search_result, &used_table_columns);
+                }
             }
         }
     }
