@@ -1057,18 +1057,49 @@ pub struct CurrentProgram {
 }
 
 impl MediaRoot {
-    pub fn table_print(media: MediaRoot) {
+    pub fn table_print(media: MediaRoot, table_columns: &Vec<String>) {
         let mut table = Table::new();
         table
             .set_content_arrangement(ContentArrangement::Dynamic)
-            .set_header(vec!["Name", "ID", "Type"]);
+            .set_header(table_columns);
         for media_item in media.items {
-            table.add_row(vec![
-                &media_item.name,
-                &media_item.id,
-                &media_item.type_field
-            ]);
+            table.add_row(
+                build_table_row(&media_item, table_columns)
+            );
         }
         println!("{table}");
     }
+
+    pub fn csv_print(media: MediaRoot, table_columns: &Vec<String>) {
+        let mut wtr = csv::Writer::from_writer(std::io::stdout());
+
+        for media_item in media.items {
+            wtr.write_record(
+                build_table_row(&media_item, table_columns)
+            ).unwrap();
+        }
+    }
+
+    pub fn json_print(media: MediaRoot) {
+        println!("{}", serde_json::to_string_pretty(&media).unwrap());
+    }
 }
+
+fn build_table_row(media_item: &MediaItem, table_columns: &Vec<String>) -> Vec<String> {
+    let mut row = Vec::new();
+
+    for column in table_columns {
+        match column.to_uppercase().as_str() {
+            "NAME" => row.push(media_item.name.to_string()),
+            "ID" => row.push(media_item.id.to_string()),
+            "TYPE" => row.push(media_item.type_field.to_string()),
+            "PATH" => row.push(media_item.path.to_string()),
+            "CRITICRATING" => row.push(media_item.critic_rating.to_string()),
+            "PRODUCTIONYEAR" => row.push(media_item.production_year.to_string()),
+            _ => row.push("?".to_string())
+        }
+    }
+    
+    return row
+}
+
