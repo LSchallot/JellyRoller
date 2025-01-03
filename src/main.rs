@@ -301,6 +301,15 @@ struct Cli {
         /// Print information as json.
         #[clap(long, required = false)]
         json: bool
+    },
+    /// Installs the specified package
+    InstallPackage {
+        /// Package to install
+        #[clap(short = 'p', long = "package", required = true)]
+        package: String,
+        /// Version to install
+        #[clap(short = 'v', long = "version", required = false, default_value = "")]
+        version: String
     }
 }
 
@@ -654,6 +663,10 @@ fn main() -> Result<(), confy::ConfyError> {
             let mut repos = get_repo_info(ServerInfo::new("/Repositories", &cfg.server_url, &cfg.api_key)).unwrap();
             repos.push(RepositoryDetails::new(name, path, true));
             set_repo_info(ServerInfo::new("/Repositories", &cfg.server_url, &cfg.api_key), repos);
+        },
+
+        Commands::InstallPackage { package, version } => {
+
         },
 
         Commands::ServerInfo {} => {

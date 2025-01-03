@@ -55,6 +55,10 @@ pub fn get_packages_info(server_info: ServerInfo) -> Result<Vec<PackageDetails>,
     Ok(packages)
 }
 
+pub fn install_package(server_info: ServerInfo) {
+
+}
+
 //pub fn return_server_info(server_info: ServerInfo) -> Result<String, Box<dyn std::error::Error>> {
 pub fn return_server_info(server_info: ServerInfo) -> String {
     let response = simple_get(server_info.server_url, server_info.api_key, Vec::new());
