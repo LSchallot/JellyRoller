@@ -94,130 +94,9 @@ enum Commands {
         #[clap(required = true, value_parser)]
         password: String,
     },
-    /// Deletes an existing user.
-    #[clap(arg_required_else_help = true)]
-    DeleteUser {
-        /// User to remove.
-        #[clap(required = true, value_parser)]
-        username: String,
-    },
-    /// Lists the current users with basic information.
-    ListUsers {
-        /// Exports the user list information to a file
-        #[clap(short, long)]
-        export: bool,
-        /// Path for the file export
-        #[clap(short, long, default_value = "")]
-        output: String,
-        /// Username to gather information about
-        #[clap(short, long, default_value = "")]
-        username: String,
-    },
-    /// Resets a user's password.
-    #[clap(arg_required_else_help = true)]
-    ResetPassword {
-        /// User to be modified.
-        #[clap(required = true, value_parser)]
-        username: String,
-        /// What to reset the specified user's password to.
-        #[clap(required = true, value_parser)]
-        password: String,
-    },
-    /// Displays the server information.
-    ServerInfo {},
-    /// Displays the available system logs.
-    ListLogs {
-        /// Print information as json.
-        #[clap(long, required = false)]
-        json: bool,
-    },
-    /// Displays the requested logfile.
-    ShowLog {
-        /// Name of the logfile to show.
-        #[clap(required = true, value_parser)]
-        logfile: String,
-    },
-    /// Reconfigure the connection information.
-    Reconfigure {},
-    /// Show all devices.
-    GetDevices {
-        /// Only show devices active in the last hour
-        #[clap(long, required = false)]
-        active: bool,
-        /// Print information as json.
-        #[clap(long, required = false)]
-        json: bool,
-    },
-    /// Removes all devices associated with the specified user.
-    RemoveDeviceByUsername {
-        #[clap(required = true, value_parser)]
-        username: String,
-    },
-    /// Show all scheduled tasks and their status.
-    GetScheduledTasks {
-        /// Print information as json.
-        #[clap(long, required = false)]
-        json: bool,
-    },
-    /// Executes a scheduled task by name.
-    ExecuteTaskByName {
-        #[clap(required = true, value_parser)]
-        task: String,
-    },
-    /// Start a library scan.
-    ScanLibrary {
-        /// Library ID
-        #[clap(required = false, value_parser, default_value = "all")]
-        library_id: String,
-        /// Type of scan
-        #[clap(required = false, default_value = "all")]
-        scan_type: ScanType,
-    },
-    /// Disable a user.
-    DisableUser {
-        #[clap(required = true, value_parser)]
-        username: String,
-    },
-    /// Enable a user.
-    EnableUser {
-        #[clap(required = true, value_parser)]
-        username: String,
-    },
-    /// Grants the specified user admin rights.
-    GrantAdmin {
-        #[clap(required = true, value_parser)]
-        username: String,
-    },
-    /// Revokes admin rights from the specified user.
-    RevokeAdmin {
-        #[clap(required = true, value_parser)]
-        username: String,
-    },
-    /// Restarts Jellyfin
-    RestartJellyfin {},
-    /// Shuts down Jellyfin
-    ShutdownJellyfin {},
-    /// Gets the libraries available to the configured user
-    GetLibraries {
-        /// Print information as json.
-        #[clap(long, required = false)]
-        json: bool,
-    },
-    /// Returns a list of installed plugins
-    GetPlugins {
-        /// Print information as json.
-        #[clap(long, required = false)]
-        json: bool,
-    },
     /// Uses the supplied file to mass create new users.  
     AddUsers {
         /// File that contains the user information in "username,password" lines.
-        #[clap(required = true, value_parser)]
-        inputfile: String,
-    },
-    /// Mass update users in the supplied file
-    UpdateUsers {
-        /// File that contains the user JSON information.
         #[clap(required = true, value_parser)]
         inputfile: String,
     },
@@ -233,59 +112,106 @@ enum Commands {
         #[clap(required = false, short, long, default_value = "")]
         filename: String,
     },
-    /// Executes a search of your media
-    SearchMedia {
-        /// Search term
-        #[clap(required = true, short, long)]
-        term: String,
-        /// Filter for media type
-        #[clap(required = false, short, long, default_value = "all")]
-        mediatype: String,
-        #[clap(required = false, short, long, default_value = "")]
-        parentid: String,
-        #[clap(short = 'o', long, value_enum, default_value = "table")]
-        output_format: OutputFormat,
-        /// By default, the server does not include file paths in the search results. Setting this
-        /// will tell the server to include the file path in the search results.
-        #[clap(short = 'f', long, required = false)]
-        include_filepath: bool,
-        /// Available columns: Name, Id, Type, Path, CriticRating, ProductionYear
-        #[clap(short = 'c', long, value_parser, num_args = 0.., value_delimiter = ',', default_value = "Name,ID,Type")]
-        table_columns: Vec<String>,
+    /// Deletes an existing user.
+    #[clap(arg_required_else_help = true)]
+    DeleteUser {
+        /// User to remove.
+        #[clap(required = true, value_parser)]
+        username: String,
     },
-    /// Updates image of specified file by name
-    UpdateImageByName {
-        /// Attempt to update based on title.  Requires unique search term.
-        #[clap(required = true, short, long)]
-        title: String,
-        /// Path to the image that will be used.
-        #[clap(required = true, short, long)]
-        path: String,
-        #[clap(required = true, short, long)]
-        imagetype: ImageType,
+    /// Disable a user.
+    DisableUser {
+        #[clap(required = true, value_parser)]
+        username: String,
     },
-    /// Updates image of specified file by id
-    UpdateImageById {
-        /// Attempt to update based on item id.
-        #[clap(required = true, short = 'i', long)]
-        id: String,
-        /// Path to the image that will be used.
-        #[clap(required = true, short, long)]
-        path: String,
-        #[clap(required = true, short = 'I', long)]
-        imagetype: ImageType,
+    /// Enable a user.
+    EnableUser {
+        #[clap(required = true, value_parser)]
+        username: String,
+    },
+    /// Executes a scheduled task by name.
+    ExecuteTaskByName {
+        #[clap(required = true, value_parser)]
+        task: String,
     },
     /// Generate a report for an issue.
     GenerateReport {},
-    /// Updates metadata of specified id with metadata provided by specified file
-    UpdateMetadata {
-        /// ID of the file to update
-        #[clap(required = true, short = 'i', long)]
-        id: String,
-        /// File that contains the metadata to upload to the server
-        #[clap(required = true, short = 'f', long)]
-        filename: String,
+    /// Show all devices.
+    GetDevices {
+        /// Only show devices active in the last hour
+        #[clap(long, required = false)]
+        active: bool,
+        /// Print information as json.
+        #[clap(long, required = false)]
+        json: bool,
     },
+    /// Gets the libraries available to the configured user
+    GetLibraries {
+        /// Print information as json.
+        #[clap(long, required = false)]
+        json: bool,
+    },
+    /// Lists all available packages
+    GetPackages {
+        /// Print information as json.
+        #[clap(long, required = false)]
+        json: bool,
+    },
+    /// Returns a list of installed plugins
+    GetPlugins {
+        /// Print information as json.
+        #[clap(long, required = false)]
+        json: bool,
+    },
+    /// Lists all current repositories
+    GetRepositories {
+        /// Print information as json.
+        #[clap(long, required = false)]
+        json: bool,
+    },
+    /// Show all scheduled tasks and their status.
+    GetScheduledTasks {
+        /// Print information as json.
+        #[clap(long, required = false)]
+        json: bool,
+    },
+    /// Grants the specified user admin rights.
+    GrantAdmin {
+        #[clap(required = true, value_parser)]
+        username: String,
+    },
+    /// Installs the specified package
+    InstallPackage {
+        /// Package to install
+        #[clap(short = 'p', long = "package", required = true)]
+        package: String,
+        /// Version to install
+        #[clap(short = 'v', long = "version", required = false, default_value = "")]
+        version: String,
+        /// Repository to install from
+        #[clap(short = 'r', long = "repository", required = false, default_value = "")]
+        repository: String,
+    },
+    /// Displays the available system logs.
+    ListLogs {
+        /// Print information as json.
+        #[clap(long, required = false)]
+        json: bool,
+    },
+    /// Lists the current users with basic information.
+    ListUsers {
+        /// Exports the user list information to a file
+        #[clap(short, long)]
+        export: bool,
+        /// Path for the file export
+        #[clap(short, long, default_value = "")]
+        output: String,
+        /// Username to gather information about
+        #[clap(short, long, default_value = "")]
+        username: String,
+    },
+    /// Reconfigure the connection information.
+    Reconfigure {},
     /// Registers a new library.
     RegisterLibrary {
         /// Name of the new library
@@ -307,29 +233,103 @@ enum Commands {
         #[clap(required = true, short = 'u', long = "url")]
         path: String,
     },
-    /// Lists all current repositories
-    GetRepositories {
-        /// Print information as json.
-        #[clap(long, required = false)]
-        json: bool,
+    /// Removes all devices associated with the specified user.
+    RemoveDeviceByUsername {
+        #[clap(required = true, value_parser)]
+        username: String,
     },
-    /// Lists all available packages
-    GetPackages {
-        /// Print information as json.
-        #[clap(long, required = false)]
-        json: bool,
+    /// Resets a user's password.
+    #[clap(arg_required_else_help = true)]
+    ResetPassword {
+        /// User to be modified.
+        #[clap(required = true, value_parser)]
+        username: String,
+        /// What to reset the specified user's password to.
+        #[clap(required = true, value_parser)]
+        password: String,
     },
-    /// Installs the specified package
-    InstallPackage {
-        /// Package to install
-        #[clap(short = 'p', long = "package", required = true)]
-        package: String,
-        /// Version to install
-        #[clap(short = 'v', long = "version", required = false, default_value = "")]
-        version: String,
-        /// Repository to install from
-        #[clap(short = 'r', long = "repository", required = false, default_value = "")]
-        repository: String,
+    /// Revokes admin rights from the specified user.
+    RevokeAdmin {
+        #[clap(required = true, value_parser)]
+        username: String,
+    },
+    /// Restarts Jellyfin
+    RestartJellyfin {},
+    /// Start a library scan.
+    ScanLibrary {
+        /// Library ID
+        #[clap(required = false, value_parser, default_value = "all")]
+        library_id: String,
+        /// Type of scan
+        #[clap(required = false, default_value = "all")]
+        scan_type: ScanType,
+    },
+    /// Executes a search of your media
+    SearchMedia {
+        /// Search term
+        #[clap(required = true, short, long)]
+        term: String,
+        /// Filter for media type
+        #[clap(required = false, short, long, default_value = "all")]
+        mediatype: String,
+        #[clap(required = false, short, long, default_value = "")]
+        parentid: String,
+        #[clap(short = 'o', long, value_enum, default_value = "table")]
+        output_format: OutputFormat,
+        /// By default, the server does not include file paths in the search results. Setting this
+        /// will tell the server to include the file path in the search results.
+        #[clap(short = 'f', long, required = false)]
+        include_filepath: bool,
+        /// Available columns: Name, Id, Type, Path, CriticRating, ProductionYear
+        #[clap(short = 'c', long, value_parser, num_args = 0.., value_delimiter = ',', default_value = "Name,ID,Type")]
+        table_columns: Vec<String>,
+    },
+    /// Displays the server information.
+    ServerInfo {},
+    /// Displays the requested logfile.
+    ShowLog {
+        /// Name of the logfile to show.
+        #[clap(required = true, value_parser)]
+        logfile: String,
+    },
+    /// Shuts down Jellyfin
+    ShutdownJellyfin {},
+    /// Updates image of specified file by id
+    UpdateImageById {
+        /// Attempt to update based on item id.
+        #[clap(required = true, short = 'i', long)]
+        id: String,
+        /// Path to the image that will be used.
+        #[clap(required = true, short, long)]
+        path: String,
+        #[clap(required = true, short = 'I', long)]
+        imagetype: ImageType,
+    },
+    /// Updates image of specified file by name
+    UpdateImageByName {
+        /// Attempt to update based on title.  Requires unique search term.
+        #[clap(required = true, short, long)]
+        title: String,
+        /// Path to the image that will be used.
+        #[clap(required = true, short, long)]
+        path: String,
+        #[clap(required = true, short, long)]
+        imagetype: ImageType,
+    },
+    /// Updates metadata of specified id with metadata provided by specified file
+    UpdateMetadata {
+        /// ID of the file to update
+        #[clap(required = true, short = 'i', long)]
+        id: String,
+        /// File that contains the metadata to upload to the server
+        #[clap(required = true, short = 'f', long)]
+        filename: String,
+    },
+    /// Mass update users in the supplied file
+    UpdateUsers {
+        /// File that contains the user JSON information.
+        #[clap(required = true, value_parser)]
+        inputfile: String,
     },
 }
 
