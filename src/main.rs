@@ -327,7 +327,10 @@ struct Cli {
         package: String,
         /// Version to install
         #[clap(short = 'v', long = "version", required = false, default_value = "")]
-        version: String
+        version: String,
+        /// Repository to install from
+        #[clap(short = 'r', long = "repository", required = false, default_value = "")]
+        repository: String
     }
 }
 
@@ -683,8 +686,10 @@ fn main() -> Result<(), confy::ConfyError> {
             set_repo_info(ServerInfo::new("/Repositories", &cfg.server_url, &cfg.api_key), repos);
         },
 
-        Commands::InstallPackage { package, version } => {
-
+        Commands::InstallPackage { package, version, repository } => {
+            // Check if package name has spaces and replace them as needed
+            let encoded = package.replace(" ","%20");
+            install_package(ServerInfo::new("/Packages/Installed/{package}", &cfg.server_url, &cfg.api_key), &encoded, &version, &repository);
         },
 
         Commands::ServerInfo {} => {

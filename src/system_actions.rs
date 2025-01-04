@@ -55,11 +55,24 @@ pub fn get_packages_info(server_info: ServerInfo) -> Result<Vec<PackageDetails>,
     Ok(packages)
 }
 
-pub fn install_package(server_info: ServerInfo) {
-
+pub fn install_package(server_info: ServerInfo, package: &str, version: &str, repository: &str) {
+    let query =
+        vec![
+            ("version", version),
+            ("repository", repository)
+        ];
+    let response = simple_post_with_query(server_info.server_url.replace("{package}", package),server_info.api_key, String::new(), query);
+    match response.status() {
+        StatusCode::NO_CONTENT => {
+            println!("Package successfully installed.");
+        } StatusCode::UNAUTHORIZED => {
+            handle_unauthorized();
+        } _ => {
+            handle_others(response);
+        }
+    }
 }
 
-//pub fn return_server_info(server_info: ServerInfo) -> Result<String, Box<dyn std::error::Error>> {
 pub fn return_server_info(server_info: ServerInfo) -> String {
     let response = simple_get(server_info.server_url, server_info.api_key, Vec::new());
     match response.status() {
