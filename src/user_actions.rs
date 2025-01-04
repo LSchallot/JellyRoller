@@ -1,7 +1,15 @@
 use crate::entities::token_details::TokenDetails;
 
-use super::{ UserDetails, Policy, responder::{simple_get, simple_post}, handle_others, handle_unauthorized } ;
-use reqwest::{StatusCode, blocking::Client, header::{CONTENT_TYPE, CONTENT_LENGTH}};
+use super::{
+    handle_others, handle_unauthorized,
+    responder::{simple_get, simple_post},
+    Policy, UserDetails,
+};
+use reqwest::{
+    blocking::Client,
+    header::{CONTENT_LENGTH, CONTENT_TYPE},
+    StatusCode,
+};
 
 #[derive(Serialize, Deserialize)]
 pub struct UserWithPass {
@@ -12,32 +20,41 @@ pub struct UserWithPass {
     #[serde(rename = "CurrentPw")]
     currentpwd: Option<String>,
     server_url: String,
-    auth_key: String
+    auth_key: String,
 }
 
 impl UserWithPass {
-    pub fn new(username: Option<String>, pass: Option<String>, currentpwd: Option<String>, server_url: String, auth_key: String) -> UserWithPass {
-        UserWithPass{
-            username: Some(username.unwrap_or_else(|| {String::new()})),
-            pass: Some(pass.unwrap_or_else(|| {String::new()})),
-            currentpwd: Some(currentpwd.unwrap_or_else(|| {String::new()})),
+    pub fn new(
+        username: Option<String>,
+        pass: Option<String>,
+        currentpwd: Option<String>,
+        server_url: String,
+        auth_key: String,
+    ) -> UserWithPass {
+        UserWithPass {
+            username: Some(username.unwrap_or_else(|| String::new())),
+            pass: Some(pass.unwrap_or_else(|| String::new())),
+            currentpwd: Some(currentpwd.unwrap_or_else(|| String::new())),
             server_url,
-            auth_key
+            auth_key,
         }
     }
 
     pub fn resetpass(self) -> Result<(), Box<dyn std::error::Error>> {
         let response = simple_post(
-            self.server_url.clone(), 
-            self.auth_key.clone(), 
-            serde_json::to_string_pretty(&self)?);
+            self.server_url.clone(),
+            self.auth_key.clone(),
+            serde_json::to_string_pretty(&self)?,
+        );
         match response.status() {
             StatusCode::NO_CONTENT => {
                 println!("Password updated successfully.");
-            } StatusCode::UNAUTHORIZED => {
+            }
+            StatusCode::UNAUTHORIZED => {
                 handle_unauthorized();
-            } _ => {
-                println!("{}", response.status()    );
+            }
+            _ => {
+                println!("{}", response.status());
                 handle_others(response);
             }
         }
@@ -45,22 +62,24 @@ impl UserWithPass {
         Ok(())
     }
 
-    pub fn create_user(self) -> Result<(), Box< dyn std::error::Error>> {
+    pub fn create_user(self) -> Result<(), Box<dyn std::error::Error>> {
         let response = simple_post(
-            self.server_url.clone(), 
-            self.auth_key.clone(), 
-            serde_json::to_string_pretty(&self)?);
+            self.server_url.clone(),
+            self.auth_key.clone(),
+            serde_json::to_string_pretty(&self)?,
+        );
         match response.status() {
             StatusCode::OK => {
                 println!("User \"{}\" successfully created.", &self.username.unwrap());
-            } StatusCode::UNAUTHORIZED => {
+            }
+            StatusCode::UNAUTHORIZED => {
                 handle_unauthorized();
-            } _ => {
+            }
+            _ => {
                 handle_others(response);
             }
         }
 
-        
         Ok(())
     }
 
@@ -72,12 +91,14 @@ impl UserWithPass {
             .header("Authorization", format!("MediaBrowser Token=\"{apikey}\""))
             .header(CONTENT_TYPE, "application/json")
             .send()?;
-            match response.status() {
+        match response.status() {
             StatusCode::NO_CONTENT => {
                 println!("User \"{}\" successfully removed.", &self.username.unwrap());
-            } StatusCode::UNAUTHORIZED => {
+            }
+            StatusCode::UNAUTHORIZED => {
                 handle_unauthorized();
-            } _ => {
+            }
+            _ => {
                 handle_others(response);
             }
         }
@@ -95,14 +116,14 @@ impl UserWithPass {
             .query(&[("app", "JellyRoller")])
             .send()
             .unwrap();
-        
+
         match response.status() {
             StatusCode::NO_CONTENT => {
                 println!("API key created.");
-            } _ => {
+            }
+            _ => {
                 handle_others(response);
             }
-            
         }
     }
 
@@ -116,9 +137,11 @@ impl UserWithPass {
                         return Ok(token.access_token);
                     }
                 }
-            } StatusCode::UNAUTHORIZED => {
+            }
+            StatusCode::UNAUTHORIZED => {
                 handle_unauthorized();
-            } _ => {
+            }
+            _ => {
                 handle_others(response);
             }
         }
@@ -141,19 +164,19 @@ pub type UserInfoVec = Vec<UserDetails>;
 pub struct UserAuth {
     server_url: String,
     username: String,
-    pw: String
+    pw: String,
 }
 
 impl UserAuth {
-    pub fn new(server_url: &str, username: &str, password: String) -> UserAuth{
-        UserAuth{ 
-            server_url: format!("{}/Users/authenticatebyname",server_url),
-            username: username.to_owned(), 
-            pw: password
+    pub fn new(server_url: &str, username: &str, password: String) -> UserAuth {
+        UserAuth {
+            server_url: format!("{}/Users/authenticatebyname", server_url),
+            username: username.to_owned(),
+            pw: password,
         }
     }
-    
-    pub fn auth_user(self) -> Result<String, Box<dyn std::error::Error>> {  
+
+    pub fn auth_user(self) -> Result<String, Box<dyn std::error::Error>> {
         let client = Client::new();
         let response = client
             .post(self.server_url.clone())
@@ -166,28 +189,27 @@ impl UserAuth {
                 let result = response.json::<UserAuthJson>()?;
                 println!("[INFO] User authenticated successfully.");
                 Ok(result.access_token)
-            } _ => {
+            }
+            _ => {
                 // Panic since the application requires an authenticated user
                 handle_others(response);
                 panic!("[ERROR] Unable to authenticate user.  Please assure your configuration information is correct.\n");
             }
         }
     }
-
-    
 }
 
 #[derive(Clone)]
 pub struct UserList {
     server_url: String,
-    api_key: String
+    api_key: String,
 }
 
 impl UserList {
-    pub fn new(endpoint: &str, server_url: &str, api_key: &str) -> UserList{
-        UserList{
-            server_url: format!("{}{}",server_url, endpoint),
-            api_key: api_key.to_string()
+    pub fn new(endpoint: &str, server_url: &str, api_key: &str) -> UserList {
+        UserList {
+            server_url: format!("{}{}", server_url, endpoint),
+            api_key: api_key.to_string(),
         }
     }
 
@@ -197,13 +219,15 @@ impl UserList {
         match response.status() {
             StatusCode::OK => {
                 users = response.json::<UserInfoVec>()?;
-            } StatusCode::UNAUTHORIZED => {
+            }
+            StatusCode::UNAUTHORIZED => {
                 handle_unauthorized();
-            } _ => {
+            }
+            _ => {
                 handle_others(response);
             }
         }
-        
+
         Ok(users)
     }
 
@@ -222,21 +246,31 @@ impl UserList {
     }
 
     pub fn get_user_information(self, id: &str) -> Result<UserDetails, Box<dyn std::error::Error>> {
-        let response = simple_get(self.server_url.replace("{userId}", id), self.api_key, Vec::new());
+        let response = simple_get(
+            self.server_url.replace("{userId}", id),
+            self.api_key,
+            Vec::new(),
+        );
         Ok(serde_json::from_str(response.text()?.as_str())?)
     }
-    
+
     pub fn get_current_user_information(self) -> Result<UserDetails, Box<dyn std::error::Error>> {
         let response = simple_get(self.server_url, self.api_key, Vec::new());
         Ok(response.json::<UserDetails>()?)
     }
 
-    pub fn update_user_config_bool(self, user_info: &Policy, id: &str, username: &str) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn update_user_config_bool(
+        self,
+        user_info: &Policy,
+        id: &str,
+        username: &str,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         let body = serde_json::to_string_pretty(user_info)?;
         let response = simple_post(
-            self.server_url.replace("{userId}", id), 
-            self.api_key.clone(), 
-            body);
+            self.server_url.replace("{userId}", id),
+            self.api_key.clone(),
+            body,
+        );
         if response.status() == StatusCode::NO_CONTENT {
             println!("User {} successfully updated.", username);
         } else {
@@ -250,23 +284,36 @@ impl UserList {
     //
     // I really hate this function but it works for now.
     //
-    pub fn update_user_info(self, id: &str, info: &UserDetails) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn update_user_info(
+        self,
+        id: &str,
+        info: &UserDetails,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         let body = serde_json::to_string_pretty(&info)?;
         // So we have to update the Policy and the user info separate even though they are the same JSON object :/
 
         // First we will update the Policy
-        let policy_url = format!("{}/Policy",self.server_url);
-        let user_response = simple_post(self.server_url.replace("{userId}", id), self.api_key.clone(), body);
-        if user_response.status() == StatusCode::NO_CONTENT {} else {
+        let policy_url = format!("{}/Policy", self.server_url);
+        let user_response = simple_post(
+            self.server_url.replace("{userId}", id),
+            self.api_key.clone(),
+            body,
+        );
+        if user_response.status() == StatusCode::NO_CONTENT {
+        } else {
             println!("Unable to update user information.");
             println!("Status Code: {}", user_response.status());
             match user_response.text() {
                 Ok(t) => println!("{}", t),
-                Err(_) => eprintln!("Could not get response text from user information update.")
-            }            
+                Err(_) => eprintln!("Could not get response text from user information update."),
+            }
         }
-        
-        let response = simple_post(policy_url.replace("{userId}", id), self.api_key, serde_json::to_string_pretty(&info.policy)?);
+
+        let response = simple_post(
+            policy_url.replace("{userId}", id),
+            self.api_key,
+            serde_json::to_string_pretty(&info.policy)?,
+        );
         if response.status() == StatusCode::NO_CONTENT {
             println!("{} successfully updated.", info.name);
         } else {
@@ -274,11 +321,10 @@ impl UserList {
             println!("Status Code: {}", response.status());
             match response.text() {
                 Ok(t) => println!("{}", t),
-                Err(_) => eprintln!("Could not get response text from user policy update.")
+                Err(_) => eprintln!("Could not get response text from user policy update."),
             }
         }
 
         Ok(())
-    
     }
 }

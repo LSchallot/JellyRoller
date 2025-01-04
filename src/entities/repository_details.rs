@@ -1,4 +1,4 @@
-use comfy_table::{ Table, ContentArrangement };
+use comfy_table::{ContentArrangement, Table};
 
 pub type RepositoryDetailsRoot = Vec<RepositoryDetails>;
 
@@ -14,12 +14,8 @@ pub struct RepositoryDetails {
 }
 
 impl RepositoryDetails {
-    pub fn new (name: String, url: String, enabled: bool) -> RepositoryDetails {
-        RepositoryDetails {
-            name,
-            url,
-            enabled
-        }
+    pub fn new(name: String, url: String, enabled: bool) -> RepositoryDetails {
+        RepositoryDetails { name, url, enabled }
     }
 
     pub fn json_print(repos: &[RepositoryDetails]) {
@@ -31,10 +27,18 @@ impl RepositoryDetails {
         table
             .set_content_arrangement(ContentArrangement::Dynamic)
             .set_width(120)
-            .set_header(vec!["Plugin Name", "Version", "Config Filename", "Description", "Id", "Can Uninstall", "Image", "Status"]);
+            .set_header(vec![
+                "Plugin Name",
+                "Version",
+                "Config Filename",
+                "Description",
+                "Id",
+                "Can Uninstall",
+                "Image",
+                "Status",
+            ]);
         for repo in repos {
             table.add_row(vec![repo.name, repo.url, repo.enabled.to_string()]);
-                
         }
         println!("{table}");
     }

@@ -1,7 +1,7 @@
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
 
-use comfy_table::{ Table, ContentArrangement };
+use comfy_table::{ContentArrangement, Table};
 
 #[derive(Default, Clone, Serialize, Deserialize)]
 pub struct ActivityDetails {
@@ -42,7 +42,15 @@ impl ActivityDetails {
         let mut table = Table::new();
         table
             .set_content_arrangement(ContentArrangement::Dynamic)
-            .set_header(vec!["Date", "User", "Type", "Severity", "Name", "ShortOverview", "Overview"]);
+            .set_header(vec![
+                "Date",
+                "User",
+                "Type",
+                "Severity",
+                "Name",
+                "ShortOverview",
+                "Overview",
+            ]);
         for activity in activities.items {
             table.add_row(vec![
                 &activity.date,
@@ -51,17 +59,18 @@ impl ActivityDetails {
                 &activity.severity,
                 &activity.name,
                 &activity.short_overview,
-                &activity.overview
+                &activity.overview,
             ]);
         }
         println!("{table}");
     }
 
-    pub fn print_as_csv(activities: ActivityDetails) -> String{
+    pub fn print_as_csv(activities: ActivityDetails) -> String {
         // first print the headers
         let mut data: String = "Date,User,Type,Severity,Name,ShortOverview,Overview\n".to_owned();
         for activity in activities.items {
-            let piece = format!("{},{},{},{},{},{},{}\n",
+            let piece = format!(
+                "{},{},{},{},{},{},{}\n",
                 &activity.date,
                 &activity.id.to_string(),
                 &activity.type_field,

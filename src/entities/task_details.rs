@@ -1,4 +1,4 @@
-use comfy_table::{ Table, ContentArrangement };
+use comfy_table::{ContentArrangement, Table};
 
 #[derive(Serialize, Deserialize)]
 pub struct TaskDetails {
@@ -10,16 +10,16 @@ pub struct TaskDetails {
     //pub percent_complete: Option<String>,
     pub percent_complete: f32,
     #[serde(rename = "Id")]
-    pub id: String
+    pub id: String,
 }
 
 impl TaskDetails {
     pub fn new(name: String, state: String, percent_complete: f32, id: String) -> TaskDetails {
-        TaskDetails{
+        TaskDetails {
             name,
             state,
             percent_complete,
-            id
+            id,
         }
     }
 

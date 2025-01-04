@@ -1,4 +1,4 @@
-use comfy_table::{Table, ContentArrangement};
+use comfy_table::{ContentArrangement, Table};
 
 pub type PluginRootJson = Vec<PluginDetails>;
 
@@ -19,7 +19,7 @@ pub struct PluginDetails {
     #[serde(rename = "HasImage")]
     pub has_image: bool,
     #[serde(rename = "Status")]
-    pub status: String
+    pub status: String,
 }
 
 impl PluginDetails {
@@ -32,9 +32,29 @@ impl PluginDetails {
         table
             .set_content_arrangement(ContentArrangement::Dynamic)
             .set_width(120)
-            .set_header(vec!["Plugin Name", "Version", "Config Filename", "Description", "Id", "Can Uninstall", "Image", "Status"]);
+            .set_header(vec![
+                "Plugin Name",
+                "Version",
+                "Config Filename",
+                "Description",
+                "Id",
+                "Can Uninstall",
+                "Image",
+                "Status",
+            ]);
         for plugin in plugins {
-            table.add_row(vec![plugin.name, plugin.version, plugin.configuration_file_name.unwrap_or_else(|| {String::new()}), plugin.description, plugin.id, plugin.can_uninstall.to_string(), plugin.has_image.to_string(), plugin.status]);
+            table.add_row(vec![
+                plugin.name,
+                plugin.version,
+                plugin
+                    .configuration_file_name
+                    .unwrap_or_else(|| String::new()),
+                plugin.description,
+                plugin.id,
+                plugin.can_uninstall.to_string(),
+                plugin.has_image.to_string(),
+                plugin.status,
+            ]);
         }
         println!("{table}");
     }

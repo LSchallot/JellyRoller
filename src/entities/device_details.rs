@@ -1,9 +1,9 @@
-use comfy_table::{ Table, ContentArrangement };
+use comfy_table::{ContentArrangement, Table};
 
 #[derive(Serialize, Deserialize)]
 pub struct DeviceRootJson {
     #[serde(rename = "Items")]
-    pub items: Vec<DeviceDetails>
+    pub items: Vec<DeviceDetails>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -15,16 +15,21 @@ pub struct DeviceDetails {
     #[serde(rename = "LastUserName")]
     pub lastusername: String,
     #[serde(rename = "DateLastActivity")]
-    pub lastactivity: String
+    pub lastactivity: String,
 }
 
 impl DeviceDetails {
-    pub fn new(id: String, name: String, lastusername: String, lastactivity: String) -> DeviceDetails {
-        DeviceDetails{
+    pub fn new(
+        id: String,
+        name: String,
+        lastusername: String,
+        lastactivity: String,
+    ) -> DeviceDetails {
+        DeviceDetails {
             id,
             name,
             lastusername,
-            lastactivity
+            lastactivity,
         }
     }
 
@@ -43,6 +48,4 @@ impl DeviceDetails {
         }
         println!("{table}");
     }
-
-    
 }
