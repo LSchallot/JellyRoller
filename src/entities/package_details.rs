@@ -45,7 +45,7 @@ impl PackageDetails {
             let mut version_output: String = "".to_string();
             for version in package.versions {
                 version_output.push_str(version.version.as_str());
-                version_output.push_str(" ");
+                version_output.push(' ');
             }
             table.add_row(vec![package.name, package.description, package.overview, package.owner, package.guid, package.category, version_output]);
         }

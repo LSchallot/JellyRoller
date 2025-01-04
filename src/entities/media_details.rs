@@ -1100,6 +1100,6 @@ fn build_table_row(media_item: &MediaItem, table_columns: &Vec<String>) -> Vec<S
         }
     }
     
-    return row
+    row
 }
 

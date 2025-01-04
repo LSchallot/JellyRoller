@@ -947,7 +947,7 @@ fn execute_search(term: &str, mediatype: String, parentid: String, include_filep
         query.push(("fields", "Path"));
     }
 
-    if parentid != "" {
+    if !parentid.is_empty() {
         query.push(("parentId", &parentid));
     }
 
