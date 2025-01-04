@@ -9,3 +9,5 @@ pub mod activity_details;
 pub mod server_info;
 pub mod token_details;
 pub mod media_details;
+pub mod repository_details;
+pub mod package_details;

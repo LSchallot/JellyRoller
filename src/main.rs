@@ -23,6 +23,8 @@ use entities::plugin_details::{PluginDetails, PluginRootJson};
 use entities::activity_details::ActivityDetails;
 use entities::movie_details::MovieDetails;
 use entities::media_details::MediaRoot;
+use entities::repository_details::{RepositoryDetails, RepositoryDetailsRoot};
+use entities::package_details::{PackageDetailsRoot, PackageDetails};
 use entities::server_info::ServerInfo;
 mod utils;
 use utils::output_writer::export_data;
@@ -61,6 +63,13 @@ impl Default for AppConfig {
             token: "Unknown".to_owned()
         }
     }
+}
+
+#[derive(ValueEnum, Clone, Debug)]
+enum OutputFormat {
+    Json,
+    Csv,
+    Table
 }
 
 /// CLAP CONFIGURATION
@@ -132,6 +141,9 @@ struct Cli {
     Reconfigure {},
     /// Show all devices.
     GetDevices {
+        /// Only show devices active in the last hour
+        #[clap(long, required = false)]
+        active: bool,
         /// Print information as json.
         #[clap(long, required = false)]
         json: bool
@@ -229,7 +241,18 @@ struct Cli {
         term: String,
         /// Filter for media type
         #[clap(required = false, short, long, default_value="all")]
-        mediatype: String
+        mediatype: String,
+        #[clap(required = false, short, long, default_value="")]
+        parentid: String,
+        #[clap(short = 'o', long, value_enum, default_value = "table")]
+        output_format: OutputFormat,
+        /// By default, the server does not include file paths in the search results. Setting this
+        /// will tell the server to include the file path in the search results.
+        #[clap(short = 'f', long, required = false)]
+        include_filepath: bool,
+        /// Available columns: Name, Id, Type, Path, CriticRating, ProductionYear
+        #[clap(short = 'c', long, value_parser, num_args = 0.., value_delimiter = ',', default_value = "Name,ID,Type")]
+        table_columns: Vec<String>
     },
     /// Updates image of specified file by name
     UpdateImageByName {
@@ -275,6 +298,39 @@ struct Cli {
         /// Path to file that contains the JSON for the library
         #[clap(required = true, short = 'f', long)]
         filename: String
+    },
+    /// Registers a new Plugin Repository
+    RegisterRepository {
+        /// Name of the new repository
+        #[clap(required = true, short = 'n', long = "name")]
+        name: String,
+        /// URL of the new repository
+        #[clap(required = true, short = 'u', long = "url")]
+        path: String
+    },
+    /// Lists all current repositories
+    GetRepositories {
+        /// Print information as json.
+       #[clap(long, required = false)]
+       json: bool 
+    },
+    /// Lists all available packages
+    GetPackages {
+        /// Print information as json.
+        #[clap(long, required = false)]
+        json: bool
+    },
+    /// Installs the specified package
+    InstallPackage {
+        /// Package to install
+        #[clap(short = 'p', long = "package", required = true)]
+        package: String,
+        /// Version to install
+        #[clap(short = 'v', long = "version", required = false, default_value = "")]
+        version: String,
+        /// Repository to install from
+        #[clap(short = 'r', long = "repository", required = false, default_value = "")]
+        repository: String
     }
 }
 
@@ -395,7 +451,7 @@ fn main() -> Result<(), confy::ConfyError> {
 
         },
         Commands::UpdateImageByName { title, path, imagetype } => {
-            let search: MediaRoot = execute_search(&title, "all".to_string(), &cfg);
+            let search: MediaRoot = execute_search(&title, "all".to_string(), "".to_string(), false, &cfg);
             if search.total_record_count > 1 {
                 eprintln!("Too many results found.  Updating by name requires a unique search term.");
                 std::process::exit(1);
@@ -606,6 +662,36 @@ fn main() -> Result<(), confy::ConfyError> {
         }
 
         // Server based commands
+        Commands::GetPackages { json } => {
+            let packages = get_packages_info(ServerInfo::new("/Packages", &cfg.server_url, &cfg.api_key)).unwrap();
+            if json {
+                PackageDetails::json_print(&packages);
+            } else {
+                PackageDetails::table_print(packages);
+            }
+        },
+
+        Commands::GetRepositories { json } => {
+            let repos = get_repo_info(ServerInfo::new("/Repositories", &cfg.server_url, &cfg.api_key)).unwrap();
+            if json {
+                RepositoryDetails::json_print(&repos);
+            } else {
+                RepositoryDetails::table_print(repos);
+            }
+        },
+        
+        Commands::RegisterRepository { name, path} => {
+            let mut repos = get_repo_info(ServerInfo::new("/Repositories", &cfg.server_url, &cfg.api_key)).unwrap();
+            repos.push(RepositoryDetails::new(name, path, true));
+            set_repo_info(ServerInfo::new("/Repositories", &cfg.server_url, &cfg.api_key), repos);
+        },
+
+        Commands::InstallPackage { package, version, repository } => {
+            // Check if package name has spaces and replace them as needed
+            let encoded = package.replace(" ","%20");
+            install_package(ServerInfo::new("/Packages/Installed/{package}", &cfg.server_url, &cfg.api_key), &encoded, &version, &repository);
+        },
+
         Commands::ServerInfo {} => {
             get_server_info(ServerInfo::new("/System/Info", &cfg.server_url, &cfg.api_key))
                 .expect("Unable to gather server information.");
@@ -636,9 +722,9 @@ fn main() -> Result<(), confy::ConfyError> {
         Commands::Reconfigure {} => {
             initial_config(cfg);
         },
-        Commands::GetDevices { json } => {
+        Commands::GetDevices { active, json } => {
             let devices: Vec<DeviceDetails> = 
-                match get_devices(ServerInfo::new(DEVICES, &cfg.server_url, &cfg.api_key)) {
+                match get_devices(ServerInfo::new(DEVICES, &cfg.server_url, &cfg.api_key), active) {
                     Err(e) => {
                         eprintln!("Unable to get devices, {e}");
                         std::process::exit(1);
@@ -817,27 +903,36 @@ fn main() -> Result<(), confy::ConfyError> {
                 }
             }
         },
-        Commands::SearchMedia { term, mediatype } => {
-            let mut query = 
-                vec![
-                    ("SortBy", "SortName,ProductionYear"),
-                    ("Recursive", "true"),
-                    ("searchTerm", &term)
-                ];
-            if mediatype != "all" {
-                query.push(("IncludeItemTypes", &mediatype));
+        Commands::SearchMedia { term, mediatype, parentid, include_filepath, output_format, table_columns } => {
+            let search_result = execute_search(&term, mediatype, parentid, include_filepath, &cfg);
+
+            let mut used_table_columns = table_columns.clone();
+
+            if include_filepath {
+                used_table_columns.push("Path".to_string());
             }
-            MediaRoot::table_print(execute_search(&term, mediatype, &cfg));
+
+            match output_format {
+                OutputFormat::Json => {
+                    MediaRoot::json_print(search_result);
+                },
+                OutputFormat::Csv => {
+                    MediaRoot::csv_print(search_result, &used_table_columns);
+                },
+                _ => {
+                    MediaRoot::table_print(search_result, &used_table_columns);
+                }
+            }
         }
     }
-    
+
     Ok(())
 }
 
 ///
 /// Executes a search with the passed parameters.
 /// 
-fn execute_search(term: &str, mediatype: String, cfg: &AppConfig) -> MediaRoot {
+fn execute_search(term: &str, mediatype: String, parentid: String, include_filepath: bool, cfg: &AppConfig) -> MediaRoot {
     let mut query =
         vec![
             ("SortBy", "SortName,ProductionYear"),
@@ -846,6 +941,14 @@ fn execute_search(term: &str, mediatype: String, cfg: &AppConfig) -> MediaRoot {
         ];
     if mediatype != "all" {
         query.push(("IncludeItemTypes", &mediatype));
+    }
+
+    if include_filepath {
+        query.push(("fields", "Path"));
+    }
+
+    if !parentid.is_empty() {
+        query.push(("parentId", &parentid));
     }
 
     match get_search_results(ServerInfo::new("/Items", &cfg.server_url, &cfg.api_key), query) {

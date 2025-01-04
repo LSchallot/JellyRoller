@@ -1,8 +1,9 @@
-use crate:: entities::{activity_details::ActivityDetails, media_details::MediaRoot, task_details::TaskDetails };
+use crate:: entities::{activity_details::ActivityDetails, media_details::MediaRoot, repository_details::RepositoryDetails, task_details::TaskDetails };
 
-use super::{ ServerInfo, DeviceDetails, DeviceRootJson, LibraryDetails, LibraryRootJson, LogDetails, MovieDetails, ImageType, responder::{ simple_get, simple_post, simple_post_with_query, simple_post_image }, handle_unauthorized, handle_others };
+use super::{ ServerInfo, DeviceDetails, DeviceRootJson, LibraryDetails, LibraryRootJson, LogDetails, MovieDetails, RepositoryDetailsRoot, PackageDetailsRoot, PackageDetails, ImageType, responder::{ simple_get, simple_post, simple_post_with_query, simple_post_image }, handle_unauthorized, handle_others };
 use reqwest::{blocking::Client, StatusCode};
 use serde_json::Value;
+use chrono::{ DateTime, Duration };
 
 pub type LogFileVec = Vec<LogDetails>;
 pub type ScheduledTasksVec = Vec<TaskDetails>;
@@ -24,7 +25,54 @@ pub fn get_server_info(server_info: ServerInfo) -> Result<(), Box<dyn std::error
     Ok(())
 }
 
-//pub fn return_server_info(server_info: ServerInfo) -> Result<String, Box<dyn std::error::Error>> {
+pub fn get_repo_info(server_info: ServerInfo) -> Result<Vec<RepositoryDetails>, Box<dyn std::error::Error>> {
+    let response = simple_get(server_info.server_url, server_info.api_key, Vec::new());
+    let mut repos = Vec::new();
+    match response.status() {
+        StatusCode::OK => {
+            repos = response.json::<RepositoryDetailsRoot>()?;
+        } _ => {
+            handle_others(response)
+        }
+    }
+    Ok(repos)
+}
+
+pub fn set_repo_info(server_info: ServerInfo, repos: Vec<RepositoryDetails>) {
+    simple_post(server_info.server_url, server_info.api_key, serde_json::to_string(&repos).unwrap());
+}
+
+pub fn get_packages_info(server_info: ServerInfo) -> Result<Vec<PackageDetails>, Box<dyn std::error::Error>> {
+    let response = simple_get(server_info.server_url, server_info.api_key, Vec::new());
+    let mut packages = Vec::new();
+    match response.status() {
+        StatusCode::OK => {
+            packages = response.json::<PackageDetailsRoot>()?;
+        } _ => {
+            handle_others(response)
+        }
+    }
+    Ok(packages)
+}
+
+pub fn install_package(server_info: ServerInfo, package: &str, version: &str, repository: &str) {
+    let query =
+        vec![
+            ("version", version),
+            ("repository", repository)
+        ];
+    let response = simple_post_with_query(server_info.server_url.replace("{package}", package),server_info.api_key, String::new(), query);
+    match response.status() {
+        StatusCode::NO_CONTENT => {
+            println!("Package successfully installed.");
+        } StatusCode::UNAUTHORIZED => {
+            handle_unauthorized();
+        } _ => {
+            handle_others(response);
+        }
+    }
+}
+
 pub fn return_server_info(server_info: ServerInfo) -> String {
     let response = simple_get(server_info.server_url, server_info.api_key, Vec::new());
     match response.status() {
@@ -70,15 +118,23 @@ pub fn get_log_filenames(server_info: ServerInfo) -> Result<Vec<LogDetails>, Box
     Ok(details)
 }
 
-pub fn get_devices(server_info: ServerInfo) -> Result<Vec<DeviceDetails>, Box<dyn std::error::Error>> {
+pub fn get_devices(server_info: ServerInfo, active: bool) -> Result<Vec<DeviceDetails>, Box<dyn std::error::Error>> {
     let response = simple_get(server_info.server_url, server_info.api_key, Vec::new());
         let mut details = Vec::new();
         match response.status() {
         StatusCode::OK => {
             let json = response.text()?;
             let devices = serde_json::from_str::<DeviceRootJson>(&json)?;
+            let cutofftime = chrono::offset::Utc::now() - Duration::seconds(960);
             for device in devices.items {
-                details.push(DeviceDetails::new(device.id, device.name, device.lastusername));
+                let datetime = DateTime::parse_from_rfc3339(&device.lastactivity).unwrap();
+                if active {
+                    if cutofftime < datetime {
+                        details.push(DeviceDetails::new(device.id, device.name, device.lastusername, device.lastactivity));
+                    }
+                } else {
+                    details.push(DeviceDetails::new(device.id, device.name, device.lastusername, device.lastactivity));
+                }
             }
         } StatusCode::UNAUTHORIZED => {
             handle_unauthorized();

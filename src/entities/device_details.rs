@@ -13,15 +13,18 @@ pub struct DeviceDetails {
     #[serde(rename = "Name")]
     pub name: String,
     #[serde(rename = "LastUserName")]
-    pub lastusername: String
+    pub lastusername: String,
+    #[serde(rename = "DateLastActivity")]
+    pub lastactivity: String
 }
 
 impl DeviceDetails {
-    pub fn new(id: String, name: String, lastusername: String) -> DeviceDetails {
+    pub fn new(id: String, name: String, lastusername: String, lastactivity: String) -> DeviceDetails {
         DeviceDetails{
             id,
             name,
-            lastusername
+            lastusername,
+            lastactivity
         }
     }
 

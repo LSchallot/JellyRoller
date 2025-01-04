@@ -10,7 +10,7 @@ Any previous user auth tokens will be converted to an API key upon next executio
 ## Usage Information
 
 ```
-jellyroller 0.5.0
+jellyroller 0.6.0
 A CLI controller for managing Jellyfin
 
 Usage: jellyroller.exe <COMMAND>
@@ -46,6 +46,10 @@ Commands:
   generate-report            Generate a report for an issue
   update-metadata            Updates metadata of specified id with metadata provided by specified file
   register-library           Registers a new library
+  register-repository        Registers a new Plugin Repository
+  get-repositories           Lists all current repositories
+  get-packages               Lists all available packages
+  install-package            Installs the specified package
   help                       Print this message or the help of the given subcommand(s)
 
 Options:
