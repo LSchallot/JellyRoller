@@ -68,6 +68,11 @@ brew tap LSchallot/JellyRoller https://github.com/LSchallot/JellyRoller
 brew install --build-from-source jellyroller
 ```
 ### Windows (Scoop)
+```
+scoop add bucket jellyroller https://github.com/lschallot/jellyroller.git
+scoop update
+scoop install jellyroller
+```
 
 ### Building From Source
 
