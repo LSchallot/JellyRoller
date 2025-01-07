@@ -5,6 +5,7 @@ use std::env;
 use std::fmt;
 use std::fs::{self, File};
 use std::io::{self, BufRead, BufReader, Cursor, Read, Write};
+use std::{thread, time};
 
 mod user_actions;
 use user_actions::{UserAuth, UserList, UserWithPass};
@@ -63,13 +64,6 @@ impl Default for AppConfig {
             token: "Unknown".to_owned(),
         }
     }
-}
-
-#[derive(ValueEnum, Clone, Debug)]
-enum OutputFormat {
-    Json,
-    Csv,
-    Table,
 }
 
 /// CLAP CONFIGURATION
@@ -171,9 +165,12 @@ enum Commands {
     },
     /// Show all scheduled tasks and their status.
     GetScheduledTasks {
-        /// Print information as json.
+        /// Print information as json (DEPRECATED).
         #[clap(long, required = false)]
         json: bool,
+        /// Specify the output format
+        #[clap(short = 'o', long, value_enum, default_value = "table")]
+        output_format: OutputFormat,
     },
     /// Grants the specified user admin rights.
     GrantAdmin {
@@ -334,23 +331,21 @@ enum Commands {
 }
 
 #[derive(ValueEnum, Clone, Debug, PartialEq)]
+enum CollectionType {
+    Movies,
+    TVShows,
+    Music,
+    MusicVideos,
+    HomeVideos,
+    BoxSets,
+    Books,
+    Mixed,
+}
+
+#[derive(ValueEnum, Clone, Debug, PartialEq)]
 enum Detail {
     User,
     Server,
-}
-
-#[derive(ValueEnum, Clone, Debug, PartialEq)]
-enum ScanType {
-    NewUpdated,
-    MissingMetadata,
-    ReplaceMetadata,
-    All,
-}
-
-#[derive(ValueEnum, Clone, Debug, PartialEq)]
-enum ReportType {
-    Activity,
-    Movie,
 }
 
 #[derive(ValueEnum, Clone, Debug, PartialEq)]
@@ -369,16 +364,25 @@ enum ImageType {
     Profile,
 }
 
+#[derive(ValueEnum, Clone, Debug)]
+enum OutputFormat {
+    Json,
+    Csv,
+    Table,
+}
+
 #[derive(ValueEnum, Clone, Debug, PartialEq)]
-enum CollectionType {
-    Movies,
-    TVShows,
-    Music,
-    MusicVideos,
-    HomeVideos,
-    BoxSets,
-    Books,
-    Mixed,
+enum ReportType {
+    Activity,
+    Movie,
+}
+
+#[derive(ValueEnum, Clone, Debug, PartialEq)]
+enum ScanType {
+    NewUpdated,
+    MissingMetadata,
+    ReplaceMetadata,
+    All,
 }
 
 fn main() -> Result<(), confy::ConfyError> {
@@ -840,7 +844,7 @@ fn main() -> Result<(), confy::ConfyError> {
                 LibraryDetails::table_print(libraries);
             }
         }
-        Commands::GetScheduledTasks { json } => {
+        Commands::GetScheduledTasks { json , output_format} => {
             let tasks: Vec<TaskDetails> = match get_scheduled_tasks(ServerInfo::new(
                 "/ScheduledTasks",
                 &cfg.server_url,
@@ -854,9 +858,21 @@ fn main() -> Result<(), confy::ConfyError> {
             };
 
             if json {
+                json_deprecation();
                 TaskDetails::json_print(&tasks);
-            } else {
-                TaskDetails::table_print(tasks);
+                std::process::exit(0);
+            }
+
+            match output_format {
+                OutputFormat::Json => {
+                    TaskDetails::json_print(&tasks);
+                }
+                OutputFormat::Csv => {
+                    TaskDetails::csv_print(&tasks);
+                }
+                _ => {
+                    TaskDetails::table_print(tasks);
+                }
             }
         }
         Commands::ExecuteTaskByName { task } => {
@@ -1071,6 +1087,18 @@ fn main() -> Result<(), confy::ConfyError> {
     }
 
     Ok(())
+}
+
+///
+/// JSON flag deprecation message.
+/// 
+fn json_deprecation() {
+    println!("|========= DEPRECATION WARNING ============|");
+    println!("  The \"--json\" flag has been deprecated.");
+    println!("  Please consider migrating to the");
+    println!("  \"output_format\" argument");
+    println!("|==========================================|");
+    thread::sleep(time::Duration::from_millis(5000));
 }
 
 ///
