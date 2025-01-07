@@ -82,12 +82,6 @@ Currently built with rustc 1.83.0. If building on a Linux machine, you may need 
 cargo install --git https://github.com/LSchallot/JellyRoller
 ```
 
-```
-git clone <git location>
-cd jellyroller
-cargo build
-```
-
 ### Initial Configuration
 
 When running JellyRoller for the first time, you will be prompted to configure against your Jellyfin instance. You will be prompted for various items which are described below.
