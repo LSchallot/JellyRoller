@@ -62,14 +62,24 @@ Options:
 
 **Note:** All installation instructions assume the end-user can handle adding the application to their user's PATH.
 
+### Mac / Linux (Homebrew)
+```
+brew tap LSchallot/JellyRoller https://github.com/LSchallot/JellyRoller
+brew install --build-from-source jellyroller
+```
+### Windows (Scoop)
+```
+scoop add bucket jellyroller https://github.com/lschallot/jellyroller.git
+scoop update
+scoop install jellyroller
+```
+
 ### Building From Source
 
 Currently built with rustc 1.83.0. If building on a Linux machine, you may need to install openssl-devel.
 
 ```
-git clone <git location>
-cd jellyroller
-cargo build
+cargo install --git https://github.com/LSchallot/JellyRoller
 ```
 
 ### Initial Configuration
