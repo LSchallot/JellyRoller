@@ -22,6 +22,17 @@ impl LogDetails {
         }
     }
 
+    pub fn csv_print(logs: Vec<LogDetails>) {
+        for log in logs {
+            println!("{}, {}, {}, {}",
+                log.name, 
+                log.size.to_string(),
+                log.date_created,
+                log.date_modified,
+            )
+        }
+    }
+
     pub fn json_print(logs: &[LogDetails]) {
         println!("{}", serde_json::to_string_pretty(&logs).unwrap());
     }

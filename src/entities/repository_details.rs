@@ -18,6 +18,16 @@ impl RepositoryDetails {
         RepositoryDetails { name, url, enabled }
     }
 
+    pub fn csv_print(repos: Vec<RepositoryDetails>) {
+        for repo in repos {
+            println!("{}, {}, {}",
+                repo.name, 
+                repo.url,
+                repo.enabled.to_string(),
+            )
+        }
+    }
+
     pub fn json_print(repos: &[RepositoryDetails]) {
         println!("{}", serde_json::to_string_pretty(&repos).unwrap());
     }
@@ -31,11 +41,6 @@ impl RepositoryDetails {
                 "Plugin Name",
                 "Version",
                 "Config Filename",
-                "Description",
-                "Id",
-                "Can Uninstall",
-                "Image",
-                "Status",
             ]);
         for repo in repos {
             table.add_row(vec![repo.name, repo.url, repo.enabled.to_string()]);

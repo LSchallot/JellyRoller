@@ -23,6 +23,23 @@ pub struct PluginDetails {
 }
 
 impl PluginDetails {
+    pub fn csv_print(plugins: Vec<PluginDetails>) {
+        for plugin in plugins {
+            println!("{}, {}, {}, {}, {}, {}, {}, {}",
+                plugin.name,
+                plugin.version,
+                plugin
+                    .configuration_file_name
+                    .unwrap_or_else(|| String::new()),
+                plugin.description,
+                plugin.id,
+                plugin.can_uninstall.to_string(),
+                plugin.has_image.to_string(),
+                plugin.status,
+            )
+        }
+    }
+    
     pub fn json_print(plugins: &[PluginDetails]) {
         println!("{}", serde_json::to_string_pretty(&plugins).unwrap());
     }

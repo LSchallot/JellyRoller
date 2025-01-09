@@ -29,6 +29,12 @@ impl LibraryDetails {
         }
     }
 
+    pub fn csv_print(libraries: Vec<LibraryDetails>) {
+        for library in libraries {
+            println!("{}, {}, {}, {}", library.name, library.collection_type, library.item_id, library.refresh_status);
+        }
+    }
+
     pub fn json_print(libraries: &[LibraryDetails]) {
         println!("{}", serde_json::to_string_pretty(&libraries).unwrap());
     }

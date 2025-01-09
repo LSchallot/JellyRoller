@@ -33,11 +33,17 @@ impl DeviceDetails {
         }
     }
 
+    pub fn csv_print(devices: &[DeviceDetails]) {
+        for device in devices {
+            println!("{}, {}, {}", &device.id, &device.name, &device.lastusername);
+        }
+    }
+
     pub fn json_print(devices: &[DeviceDetails]) {
         println!("{}", serde_json::to_string_pretty(&devices).unwrap());
     }
 
-    pub fn table_print(devices: &[DeviceDetails]) {
+    pub fn table_print(devices: Vec<DeviceDetails>) {
         let mut table = Table::new();
         table
             .set_content_arrangement(ContentArrangement::Dynamic)

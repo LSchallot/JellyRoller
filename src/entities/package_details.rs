@@ -31,6 +31,25 @@ pub struct Version {
 }
 
 impl PackageDetails {
+    pub fn csv_print(packages: Vec<PackageDetails>) {
+        for package in packages {
+            let mut version_output: String = "".to_string();
+            for version in package.versions {
+                version_output.push_str(version.version.as_str());
+                version_output.push(' ');
+            }
+            println!("{}, {}, {}, {}, {}, {}, {}", 
+                package.name,
+                package.description,
+                package.overview,
+                package.owner,
+                package.guid,
+                package.category,
+                version_output,
+            );
+        }
+    }
+    
     pub fn json_print(packages: &[PackageDetails]) {
         println!("{}", serde_json::to_string_pretty(&packages).unwrap());
     }
