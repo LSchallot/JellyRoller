@@ -414,17 +414,21 @@ fn main() -> Result<(), confy::ConfyError> {
         confy::load("jellyroller", "jellyroller")?
     };
 
-    let args = Cli::parse();
-    
-    if cfg.status == "not configured" {
-        println!("Application is not configured!");
-        initial_config(cfg);
-        std::process::exit(0);
-    } else if cfg.token == "Unknown" {
-        println!("[INFO] Username/Password detected.  Reconfiguring to use API key.");
-        token_to_api(cfg.clone());
+    // Due to an oddity with confy and clap, manually check for help flag.
+    let args: Vec<String> = env::args().collect();
+    if !(args.contains(&"-h".to_string()) || args.contains(&"--help".to_string())) {
+        if cfg.status == "not configured" {
+            println!("Application is not configured!");
+            initial_config(cfg);
+            std::process::exit(0);
+        } else if cfg.token == "Unknown" {
+            println!("[INFO] Username/Password detected.  Reconfiguring to use API key.");
+            token_to_api(cfg.clone());
+        }
     }
     
+    let args = Cli::parse();
+
     match args.command {
         //TODO: Create a simple_post variation that allows for query params.
         Commands::RegisterLibrary {
