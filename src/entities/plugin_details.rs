@@ -33,8 +33,8 @@ impl PluginDetails {
                     .unwrap_or_else(|| String::new()),
                 plugin.description,
                 plugin.id,
-                plugin.can_uninstall.to_string(),
-                plugin.has_image.to_string(),
+                plugin.can_uninstall,
+                plugin.has_image,
                 plugin.status,
             )
         }

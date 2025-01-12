@@ -26,7 +26,7 @@ impl LogDetails {
         for log in logs {
             println!("{}, {}, {}, {}",
                 log.name, 
-                log.size.to_string(),
+                log.size,
                 log.date_created,
                 log.date_modified,
             )

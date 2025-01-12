@@ -23,7 +23,7 @@ impl RepositoryDetails {
             println!("{}, {}, {}",
                 repo.name, 
                 repo.url,
-                repo.enabled.to_string(),
+                repo.enabled,
             )
         }
     }
