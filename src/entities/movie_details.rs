@@ -1,6 +1,6 @@
+use comfy_table::{ContentArrangement, Table};
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
-use comfy_table::{ Table, ContentArrangement };
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -41,10 +41,21 @@ pub struct Item {
 impl MovieDetails {
     pub fn table_print(movies: MovieDetails) {
         let mut table = Table::new();
-        table  
+        table
             .set_content_arrangement(ContentArrangement::Dynamic)
-            .set_header(vec!["Name", "Date Added", "Premiere Date", "Release Year", "Genres", "Parental Rating", "Community Rating", 
-                "Runtime (in minutes)", "Resolution", "Subtitles", "Path "]);
+            .set_header(vec![
+                "Name",
+                "Date Added",
+                "Premiere Date",
+                "Release Year",
+                "Genres",
+                "Parental Rating",
+                "Community Rating",
+                "Runtime (in minutes)",
+                "Resolution",
+                "Subtitles",
+                "Path ",
+            ]);
         for movie in movies.items {
             table.add_row(vec![
                 &movie.name,
@@ -57,7 +68,7 @@ impl MovieDetails {
                 &Self::ticks_to_minutes(&movie.run_time_ticks).to_string(),
                 &Self::format_resolution(movie.width.to_string(), movie.height.to_string()),
                 &movie.has_subtitles.to_string(),
-                &movie.path
+                &movie.path,
             ]);
         }
         println!("{table}");
@@ -66,7 +77,8 @@ impl MovieDetails {
     pub fn print_as_csv(movies: MovieDetails) -> String {
         let mut data: String = "Name,Date Added,Premiere Date,Release Year,Genres,Parental Rating,Community Rating,Runtime (in minutes),Resolution,Subtitles,Path\n".to_owned();
         for movie in movies.items {
-            let piece = format!("{},{},{},{},{},{},{},{},{},{},{}\n",
+            let piece = format!(
+                "{},{},{},{},{},{},{},{},{},{},{}\n",
                 movie.name,
                 movie.date_created,
                 movie.premiere_date,
@@ -89,7 +101,11 @@ impl MovieDetails {
     }
 
     fn genres_to_string(movie: &Item) -> String {
-        let string = &movie.genres.iter().map(|x| x.to_string() + ";").collect::<String>();
+        let string = &movie
+            .genres
+            .iter()
+            .map(|x| x.to_string() + ";")
+            .collect::<String>();
         string.trim_end_matches(',').to_string()
     }
 

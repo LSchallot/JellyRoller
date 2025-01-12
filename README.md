@@ -10,46 +10,46 @@ Any previous user auth tokens will be converted to an API key upon next executio
 ## Usage Information
 
 ```
-jellyroller 0.6.0
+jellyroller 0.7.0
 A CLI controller for managing Jellyfin
 
 Usage: jellyroller.exe <COMMAND>
 
 Commands:
   add-user                   Creates a new user
+  add-users                  Uses the supplied file to mass create new users
+  create-report              Creates a report of either activity or available movie items
   delete-user                Deletes an existing user
-  list-users                 Lists the current users with basic information
-  reset-password             Resets a user's password
-  server-info                Displays the server information
-  list-logs                  Displays the available system logs
-  show-log                   Displays the requested logfile
-  reconfigure                Reconfigure the connection information
-  get-devices                Show all devices
-  remove-device-by-username  Removes all devices associated with the specified user
-  get-scheduled-tasks        Show all scheduled tasks and their status
-  execute-task-by-name       Executes a scheduled task by name
-  scan-library               Start a library scan
   disable-user               Disable a user
   enable-user                Enable a user
-  grant-admin                Grants the specified user admin rights
-  revoke-admin               Revokes admin rights from the specified user
-  restart-jellyfin           Restarts Jellyfin
-  shutdown-jellyfin          Shuts down Jellyfin
-  get-libraries              Gets the libraries available to the configured user
-  get-plugins                Returns a list of installed plugins
-  add-users                  Uses the supplied file to mass create new users
-  update-users               Mass update users in the supplied file
-  create-report              Creates a report of either activity or available movie items
-  search-media               Executes a search of your media
-  update-image-by-name       Updates image of specified file by name
-  update-image-by-id         Updates image of specified file by id
+  execute-task-by-name       Executes a scheduled task by name
   generate-report            Generate a report for an issue
-  update-metadata            Updates metadata of specified id with metadata provided by specified file
+  get-devices                Show all devices
+  get-libraries              Gets the libraries available to the configured user
+  get-packages               Lists all available packages
+  get-plugins                Returns a list of installed plugins
+  get-repositories           Lists all current repositories
+  get-scheduled-tasks        Show all scheduled tasks and their status
+  grant-admin                Grants the specified user admin rights
+  install-package            Installs the specified package
+  list-logs                  Displays the available system logs
+  list-users                 Lists the current users with basic information
+  reconfigure                Reconfigure the connection information
   register-library           Registers a new library
   register-repository        Registers a new Plugin Repository
-  get-repositories           Lists all current repositories
-  get-packages               Lists all available packages
-  install-package            Installs the specified package
+  remove-device-by-username  Removes all devices associated with the specified user
+  reset-password             Resets a user's password
+  revoke-admin               Revokes admin rights from the specified user
+  restart-jellyfin           Restarts Jellyfin
+  scan-library               Start a library scan
+  search-media               Executes a search of your media
+  server-info                Displays the server information
+  show-log                   Displays the requested logfile
+  shutdown-jellyfin          Shuts down Jellyfin
+  update-image-by-id         Updates image of specified file by id
+  update-image-by-name       Updates image of specified file by name
+  update-metadata            Updates metadata of specified id with metadata provided by specified file
+  update-users               Mass update users in the supplied file
   help                       Print this message or the help of the given subcommand(s)
 
 Options:
@@ -62,14 +62,24 @@ Options:
 
 **Note:** All installation instructions assume the end-user can handle adding the application to their user's PATH.
 
+### Mac / Linux (Homebrew)
+```
+brew tap LSchallot/JellyRoller https://github.com/LSchallot/JellyRoller
+brew install --build-from-source jellyroller
+```
+### Windows (Scoop)
+```
+scoop add bucket jellyroller https://github.com/lschallot/jellyroller.git
+scoop update
+scoop install jellyroller
+```
+
 ### Building From Source
 
 Currently built with rustc 1.83.0. If building on a Linux machine, you may need to install openssl-devel.
 
 ```
-git clone <git location>
-cd jellyroller
-cargo build
+cargo install --git https://github.com/LSchallot/JellyRoller
 ```
 
 ### Initial Configuration

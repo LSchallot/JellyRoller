@@ -1,4 +1,4 @@
-use comfy_table::{ Table, ContentArrangement };
+use comfy_table::{ContentArrangement, Table};
 
 pub type LibraryRootJson = Vec<LibraryDetails>;
 
@@ -15,12 +15,23 @@ pub struct LibraryDetails {
 }
 
 impl LibraryDetails {
-    pub fn new(name: String, collection_type: String, item_id: String, refresh_status: String) -> LibraryDetails {
-        LibraryDetails{
+    pub fn new(
+        name: String,
+        collection_type: String,
+        item_id: String,
+        refresh_status: String,
+    ) -> LibraryDetails {
+        LibraryDetails {
             name,
             collection_type,
             item_id,
-            refresh_status
+            refresh_status,
+        }
+    }
+
+    pub fn csv_print(libraries: Vec<LibraryDetails>) {
+        for library in libraries {
+            println!("{}, {}, {}, {}", library.name, library.collection_type, library.item_id, library.refresh_status);
         }
     }
 
@@ -33,9 +44,19 @@ impl LibraryDetails {
         table
             .set_content_arrangement(ContentArrangement::Dynamic)
             .set_width(120)
-            .set_header(vec!["Library Name", "Collection Type", "Library Id", "Refresh Status"]);
+            .set_header(vec![
+                "Library Name",
+                "Collection Type",
+                "Library Id",
+                "Refresh Status",
+            ]);
         for library in libraries {
-            table.add_row(vec![library.name, library.collection_type, library.item_id, library.refresh_status]);
+            table.add_row(vec![
+                library.name,
+                library.collection_type,
+                library.item_id,
+                library.refresh_status,
+            ]);
         }
         println!("{table}");
     }

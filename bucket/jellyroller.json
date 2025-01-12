@@ -1,0 +1,27 @@
+{
+    "version": "0.6.0",
+    "description": "Jellyroller is a CLI configuration tool for Jellyfin",
+    "homepage": "https://github.com/lschallot/jellyroller",
+    "license": "GPL-2",
+    "architecture": {
+        "64bit": {
+            "url": "https://github.com/lschallot/jellyroller/releases/download/v0.6.0/jellyroller-x86_64-windows.tar.gz",
+            "hash": "3db3bb63461d9906058d600c181f75e80294a6a0a018437a53a8e0261e3b31d9"
+        }
+    },
+    "bin": "jellyroller.exe",
+    "checkver": {
+        "url": "https://api.github.com/repos/lschallot/jellyroller/releases/latest",
+        "regex": "/v([\\w-.]+)"
+    },
+    "autoupdate": {
+        "architecture": {
+            "64bit": {
+                "url": "https://github.com/lschallot/jellyroller/releases/download/v$version/jellyroller-x86_64-windows.tar.gz"
+            }
+        },
+        "hash": {
+            "url": "$url.sha256"
+        }
+    }
+}

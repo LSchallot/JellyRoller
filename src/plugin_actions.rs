@@ -1,17 +1,19 @@
-use super::{ PluginRootJson, PluginDetails, responder::simple_get, handle_others, handle_unauthorized };
+use super::{
+    handle_others, handle_unauthorized, responder::simple_get, PluginDetails, PluginRootJson,
+};
 use reqwest::StatusCode;
 
 #[derive(Clone)]
 pub struct PluginInfo {
     server_url: String,
-    api_key: String
+    api_key: String,
 }
 
 impl PluginInfo {
     pub fn new(endpoint: &str, server_url: &str, api_key: String) -> PluginInfo {
         PluginInfo {
             server_url: format!("{}{}", server_url, endpoint),
-            api_key
+            api_key,
         }
     }
 
@@ -21,12 +23,13 @@ impl PluginInfo {
             StatusCode::OK => {
                 let json = response.text()?;
                 let plugins = serde_json::from_str::<PluginRootJson>(&json)?;
-                return Ok(plugins)
-            } StatusCode::UNAUTHORIZED => {
+                return Ok(plugins);
+            }
+            StatusCode::UNAUTHORIZED => {
                 handle_unauthorized();
-            } _ => {
+            }
+            _ => {
                 handle_others(response);
-                
             }
         }
 

@@ -1,4 +1,4 @@
-use comfy_table::{ Table, ContentArrangement };
+use comfy_table::{ContentArrangement, Table};
 
 #[derive(Serialize, Deserialize)]
 pub struct TaskDetails {
@@ -10,16 +10,16 @@ pub struct TaskDetails {
     //pub percent_complete: Option<String>,
     pub percent_complete: f32,
     #[serde(rename = "Id")]
-    pub id: String
+    pub id: String,
 }
 
 impl TaskDetails {
     pub fn new(name: String, state: String, percent_complete: f32, id: String) -> TaskDetails {
-        TaskDetails{
+        TaskDetails {
             name,
             state,
             percent_complete,
-            id
+            id,
         }
     }
 
@@ -27,6 +27,15 @@ impl TaskDetails {
         println!("{}", serde_json::to_string_pretty(&tasks).unwrap());
     }
 
+    pub fn csv_print(tasks: &[TaskDetails]) {
+        for task in tasks {
+            let mut per_comp: String = "".to_string();
+            if task.percent_complete > 0.0 {
+                per_comp = task.percent_complete.to_string();
+            }
+            println!("{}, {}, {}, {}", task.name, task.state, per_comp, task.id);
+        }
+    }
     pub fn table_print(tasks: Vec<TaskDetails>) {
         let mut table = Table::new();
         table

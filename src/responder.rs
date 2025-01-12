@@ -7,7 +7,9 @@ pub fn simple_get(server_url: String, api_key: String, query: Vec<(&str, &str)>)
         .header("Authorization", format!("MediaBrowser Token=\"{api_key}\""))
         .query(&query)
         .send();
-    if let Ok(resp) = response { resp } else {
+    if let Ok(resp) = response {
+        resp
+    } else {
         println!("Get response error.");
         std::process::exit(1);
     }
@@ -21,13 +23,20 @@ pub fn simple_post(server_url: String, api_key: String, body: String) -> Respons
         .header("Authorization", format!("MediaBrowser Token=\"{api_key}\""))
         .body(body)
         .send();
-    if let Ok(resp) = response { resp } else {
+    if let Ok(resp) = response {
+        resp
+    } else {
         println!("Post response error.");
         std::process::exit(1);
     }
 }
 
-pub fn simple_post_with_query(server_url: String, api_key: String, body: String, query: Vec<(&str, &str)>) -> Response {
+pub fn simple_post_with_query(
+    server_url: String,
+    api_key: String,
+    body: String,
+    query: Vec<(&str, &str)>,
+) -> Response {
     let client = Client::new();
     let response = client
         .post(server_url)
@@ -36,7 +45,9 @@ pub fn simple_post_with_query(server_url: String, api_key: String, body: String,
         .body(body)
         .query(&query)
         .send();
-    if let Ok(resp) = response { resp } else {
+    if let Ok(resp) = response {
+        resp
+    } else {
         println!("Post with query response error.");
         std::process::exit(1);
     }
@@ -50,7 +61,9 @@ pub fn simple_post_image(server_url: String, api_key: String, body: String) -> R
         .header("Authorization", format!("MediaBrowser Token=\"{api_key}\""))
         .body(body)
         .send();
-    if let Ok(resp) = response { resp } else {
+    if let Ok(resp) = response {
+        resp
+    } else {
         println!("Post image response error.");
         std::process::exit(1);
     }

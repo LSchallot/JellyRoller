@@ -1,4 +1,4 @@
-use comfy_table::{ Table, ContentArrangement };
+use comfy_table::{ContentArrangement, Table};
 
 #[derive(Serialize, Deserialize)]
 pub struct LogDetails {
@@ -9,16 +9,27 @@ pub struct LogDetails {
     #[serde(rename = "Name")]
     pub name: String,
     #[serde(rename = "Size")]
-    pub size: i32
+    pub size: i32,
 }
 
 impl LogDetails {
     pub fn new(date_created: String, date_modified: String, name: String, size: i32) -> LogDetails {
-        LogDetails{
+        LogDetails {
             date_created,
             date_modified,
             name,
-            size
+            size,
+        }
+    }
+
+    pub fn csv_print(logs: Vec<LogDetails>) {
+        for log in logs {
+            println!("{}, {}, {}, {}",
+                log.name, 
+                log.size,
+                log.date_created,
+                log.date_modified,
+            )
         }
     }
 
@@ -33,7 +44,12 @@ impl LogDetails {
             .set_width(120)
             .set_header(vec!["Log Name", "Size", "Date Created", "Last Modified"]);
         for log in logs {
-            table.add_row(vec![log.name, log.size.to_string(), log.date_created, log.date_modified]);
+            table.add_row(vec![
+                log.name,
+                log.size.to_string(),
+                log.date_created,
+                log.date_modified,
+            ]);
         }
         println!("{table}");
     }

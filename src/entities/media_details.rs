@@ -1,6 +1,6 @@
 // THIS IS CURRENTLY NOT USEABLE
 
-use comfy_table::{ Table, ContentArrangement };
+use comfy_table::{ContentArrangement, Table};
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
 
@@ -25,8 +25,8 @@ pub struct MediaItem {
     #[serde(rename = "ServerId")]
     pub server_id: String,
 
-     #[serde(rename = "Id")]
-     pub id: String,
+    #[serde(rename = "Id")]
+    pub id: String,
     #[serde(rename = "Etag")]
     pub etag: String,
     #[serde(rename = "SourceType")]
@@ -127,8 +127,8 @@ pub struct MediaItem {
     pub is_folder: bool,
     #[serde(rename = "ParentId")]
     pub parent_id: String,
-     #[serde(rename = "Type")]
-     pub type_field: String,
+    #[serde(rename = "Type")]
+    pub type_field: String,
     #[serde(rename = "People")]
     pub people: Vec<People>,
     #[serde(rename = "Studios")]
@@ -1053,8 +1053,7 @@ pub struct Chapter3 {
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
-pub struct CurrentProgram {
-}
+pub struct CurrentProgram {}
 
 impl MediaRoot {
     pub fn table_print(media: MediaRoot, table_columns: &Vec<String>) {
@@ -1063,9 +1062,7 @@ impl MediaRoot {
             .set_content_arrangement(ContentArrangement::Dynamic)
             .set_header(table_columns);
         for media_item in media.items {
-            table.add_row(
-                build_table_row(&media_item, table_columns)
-            );
+            table.add_row(build_table_row(&media_item, table_columns));
         }
         println!("{table}");
     }
@@ -1074,9 +1071,8 @@ impl MediaRoot {
         let mut wtr = csv::Writer::from_writer(std::io::stdout());
 
         for media_item in media.items {
-            wtr.write_record(
-                build_table_row(&media_item, table_columns)
-            ).unwrap();
+            wtr.write_record(build_table_row(&media_item, table_columns))
+                .unwrap();
         }
     }
 
@@ -1096,10 +1092,9 @@ fn build_table_row(media_item: &MediaItem, table_columns: &Vec<String>) -> Vec<S
             "PATH" => row.push(media_item.path.to_string()),
             "CRITICRATING" => row.push(media_item.critic_rating.to_string()),
             "PRODUCTIONYEAR" => row.push(media_item.production_year.to_string()),
-            _ => row.push("?".to_string())
+            _ => row.push("?".to_string()),
         }
     }
-    
+
     row
 }
-
