@@ -11,6 +11,11 @@ class Jellyroller < Formula
     system "cargo", "install", *std_cargo_args
   end
 
+  bottle do
+    root_url "https://github.com/LSchallot/JellyRoller/releases/download/v0.7.0"
+    sha256 x86_64_linux: "94bba98e71b3661ebc4b9cf7d5c196b8aa9bf4f39ab1392c059a33cbb8f72020"
+  end
+  
   test do
     system "false"
   end
