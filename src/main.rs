@@ -1215,8 +1215,7 @@ fn main() -> Result<(), confy::ConfyError> {
             }
         }
         Commands::Completions { shell } => {
-            let mut cmd = Cli::command();
-            let cmd = &mut cmd;
+            let cmd = &mut Cli::command();
 
             generate(shell, cmd, cmd.get_name().to_string(), &mut io::stdout());
         }
