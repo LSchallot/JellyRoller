@@ -65,6 +65,13 @@ Options:
 ### Mac / Linux (Homebrew)
 ```
 brew tap LSchallot/JellyRoller https://github.com/LSchallot/JellyRoller
+```
+#### (Linux)
+```
+brew install jellyroller
+```
+#### (Mac)
+```
 brew install --build-from-source jellyroller
 ```
 ### Windows (Scoop)

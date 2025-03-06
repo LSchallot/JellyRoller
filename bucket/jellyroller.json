@@ -5,8 +5,8 @@
     "license": "GPL-2",
     "architecture": {
         "64bit": {
-            "url": "https://github.com/lschallot/jellyroller/releases/download/v0.6.0/jellyroller-x86_64-windows.tar.gz",
-            "hash": "3db3bb63461d9906058d600c181f75e80294a6a0a018437a53a8e0261e3b31d9"
+            "url": "https://github.com/LSchallot/JellyRoller/releases/download/v0.7.0/jellyroller-0.7.0-x86_64-windows.tar.gz",
+            "hash": "db48d833596ddf939c3e59a7b165c77aa06384648eff4ac2df0517bb470b4bd8"
         }
     },
     "bin": "jellyroller.exe",
@@ -17,7 +17,7 @@
     "autoupdate": {
         "architecture": {
             "64bit": {
-                "url": "https://github.com/lschallot/jellyroller/releases/download/v$version/jellyroller-x86_64-windows.tar.gz"
+                "url": "https://github.com/lschallot/jellyroller/releases/download/v$version/jellyroller-$version-x86_64-windows.tar.gz"
             }
         },
         "hash": {
