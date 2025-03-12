@@ -1,5 +1,6 @@
 use base64::{engine::general_purpose, Engine as _};
-use clap::{Parser, Subcommand, ValueEnum};
+use clap::{CommandFactory, Parser, Subcommand, ValueEnum};
+use clap_complete::{generate, Shell};
 use image::ImageFormat;
 use std::env;
 use std::fmt;
@@ -93,6 +94,11 @@ enum Commands {
         /// File that contains the user information in "username,password" lines.
         #[clap(required = true, value_parser)]
         inputfile: String,
+    },
+    /// Generate Shell completions
+    Completions {
+        #[clap(required = true, value_parser)]
+        shell: Shell,
     },
     /// Creates a report of either activity or available movie items
     CreateReport {
@@ -191,6 +197,18 @@ enum Commands {
     GrantAdmin {
         #[clap(required = true, value_parser)]
         username: String,
+    },
+    /// Perform a silent initialization.
+    Initialize {
+        /// Username for API key creation
+        #[clap(required = true, long = "username")]
+        username: String,
+        /// Password for user
+        #[clap(required = true, long = "password")]
+        password: String,
+        /// URL of server
+        #[clap(required = true, long = "url")]
+        server_url: String
     },
     /// Installs the specified package
     InstallPackage {
@@ -345,7 +363,7 @@ enum Commands {
         /// File that contains the user JSON information.
         #[clap(required = true, value_parser)]
         inputfile: String,
-    },
+    }
 }
 
 #[derive(ValueEnum, Clone, Debug, PartialEq)]
@@ -408,7 +426,7 @@ fn main() -> Result<(), confy::ConfyError> {
     current.pop();
     current.push("jellyroller.config");
 
-    let cfg: AppConfig = if std::path::Path::new(current.as_path()).exists() {
+    let mut cfg: AppConfig = if std::path::Path::new(current.as_path()).exists() {
         confy::load_path(current.as_path())?
     } else {
         confy::load("jellyroller", "jellyroller")?
@@ -416,7 +434,7 @@ fn main() -> Result<(), confy::ConfyError> {
 
     // Due to an oddity with confy and clap, manually check for help flag.
     let args: Vec<String> = env::args().collect();
-    if !(args.contains(&"-h".to_string()) || args.contains(&"--help".to_string())) {
+    if !(args.contains(&"initialize".to_string()) || args.contains(&"-h".to_string()) || args.contains(&"--help".to_string())) {
         if cfg.status == "not configured" {
             println!("Application is not configured!");
             initial_config(cfg);
@@ -426,10 +444,24 @@ fn main() -> Result<(), confy::ConfyError> {
             token_to_api(cfg.clone());
         }
     }
-    
+
     let args = Cli::parse();
 
     match args.command {
+        Commands::Initialize {
+            username,
+            password,
+            server_url
+        } => {
+            println!("Configuring JellyRoller with supplied values.....");
+            env::consts::OS.clone_into(&mut cfg.os);
+            server_url.trim().clone_into(&mut cfg.server_url);
+            cfg.api_key = UserAuth::auth_user(UserAuth::new(&cfg.server_url, username.trim(), password))
+                .expect("Unable to generate user auth token.  Please assure your configuration information was input correctly\n");
+            "configured".clone_into(&mut cfg.status);
+            token_to_api(cfg);
+        }
+        
         //TODO: Create a simple_post variation that allows for query params.
         Commands::RegisterLibrary {
             name,
@@ -739,16 +771,19 @@ fn main() -> Result<(), confy::ConfyError> {
         }
 
         // Server based commands
-        Commands::GetPackages { json, output_format } => {
+        Commands::GetPackages {
+            json,
+            output_format,
+        } => {
             let packages =
                 get_packages_info(ServerInfo::new("/Packages", &cfg.server_url, &cfg.api_key))
                     .unwrap();
-            
+
             if json {
                 json_deprecation();
                 PackageDetails::json_print(&packages);
                 std::process::exit(0)
-            } 
+            }
 
             match output_format {
                 OutputFormat::Json => {
@@ -763,19 +798,22 @@ fn main() -> Result<(), confy::ConfyError> {
             }
         }
 
-        Commands::GetRepositories { json, output_format } => {
+        Commands::GetRepositories {
+            json,
+            output_format,
+        } => {
             let repos = get_repo_info(ServerInfo::new(
                 "/Repositories",
                 &cfg.server_url,
                 &cfg.api_key,
             ))
             .unwrap();
-            
+
             if json {
                 json_deprecation();
                 RepositoryDetails::json_print(&repos);
                 std::process::exit(0)
-            } 
+            }
 
             match output_format {
                 OutputFormat::Json => {
@@ -786,7 +824,7 @@ fn main() -> Result<(), confy::ConfyError> {
                 }
                 _ => {
                     RepositoryDetails::table_print(repos);
-                } 
+                }
             }
         }
 
@@ -831,7 +869,10 @@ fn main() -> Result<(), confy::ConfyError> {
             ))
             .expect("Unable to gather server information.");
         }
-        Commands::ListLogs { json, output_format } => {
+        Commands::ListLogs {
+            json,
+            output_format,
+        } => {
             let logs = match get_log_filenames(ServerInfo::new(
                 "/System/Logs",
                 &cfg.server_url,
@@ -843,7 +884,7 @@ fn main() -> Result<(), confy::ConfyError> {
                 }
                 Ok(i) => i,
             };
-            
+
             if json {
                 json_deprecation();
                 LogDetails::json_print(&logs);
@@ -872,7 +913,11 @@ fn main() -> Result<(), confy::ConfyError> {
         Commands::Reconfigure {} => {
             initial_config(cfg);
         }
-        Commands::GetDevices { active, json, output_format } => {
+        Commands::GetDevices {
+            active,
+            json,
+            output_format,
+        } => {
             let devices: Vec<DeviceDetails> = match get_devices(
                 ServerInfo::new(DEVICES, &cfg.server_url, &cfg.api_key),
                 active,
@@ -883,13 +928,13 @@ fn main() -> Result<(), confy::ConfyError> {
                 }
                 Ok(i) => i,
             };
-            
+
             if json {
                 json_deprecation();
                 DeviceDetails::json_print(&devices);
                 std::process::exit(0)
             }
-            
+
             match output_format {
                 OutputFormat::Json => {
                     DeviceDetails::json_print(&devices);
@@ -902,7 +947,10 @@ fn main() -> Result<(), confy::ConfyError> {
                 }
             }
         }
-        Commands::GetLibraries { json, output_format } => {
+        Commands::GetLibraries {
+            json,
+            output_format,
+        } => {
             let libraries: Vec<LibraryDetails> = match get_libraries(ServerInfo::new(
                 "/Library/VirtualFolders",
                 &cfg.server_url,
@@ -914,7 +962,7 @@ fn main() -> Result<(), confy::ConfyError> {
                 }
                 Ok(i) => i,
             };
-            
+
             if json {
                 json_deprecation();
                 LibraryDetails::json_print(&libraries);
@@ -924,16 +972,19 @@ fn main() -> Result<(), confy::ConfyError> {
             match output_format {
                 OutputFormat::Json => {
                     LibraryDetails::json_print(&libraries);
-                } 
+                }
                 OutputFormat::Csv => {
                     LibraryDetails::csv_print(libraries);
-                } 
+                }
                 _ => {
                     LibraryDetails::table_print(libraries);
                 }
             }
         }
-        Commands::GetScheduledTasks { json , output_format} => {
+        Commands::GetScheduledTasks {
+            json,
+            output_format,
+        } => {
             let tasks: Vec<TaskDetails> = match get_scheduled_tasks(ServerInfo::new(
                 "/ScheduledTasks",
                 &cfg.server_url,
@@ -1069,7 +1120,10 @@ fn main() -> Result<(), confy::ConfyError> {
                 &cfg.api_key,
             ));
         }
-        Commands::GetPlugins { json, output_format } => {
+        Commands::GetPlugins {
+            json,
+            output_format,
+        } => {
             let plugins: Vec<PluginDetails> = match PluginInfo::get_plugins(PluginInfo::new(
                 "/Plugins",
                 &cfg.server_url,
@@ -1081,12 +1135,12 @@ fn main() -> Result<(), confy::ConfyError> {
                 }
                 Ok(i) => i,
             };
-            
+
             if json {
                 json_deprecation();
                 PluginDetails::json_print(&plugins);
                 std::process::exit(0)
-            } 
+            }
 
             match output_format {
                 OutputFormat::Json => {
@@ -1186,6 +1240,11 @@ fn main() -> Result<(), confy::ConfyError> {
                 }
             }
         }
+        Commands::Completions { shell } => {
+            let cmd = &mut Cli::command();
+
+            generate(shell, cmd, cmd.get_name().to_string(), &mut io::stdout());
+        }
     }
 
     Ok(())
@@ -1193,7 +1252,7 @@ fn main() -> Result<(), confy::ConfyError> {
 
 ///
 /// JSON flag deprecation message.
-/// 
+///
 fn json_deprecation() {
     println!("|========= DEPRECATION WARNING ============|");
     println!("  The \"--json\" flag has been deprecated.");

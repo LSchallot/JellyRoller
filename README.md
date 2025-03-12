@@ -10,7 +10,7 @@ Any previous user auth tokens will be converted to an API key upon next executio
 ## Usage Information
 
 ```
-jellyroller 0.7.0
+jellyroller 0.8.0
 A CLI controller for managing Jellyfin
 
 Usage: jellyroller.exe <COMMAND>
@@ -83,7 +83,7 @@ scoop install jellyroller
 
 ### Building From Source
 
-Currently built with rustc 1.83.0. If building on a Linux machine, you may need to install openssl-devel.
+Currently built with rustc 1.85.0. If building on a Linux machine, you may need to install openssl-devel.
 
 ```
 cargo install --git https://github.com/LSchallot/JellyRoller
