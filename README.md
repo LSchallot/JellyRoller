@@ -83,7 +83,7 @@ scoop install jellyroller
 
 ### Building From Source
 
-Currently built with rustc 1.83.0. If building on a Linux machine, you may need to install openssl-devel.
+Currently built with rustc 1.85.0. If building on a Linux machine, you may need to install openssl-devel.
 
 ```
 cargo install --git https://github.com/LSchallot/JellyRoller

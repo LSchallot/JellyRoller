@@ -95,6 +95,11 @@ enum Commands {
         #[clap(required = true, value_parser)]
         inputfile: String,
     },
+    /// Generate Shell completions
+    Completions {
+        #[clap(required = true, value_parser)]
+        shell: Shell,
+    },
     /// Creates a report of either activity or available movie items
     CreateReport {
         /// Type of report (activity or movie)
@@ -192,6 +197,18 @@ enum Commands {
     GrantAdmin {
         #[clap(required = true, value_parser)]
         username: String,
+    },
+    /// Perform a silent initialization.
+    Initialize {
+        /// Username for API key creation
+        #[clap(required = true, long = "username")]
+        username: String,
+        /// Password for user
+        #[clap(required = true, long = "password")]
+        password: String,
+        /// URL of server
+        #[clap(required = true, long = "url")]
+        server_url: String
     },
     /// Installs the specified package
     InstallPackage {
@@ -346,12 +363,7 @@ enum Commands {
         /// File that contains the user JSON information.
         #[clap(required = true, value_parser)]
         inputfile: String,
-    },
-    /// Generate Shell completions
-    Completions {
-        #[clap(required = true, value_parser)]
-        shell: Shell,
-    },
+    }
 }
 
 #[derive(ValueEnum, Clone, Debug, PartialEq)]
@@ -414,7 +426,7 @@ fn main() -> Result<(), confy::ConfyError> {
     current.pop();
     current.push("jellyroller.config");
 
-    let cfg: AppConfig = if std::path::Path::new(current.as_path()).exists() {
+    let mut cfg: AppConfig = if std::path::Path::new(current.as_path()).exists() {
         confy::load_path(current.as_path())?
     } else {
         confy::load("jellyroller", "jellyroller")?
@@ -422,7 +434,7 @@ fn main() -> Result<(), confy::ConfyError> {
 
     // Due to an oddity with confy and clap, manually check for help flag.
     let args: Vec<String> = env::args().collect();
-    if !(args.contains(&"-h".to_string()) || args.contains(&"--help".to_string())) {
+    if !(args.contains(&"initialize".to_string()) || args.contains(&"-h".to_string()) || args.contains(&"--help".to_string())) {
         if cfg.status == "not configured" {
             println!("Application is not configured!");
             initial_config(cfg);
@@ -436,6 +448,20 @@ fn main() -> Result<(), confy::ConfyError> {
     let args = Cli::parse();
 
     match args.command {
+        Commands::Initialize {
+            username,
+            password,
+            server_url
+        } => {
+            println!("Configuring JellyRoller with supplied values.....");
+            env::consts::OS.clone_into(&mut cfg.os);
+            server_url.trim().clone_into(&mut cfg.server_url);
+            cfg.api_key = UserAuth::auth_user(UserAuth::new(&cfg.server_url, username.trim(), password))
+                .expect("Unable to generate user auth token.  Please assure your configuration information was input correctly\n");
+            "configured".clone_into(&mut cfg.status);
+            token_to_api(cfg);
+        }
+        
         //TODO: Create a simple_post variation that allows for query params.
         Commands::RegisterLibrary {
             name,
