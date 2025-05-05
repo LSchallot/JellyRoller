@@ -10,7 +10,7 @@ Any previous user auth tokens will be converted to an API key upon next executio
 ## Usage Information
 
 ```
-jellyroller 0.8.0
+jellyroller 1.0.0
 A CLI controller for managing Jellyfin
 
 Usage: jellyroller.exe <COMMAND>
@@ -18,6 +18,7 @@ Usage: jellyroller.exe <COMMAND>
 Commands:
   add-user                   Creates a new user
   add-users                  Uses the supplied file to mass create new users
+  completions                Generate Shell completions
   create-report              Creates a report of either activity or available movie items
   delete-user                Deletes an existing user
   disable-user               Disable a user
@@ -31,6 +32,7 @@ Commands:
   get-repositories           Lists all current repositories
   get-scheduled-tasks        Show all scheduled tasks and their status
   grant-admin                Grants the specified user admin rights
+  initialize                 Perform a silent initialization
   install-package            Installs the specified package
   list-logs                  Displays the available system logs
   list-users                 Lists the current users with basic information
@@ -83,7 +85,7 @@ scoop install jellyroller
 
 ### Building From Source
 
-Currently built with rustc 1.85.0. If building on a Linux machine, you may need to install openssl-devel.
+Currently built with rustc 1.86.0. If building on a Linux machine, you may need to install openssl-devel.
 
 ```
 cargo install --git https://github.com/LSchallot/JellyRoller

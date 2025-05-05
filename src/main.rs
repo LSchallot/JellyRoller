@@ -6,7 +6,6 @@ use std::env;
 use std::fmt;
 use std::fs::{self, File};
 use std::io::{self, BufRead, BufReader, Cursor, Read, Write};
-use std::{thread, time};
 
 mod user_actions;
 use user_actions::{UserAuth, UserList, UserWithPass};
@@ -141,54 +140,36 @@ enum Commands {
         /// Only show devices active in the last hour
         #[clap(long, required = false)]
         active: bool,
-        /// Print information as json.
-        #[clap(long, required = false)]
-        json: bool,
         /// Specify the output format
         #[clap(short = 'o', long, value_enum, default_value = "table")]
         output_format: OutputFormat,
     },
     /// Gets the libraries available to the configured user
     GetLibraries {
-        /// Print information as json.
-        #[clap(long, required = false)]
-        json: bool,
         /// Specify the output format
         #[clap(short = 'o', long, value_enum, default_value = "table")]
         output_format: OutputFormat,
     },
     /// Lists all available packages
     GetPackages {
-        /// Print information as json.
-        #[clap(long, required = false)]
-        json: bool,
         /// Specify the output format
         #[clap(short = 'o', long, value_enum, default_value = "table")]
         output_format: OutputFormat,
     },
     /// Returns a list of installed plugins
     GetPlugins {
-        /// Print information as json.
-        #[clap(long, required = false)]
-        json: bool,
         /// Specify the output format
         #[clap(short = 'o', long, value_enum, default_value = "table")]
         output_format: OutputFormat,
     },
     /// Lists all current repositories
     GetRepositories {
-        /// Print information as json.
-        #[clap(long, required = false)]
-        json: bool,
         /// Specify the output format
         #[clap(short = 'o', long, value_enum, default_value = "table")]
         output_format: OutputFormat,
     },
     /// Show all scheduled tasks and their status.
     GetScheduledTasks {
-        /// Print information as json (DEPRECATED).
-        #[clap(long, required = false)]
-        json: bool,
         /// Specify the output format
         #[clap(short = 'o', long, value_enum, default_value = "table")]
         output_format: OutputFormat,
@@ -224,9 +205,6 @@ enum Commands {
     },
     /// Displays the available system logs.
     ListLogs {
-        /// Print information as json.
-        #[clap(long, required = false)]
-        json: bool,
         /// Specify the output format
         #[clap(short = 'o', long, value_enum, default_value = "table")]
         output_format: OutputFormat,
@@ -772,18 +750,11 @@ fn main() -> Result<(), confy::ConfyError> {
 
         // Server based commands
         Commands::GetPackages {
-            json,
             output_format,
         } => {
             let packages =
                 get_packages_info(ServerInfo::new("/Packages", &cfg.server_url, &cfg.api_key))
                     .unwrap();
-
-            if json {
-                json_deprecation();
-                PackageDetails::json_print(&packages);
-                std::process::exit(0)
-            }
 
             match output_format {
                 OutputFormat::Json => {
@@ -799,7 +770,6 @@ fn main() -> Result<(), confy::ConfyError> {
         }
 
         Commands::GetRepositories {
-            json,
             output_format,
         } => {
             let repos = get_repo_info(ServerInfo::new(
@@ -808,12 +778,6 @@ fn main() -> Result<(), confy::ConfyError> {
                 &cfg.api_key,
             ))
             .unwrap();
-
-            if json {
-                json_deprecation();
-                RepositoryDetails::json_print(&repos);
-                std::process::exit(0)
-            }
 
             match output_format {
                 OutputFormat::Json => {
@@ -870,7 +834,6 @@ fn main() -> Result<(), confy::ConfyError> {
             .expect("Unable to gather server information.");
         }
         Commands::ListLogs {
-            json,
             output_format,
         } => {
             let logs = match get_log_filenames(ServerInfo::new(
@@ -884,12 +847,6 @@ fn main() -> Result<(), confy::ConfyError> {
                 }
                 Ok(i) => i,
             };
-
-            if json {
-                json_deprecation();
-                LogDetails::json_print(&logs);
-                std::process::exit(0)
-            }
 
             match output_format {
                 OutputFormat::Json => {
@@ -915,7 +872,6 @@ fn main() -> Result<(), confy::ConfyError> {
         }
         Commands::GetDevices {
             active,
-            json,
             output_format,
         } => {
             let devices: Vec<DeviceDetails> = match get_devices(
@@ -928,12 +884,6 @@ fn main() -> Result<(), confy::ConfyError> {
                 }
                 Ok(i) => i,
             };
-
-            if json {
-                json_deprecation();
-                DeviceDetails::json_print(&devices);
-                std::process::exit(0)
-            }
 
             match output_format {
                 OutputFormat::Json => {
@@ -948,7 +898,6 @@ fn main() -> Result<(), confy::ConfyError> {
             }
         }
         Commands::GetLibraries {
-            json,
             output_format,
         } => {
             let libraries: Vec<LibraryDetails> = match get_libraries(ServerInfo::new(
@@ -963,12 +912,6 @@ fn main() -> Result<(), confy::ConfyError> {
                 Ok(i) => i,
             };
 
-            if json {
-                json_deprecation();
-                LibraryDetails::json_print(&libraries);
-                std::process::exit(0)
-            }
-
             match output_format {
                 OutputFormat::Json => {
                     LibraryDetails::json_print(&libraries);
@@ -982,7 +925,6 @@ fn main() -> Result<(), confy::ConfyError> {
             }
         }
         Commands::GetScheduledTasks {
-            json,
             output_format,
         } => {
             let tasks: Vec<TaskDetails> = match get_scheduled_tasks(ServerInfo::new(
@@ -996,12 +938,6 @@ fn main() -> Result<(), confy::ConfyError> {
                 }
                 Ok(i) => i,
             };
-
-            if json {
-                json_deprecation();
-                TaskDetails::json_print(&tasks);
-                std::process::exit(0);
-            }
 
             match output_format {
                 OutputFormat::Json => {
@@ -1121,7 +1057,6 @@ fn main() -> Result<(), confy::ConfyError> {
             ));
         }
         Commands::GetPlugins {
-            json,
             output_format,
         } => {
             let plugins: Vec<PluginDetails> = match PluginInfo::get_plugins(PluginInfo::new(
@@ -1135,12 +1070,6 @@ fn main() -> Result<(), confy::ConfyError> {
                 }
                 Ok(i) => i,
             };
-
-            if json {
-                json_deprecation();
-                PluginDetails::json_print(&plugins);
-                std::process::exit(0)
-            }
 
             match output_format {
                 OutputFormat::Json => {
@@ -1248,18 +1177,6 @@ fn main() -> Result<(), confy::ConfyError> {
     }
 
     Ok(())
-}
-
-///
-/// JSON flag deprecation message.
-///
-fn json_deprecation() {
-    println!("|========= DEPRECATION WARNING ============|");
-    println!("  The \"--json\" flag has been deprecated.");
-    println!("  Please consider migrating to the");
-    println!("  \"output_format\" argument");
-    println!("|==========================================|");
-    thread::sleep(time::Duration::from_millis(5000));
 }
 
 ///
