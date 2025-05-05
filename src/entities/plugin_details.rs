@@ -30,7 +30,7 @@ impl PluginDetails {
                 plugin.version,
                 plugin
                     .configuration_file_name
-                    .unwrap_or_else(|| String::new()),
+                    .unwrap_or_default(),
                 plugin.description,
                 plugin.id,
                 plugin.can_uninstall,
@@ -65,7 +65,7 @@ impl PluginDetails {
                 plugin.version,
                 plugin
                     .configuration_file_name
-                    .unwrap_or_else(|| String::new()),
+                    .unwrap_or_default(),
                 plugin.description,
                 plugin.id,
                 plugin.can_uninstall.to_string(),
