@@ -22,7 +22,7 @@ pub fn get_server_info(server_info: ServerInfo) -> Result<(), Box<dyn std::error
     match response.status() {
         StatusCode::OK => {
             let body: Value = response.json()?;
-            println!("{:#}", body);
+            println!("{body:#}");
         }
         StatusCode::UNAUTHORIZED => {
             handle_unauthorized();
@@ -297,7 +297,7 @@ pub fn execute_task_by_id(server_info: ServerInfo, taskname: &str, taskid: &str)
     );
     match response.status() {
         StatusCode::NO_CONTENT => {
-            println!("Task \"{}\" initiated.", taskname);
+            println!("Task \"{taskname}\" initiated.");
         }
         StatusCode::UNAUTHORIZED => {
             handle_unauthorized();
@@ -345,7 +345,7 @@ pub fn remove_device(server_info: ServerInfo, id: &str) -> Result<(), reqwest::E
         .send()?;
     match response.status() {
         StatusCode::NO_CONTENT => {
-            println!("\t Removes device with id = {}.", id);
+            println!("\t Removes device with id = {id}.");
         }
         StatusCode::UNAUTHORIZED => {
             handle_unauthorized();

@@ -548,7 +548,7 @@ fn main() -> Result<(), confy::ConfyError> {
         }
         Commands::DeleteUser { username } => {
             let user_id = get_user_id(&cfg, &username);
-            let server_path = format!("{}/Users/{}", cfg.server_url, user_id);
+            let server_path = format!("{}/Users/{user_id}", cfg.server_url);
             match UserWithPass::delete_user(UserWithPass::new(
                 Some(username),
                 None,
@@ -603,7 +603,7 @@ fn main() -> Result<(), confy::ConfyError> {
                 if export {
                     println!("Exporting user information.....");
                     if output.is_empty() {
-                        output = format!("exported-user-info-{}.json", username);
+                        output = format!("exported-user-info-{username}.json");
                     }
                     let data: String = match serde_json::to_string_pretty(&user) {
                         Err(_) => {
@@ -625,7 +625,7 @@ fn main() -> Result<(), confy::ConfyError> {
                 &username,
             );
             // Setup the endpoint
-            let server_path = format!("{}/Users/{}/Password", &cfg.server_url, user_id);
+            let server_path = format!("{}/Users/{user_id}/Password", &cfg.server_url);
             match UserWithPass::resetpass(UserWithPass::new(
                 None,
                 Some(password),
@@ -1235,7 +1235,7 @@ fn gather_user_information(cfg: &AppConfig, username: &String, id: &str) -> User
     match UserList::get_user_information(UserList::new(USER_ID, &cfg.server_url, &cfg.api_key), id)
     {
         Err(_) => {
-            println!("Unable to get user id for {}", username);
+            println!("Unable to get user id for {username}");
             std::process::exit(1);
         }
         Ok(ul) => ul,

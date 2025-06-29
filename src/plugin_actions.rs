@@ -12,7 +12,7 @@ pub struct PluginInfo {
 impl PluginInfo {
     pub fn new(endpoint: &str, server_url: &str, api_key: String) -> PluginInfo {
         PluginInfo {
-            server_url: format!("{}{}", server_url, endpoint),
+            server_url: format!("{server_url}{endpoint}"),
             api_key,
         }
     }

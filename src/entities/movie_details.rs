@@ -110,6 +110,6 @@ impl MovieDetails {
     }
 
     fn format_resolution(width: String, height: String) -> String {
-        format!("{} * {}", width, height)
+        format!("{width} * {height}")
     }
 }

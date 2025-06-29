@@ -171,7 +171,7 @@ pub struct UserAuth {
 impl UserAuth {
     pub fn new(server_url: &str, username: &str, password: String) -> UserAuth {
         UserAuth {
-            server_url: format!("{}/Users/authenticatebyname", server_url),
+            server_url: format!("{server_url}/Users/authenticatebyname"),
             username: username.to_owned(),
             pw: password,
         }
@@ -209,7 +209,7 @@ pub struct UserList {
 impl UserList {
     pub fn new(endpoint: &str, server_url: &str, api_key: &str) -> UserList {
         UserList {
-            server_url: format!("{}{}", server_url, endpoint),
+            server_url: format!("{server_url}{endpoint}"),
             api_key: api_key.to_string(),
         }
     }
@@ -243,7 +243,7 @@ impl UserList {
         }
 
         // Supplied username could not be found.  Panic.
-        panic!("Could not find user {}.", username);
+        panic!("Could not find user {username}.");
     }
 
     pub fn get_user_information(self, id: &str) -> Result<UserDetails, Box<dyn std::error::Error>> {
@@ -273,7 +273,7 @@ impl UserList {
             body,
         );
         if response.status() == StatusCode::NO_CONTENT {
-            println!("User {} successfully updated.", username);
+            println!("User {username} successfully updated.");
         } else {
             println!("Unable to update user policy information.");
             println!("Status Code: {}", response.status());
@@ -305,7 +305,7 @@ impl UserList {
             println!("Unable to update user information.");
             println!("Status Code: {}", user_response.status());
             match user_response.text() {
-                Ok(t) => println!("{}", t),
+                Ok(t) => println!("{t}"),
                 Err(_) => eprintln!("Could not get response text from user information update."),
             }
         }
@@ -321,7 +321,7 @@ impl UserList {
             println!("Unable to update user information.");
             println!("Status Code: {}", response.status());
             match response.text() {
-                Ok(t) => println!("{}", t),
+                Ok(t) => println!("{t}"),
                 Err(_) => eprintln!("Could not get response text from user policy update."),
             }
         }
