@@ -1,35 +1,38 @@
-use base64::{engine::general_purpose, Engine as _};
 use clap::{CommandFactory, Parser, Subcommand, ValueEnum};
 use clap_complete::{generate, Shell};
-use image::ImageFormat;
 use std::env;
 use std::fmt;
-use std::fs::{self, File};
-use std::io::{self, BufRead, BufReader, Cursor, Read, Write};
+use std::io::{self, Write};
 
 mod user_actions;
 use user_actions::{UserAuth, UserList, UserWithPass};
+
 mod system_actions;
 use system_actions::*;
+
 mod plugin_actions;
-use plugin_actions::PluginInfo;
-mod entities;
 mod responder;
+
+mod entities;
 use entities::activity_details::ActivityDetails;
 use entities::device_details::{DeviceDetails, DeviceRootJson};
 use entities::library_details::{LibraryDetails, LibraryRootJson};
 use entities::log_details::LogDetails;
-use entities::media_details::MediaRoot;
 use entities::movie_details::MovieDetails;
 use entities::package_details::{PackageDetails, PackageDetailsRoot};
 use entities::plugin_details::{PluginDetails, PluginRootJson};
-use entities::repository_details::{RepositoryDetails, RepositoryDetailsRoot};
+use entities::repository_details::{RepositoryDetailsRoot};
 use entities::server_info::ServerInfo;
-use entities::task_details::TaskDetails;
 use entities::user_details::{Policy, UserDetails};
+
 mod utils;
-use utils::output_writer::export_data;
 use utils::status_handler::{handle_others, handle_unauthorized};
+
+mod commands;
+use commands::server_commands::{ command_execute_task_by_name, command_initialize, command_get_devices, command_get_packages, command_get_plugins, command_get_scheduled_tasks, command_get_repositories, command_install_package, command_register_repository };
+use commands::media_commands::{command_register_libarary, command_update_metadata, command_update_image_by_name, command_update_image_by_id, command_get_libraries, command_scan_library, command_search_media};
+use commands::log_commands::{command_generate_report, command_list_logs, command_create_report};
+use commands::user_commands::{command_delete_user, command_list_users, command_enable_user, command_disable_user, command_grant_admin, command_revoke_admin, command_reset_password, command_add_user, command_add_users, command_update_users, command_remove_device_by_username};
 
 #[macro_use]
 extern crate serde_derive;
@@ -404,7 +407,7 @@ fn main() -> Result<(), confy::ConfyError> {
     current.pop();
     current.push("jellyroller.config");
 
-    let mut cfg: AppConfig = if std::path::Path::new(current.as_path()).exists() {
+    let cfg: AppConfig = if std::path::Path::new(current.as_path()).exists() {
         confy::load_path(current.as_path())?
     } else {
         confy::load("jellyroller", "jellyroller")?
@@ -424,842 +427,71 @@ fn main() -> Result<(), confy::ConfyError> {
     }
 
     let args = Cli::parse();
-
+    /*
+        This large command match section may be able to be rewritten for better readability.
+        Example:
+        ```
+            match args.command {
+                Commands::Initialize { username, password, server_url } => command_initialize(cfg, ...),
+                Commands::RegisterLibrary { ... } => command_register_library,
+                ...
+            }
+        ```
+     */
     match args.command {
-        Commands::Initialize {
-            username,
-            password,
-            server_url
-        } => {
-            println!("Configuring JellyRoller with supplied values.....");
-            env::consts::OS.clone_into(&mut cfg.os);
-            server_url.trim().clone_into(&mut cfg.server_url);
-            cfg.api_key = UserAuth::auth_user(UserAuth::new(&cfg.server_url, username.trim(), password))
-                .expect("Unable to generate user auth token.  Please assure your configuration information was input correctly\n");
-            "configured".clone_into(&mut cfg.status);
-            token_to_api(cfg);
-        }
+        // Server Commands
+        Commands::ExecuteTaskByName { task } => command_execute_task_by_name(cfg, task),
+        Commands::GetDevices { active, output_format} => command_get_devices(cfg, active, output_format, DEVICES),
+        Commands::GetPackages { output_format } => command_get_packages(cfg, output_format),
+        Commands::GetPlugins { output_format} => command_get_plugins(cfg, output_format),
+        Commands::GetRepositories { output_format } => command_get_repositories(cfg, output_format),
+        Commands::GetScheduledTasks { output_format } => command_get_scheduled_tasks(cfg, output_format),
+        Commands::Initialize { username, password, server_url } => command_initialize(cfg, username, password, server_url),
+        Commands::InstallPackage { package, version, repository} => command_install_package(cfg, package, version, repository),
+        Commands::Reconfigure {} => initial_config(cfg),
+        Commands::RegisterRepository { name, path } => command_register_repository(cfg, name, path),
+        Commands::RestartJellyfin {} => restart_or_shutdown(ServerInfo::new("/System/Restart",&cfg.server_url,&cfg.api_key,)),
+        Commands::ServerInfo {} => get_server_info(ServerInfo::new("/System/Info", &cfg.server_url, &cfg.api_key,)).expect("Unable to gather server information."),        
+        Commands::ShutdownJellyfin {} => restart_or_shutdown(ServerInfo::new("/System/Shutdown",&cfg.server_url,&cfg.api_key,)),
         
-        //TODO: Create a simple_post variation that allows for query params.
-        Commands::RegisterLibrary {
-            name,
-            collectiontype,
-            filename,
-        } => {
-            let mut endpoint = String::from("/Library/VirtualFolders?CollectionType=");
-            endpoint.push_str(collectiontype.to_string().as_str());
-            endpoint.push_str("&refreshLibrary=true");
-            endpoint.push_str("&name=");
-            endpoint.push_str(name.as_str());
-            let mut file = File::open(filename).expect("Unable to open file.");
-            let mut contents = String::new();
-            file.read_to_string(&mut contents)
-                .expect("Unable to read file.");
-            register_library(
-                ServerInfo::new(endpoint.as_str(), &cfg.server_url, &cfg.api_key),
-                contents,
-            )
-        }
-
-        Commands::GenerateReport {} => {
-            let info = return_server_info(ServerInfo::new(
-                "/System/Info",
-                &cfg.server_url,
-                &cfg.api_key,
-            ));
-            let json: serde_json::Value = serde_json::from_str(info.as_str()).expect("failed");
-            println!(
-                "\
-                Please copy/paste the following information to any issue that is being opened:\n\
-                JellyRoller Version: {}\n\
-                JellyRoller OS: {}\n\
-                Jellyfin Version: {}\n\
-                Jellyfin Host OK: {}\n\
-                Jellyfin Server Architecture: {}\
-                ",
-                env!("CARGO_PKG_VERSION"),
-                env::consts::OS,
-                json.get("Version")
-                    .expect("Unable to extract Jellyfin version."),
-                json.get("OperatingSystem")
-                    .expect("Unable to extract Jellyfin OS information."),
-                json.get("SystemArchitecture")
-                    .expect("Unable to extract Jellyfin System Architecture.")
-            );
-        }
-
-        Commands::UpdateMetadata { id, filename } => {
-            // Read the JSON file and prepare it for upload.
-            let json: String = fs::read_to_string(filename).unwrap();
-            update_metadata(
-                ServerInfo::new("/Items/{itemId}", &cfg.server_url, &cfg.api_key),
-                id,
-                json,
-            );
-        }
-        Commands::UpdateImageByName {
-            title,
-            path,
-            imagetype,
-        } => {
-            let search: MediaRoot =
-                execute_search(&title, "all".to_string(), "".to_string(), false, &cfg);
-            if search.total_record_count > 1 {
-                eprintln!(
-                    "Too many results found.  Updating by name requires a unique search term."
-                );
-                std::process::exit(1);
-            }
-            let img_base64 = image_to_base64(path);
-            for item in search.items {
-                update_image(
-                    ServerInfo::new(
-                        "/Items/{itemId}/Images/{imageType}",
-                        &cfg.server_url,
-                        &cfg.api_key,
-                    ),
-                    item.id,
-                    &imagetype,
-                    &img_base64,
-                );
-            }
-        }
-        Commands::UpdateImageById {
-            id,
-            path,
-            imagetype,
-        } => {
-            let img_base64 = image_to_base64(path);
-            update_image(
-                ServerInfo::new(
-                    "/Items/{itemId}/Images/{imageType}",
-                    &cfg.server_url,
-                    &cfg.api_key,
-                ),
-                id,
-                &imagetype,
-                &img_base64,
-            );
-        }
-
+        // User Commands
+        Commands::AddUser { username, password } => command_add_user(cfg, username, password),
+        
+        // Log Commands
+        Commands::CreateReport { report_type, limit, filename } => command_create_report(cfg, report_type, limit, filename),
+        Commands::GenerateReport {} => command_generate_report(cfg),
+        Commands::ListLogs { output_format } => command_list_logs(cfg, output_format),
+        Commands::ShowLog { logfile } => LogFile::get_logfile(LogFile::new(ServerInfo::new("/System/Logs/Log", &cfg.server_url, &cfg.api_key),logfile,)).expect("Unable to retrieve the specified logfile."),
+        
+        // Media Commands
+        Commands::GetLibraries { output_format } => command_get_libraries(cfg, output_format),
+        Commands::RegisterLibrary { name, collectiontype, filename } => command_register_libarary(cfg, name, collectiontype, filename),
+        Commands::ScanLibrary { library_id, scan_type } => command_scan_library(cfg, library_id, scan_type),
+        Commands::SearchMedia { term, mediatype, parentid, output_format, include_filepath, table_columns } => command_search_media(cfg, term, mediatype, parentid, output_format, include_filepath, table_columns),
+        Commands::UpdateMetadata { id, filename } => command_update_metadata(cfg, id, filename),
+        Commands::UpdateImageByName {title, path, imagetype} => command_update_image_by_name(cfg, title, path, imagetype),
+        Commands::UpdateImageById { id, path, imagetype } => command_update_image_by_id(cfg, id, path, imagetype),
+        
         // User based commands
-        Commands::AddUser { username, password } => {
-            add_user(&cfg, username, password);
-        }
-        Commands::DeleteUser { username } => {
-            let user_id = get_user_id(&cfg, &username);
-            let server_path = format!("{}/Users/{user_id}", cfg.server_url);
-            match UserWithPass::delete_user(UserWithPass::new(
-                Some(username),
-                None,
-                None,
-                server_path,
-                cfg.api_key,
-            )) {
-                Err(_) => {
-                    eprintln!("Unable to delete user.");
-                    std::process::exit(1);
-                }
-                Ok(i) => i,
-            }
-        }
-        Commands::ListUsers {
-            export,
-            mut output,
-            username,
-        } => {
-            if username.is_empty() {
-                let users: Vec<UserDetails> =
-                    match UserList::list_users(UserList::new(USERS, &cfg.server_url, &cfg.api_key))
-                    {
-                        Err(_) => {
-                            eprintln!("Unable to gather users.");
-                            std::process::exit(1);
-                        }
-                        Ok(i) => i,
-                    };
-                if export {
-                    println!("Exporting all user information.....");
-                    if output.is_empty() {
-                        "exported-user-info.json".clone_into(&mut output);
-                    }
-                    let data: String = match serde_json::to_string_pretty(&users) {
-                        Err(_) => {
-                            eprintln!("Unable to convert user information into JSON.");
-                            std::process::exit(1);
-                        }
-                        Ok(i) => i,
-                    };
-                    export_data(&data, output);
-                } else {
-                    UserDetails::json_print_users(&users);
-                }
-            } else {
-                let user_id = UserList::get_user_id(
-                    UserList::new(USERS, &cfg.server_url, &cfg.api_key),
-                    &username,
-                );
-                let user = gather_user_information(&cfg, &username, &user_id);
-                if export {
-                    println!("Exporting user information.....");
-                    if output.is_empty() {
-                        output = format!("exported-user-info-{username}.json");
-                    }
-                    let data: String = match serde_json::to_string_pretty(&user) {
-                        Err(_) => {
-                            eprintln!("Unable to convert user information into JSON.");
-                            std::process::exit(1);
-                        }
-                        Ok(i) => i,
-                    };
-                    export_data(&data, output);
-                } else {
-                    UserDetails::json_print_user(&user);
-                }
-            }
-        }
-        Commands::ResetPassword { username, password } => {
-            // Get usename
-            let user_id = UserList::get_user_id(
-                UserList::new(USERS, &cfg.server_url, &cfg.api_key),
-                &username,
-            );
-            // Setup the endpoint
-            let server_path = format!("{}/Users/{user_id}/Password", &cfg.server_url);
-            match UserWithPass::resetpass(UserWithPass::new(
-                None,
-                Some(password),
-                Some("".to_string()),
-                server_path,
-                cfg.api_key,
-            )) {
-                Err(_) => {
-                    eprintln!("Unable to convert user information into JSON.");
-                    std::process::exit(1);
-                }
-                Ok(i) => i,
-            }
-        }
-        Commands::DisableUser { username } => {
-            let id = get_user_id(&cfg, &username);
-            let mut user_info = gather_user_information(&cfg, &username, &id);
-            user_info.policy.is_disabled = true;
-            UserList::update_user_config_bool(
-                UserList::new(USER_POLICY, &cfg.server_url, &cfg.api_key),
-                &user_info.policy,
-                &id,
-                &username,
-            )
-            .expect("Unable to update user.");
-        }
-        Commands::EnableUser { username } => {
-            let id = get_user_id(&cfg, &username);
-            let mut user_info = gather_user_information(&cfg, &username, &id);
-            user_info.policy.is_disabled = false;
-            UserList::update_user_config_bool(
-                UserList::new(USER_POLICY, &cfg.server_url, &cfg.api_key),
-                &user_info.policy,
-                &id,
-                &username,
-            )
-            .expect("Unable to update user.");
-        }
-        Commands::GrantAdmin { username } => {
-            let id = get_user_id(&cfg, &username);
-            let mut user_info = gather_user_information(&cfg, &username, &id);
-            user_info.policy.is_administrator = true;
-            UserList::update_user_config_bool(
-                UserList::new(USER_POLICY, &cfg.server_url, &cfg.api_key),
-                &user_info.policy,
-                &id,
-                &username,
-            )
-            .expect("Unable to update user.");
-        }
-        Commands::RevokeAdmin { username } => {
-            let id = get_user_id(&cfg, &username);
-            let mut user_info = gather_user_information(&cfg, &username, &id);
-            user_info.policy.is_administrator = false;
-            UserList::update_user_config_bool(
-                UserList::new(USER_POLICY, &cfg.server_url, &cfg.api_key),
-                &user_info.policy,
-                &id,
-                &username,
-            )
-            .expect("Unable to update user.");
-        }
-        Commands::AddUsers { inputfile } => {
-            let reader = BufReader::new(File::open(inputfile).unwrap());
-            for line in reader.lines() {
-                match line {
-                    Ok(l) => {
-                        let vec: Vec<&str> = l.split(',').collect();
-                        add_user(&cfg, vec[0].to_owned(), vec[1].to_owned());
-                    }
-                    Err(e) => println!("Unable to add user.  {e}"),
-                }
-            }
-        }
-        Commands::UpdateUsers { inputfile } => {
-            let data: String = match fs::read_to_string(inputfile) {
-                Err(_) => {
-                    eprintln!("Unable to process input file.");
-                    std::process::exit(1);
-                }
-                Ok(i) => i,
-            };
-            if data.starts_with('[') {
-                let info: Vec<UserDetails> = match serde_json::from_str::<Vec<UserDetails>>(&data) {
-                    Err(_) => {
-                        eprintln!("Unable to convert user details JSON..");
-                        std::process::exit(1);
-                    }
-                    Ok(i) => i,
-                };
-                for item in info {
-                    match UserList::update_user_info(
-                        UserList::new(USER_ID, &cfg.server_url, &cfg.api_key),
-                        &item.id,
-                        &item,
-                    ) {
-                        Ok(_) => {}
-                        Err(e) => eprintln!("Unable to update user.  {e}"),
-                    };
-                }
-            } else {
-                let info: UserDetails = match serde_json::from_str::<UserDetails>(&data) {
-                    Err(_) => {
-                        eprintln!("Unable to convert user details JSON.");
-                        std::process::exit(1);
-                    }
-                    Ok(i) => i,
-                };
-                let user_id = get_user_id(&cfg, &info.name);
-                match UserList::update_user_info(
-                    UserList::new(USER_ID, &cfg.server_url, &cfg.api_key),
-                    &user_id,
-                    &info,
-                ) {
-                    Ok(_) => {}
-                    Err(e) => {
-                        eprintln!("Unable to update user.  {e}")
-                    }
-                }
-            }
-        }
-
-        // Server based commands
-        Commands::GetPackages {
-            output_format,
-        } => {
-            let packages =
-                get_packages_info(ServerInfo::new("/Packages", &cfg.server_url, &cfg.api_key))
-                    .unwrap();
-
-            match output_format {
-                OutputFormat::Json => {
-                    PackageDetails::json_print(&packages);
-                }
-                OutputFormat::Csv => {
-                    PackageDetails::csv_print(packages);
-                }
-                _ => {
-                    PackageDetails::table_print(packages);
-                }
-            }
-        }
-
-        Commands::GetRepositories {
-            output_format,
-        } => {
-            let repos = get_repo_info(ServerInfo::new(
-                "/Repositories",
-                &cfg.server_url,
-                &cfg.api_key,
-            ))
-            .unwrap();
-
-            match output_format {
-                OutputFormat::Json => {
-                    RepositoryDetails::json_print(&repos);
-                }
-                OutputFormat::Csv => {
-                    RepositoryDetails::csv_print(repos);
-                }
-                _ => {
-                    RepositoryDetails::table_print(repos);
-                }
-            }
-        }
-
-        Commands::RegisterRepository { name, path } => {
-            let mut repos = get_repo_info(ServerInfo::new(
-                "/Repositories",
-                &cfg.server_url,
-                &cfg.api_key,
-            ))
-            .unwrap();
-            repos.push(RepositoryDetails::new(name, path, true));
-            set_repo_info(
-                ServerInfo::new("/Repositories", &cfg.server_url, &cfg.api_key),
-                repos,
-            );
-        }
-
-        Commands::InstallPackage {
-            package,
-            version,
-            repository,
-        } => {
-            // Check if package name has spaces and replace them as needed
-            let encoded = package.replace(" ", "%20");
-            install_package(
-                ServerInfo::new(
-                    "/Packages/Installed/{package}",
-                    &cfg.server_url,
-                    &cfg.api_key,
-                ),
-                &encoded,
-                &version,
-                &repository,
-            );
-        }
-
-        Commands::ServerInfo {} => {
-            get_server_info(ServerInfo::new(
-                "/System/Info",
-                &cfg.server_url,
-                &cfg.api_key,
-            ))
-            .expect("Unable to gather server information.");
-        }
-        Commands::ListLogs {
-            output_format,
-        } => {
-            let logs = match get_log_filenames(ServerInfo::new(
-                "/System/Logs",
-                &cfg.server_url,
-                &cfg.api_key,
-            )) {
-                Err(_) => {
-                    eprintln!("Unable to get get log filenames.");
-                    std::process::exit(1);
-                }
-                Ok(i) => i,
-            };
-
-            match output_format {
-                OutputFormat::Json => {
-                    LogDetails::json_print(&logs);
-                }
-                OutputFormat::Csv => {
-                    LogDetails::csv_print(logs);
-                }
-                _ => {
-                    LogDetails::table_print(logs);
-                }
-            }
-        }
-        Commands::ShowLog { logfile } => {
-            LogFile::get_logfile(LogFile::new(
-                ServerInfo::new("/System/Logs/Log", &cfg.server_url, &cfg.api_key),
-                logfile,
-            ))
-            .expect("Unable to retrieve the specified logfile.");
-        }
-        Commands::Reconfigure {} => {
-            initial_config(cfg);
-        }
-        Commands::GetDevices {
-            active,
-            output_format,
-        } => {
-            let devices: Vec<DeviceDetails> = match get_devices(
-                ServerInfo::new(DEVICES, &cfg.server_url, &cfg.api_key),
-                active,
-            ) {
-                Err(e) => {
-                    eprintln!("Unable to get devices, {e}");
-                    std::process::exit(1);
-                }
-                Ok(i) => i,
-            };
-
-            match output_format {
-                OutputFormat::Json => {
-                    DeviceDetails::json_print(&devices);
-                }
-                OutputFormat::Csv => {
-                    DeviceDetails::csv_print(&devices);
-                }
-                _ => {
-                    DeviceDetails::table_print(devices);
-                }
-            }
-        }
-        Commands::GetLibraries {
-            output_format,
-        } => {
-            let libraries: Vec<LibraryDetails> = match get_libraries(ServerInfo::new(
-                "/Library/VirtualFolders",
-                &cfg.server_url,
-                &cfg.api_key,
-            )) {
-                Err(_) => {
-                    eprintln!("Unable to get libraries.");
-                    std::process::exit(1);
-                }
-                Ok(i) => i,
-            };
-
-            match output_format {
-                OutputFormat::Json => {
-                    LibraryDetails::json_print(&libraries);
-                }
-                OutputFormat::Csv => {
-                    LibraryDetails::csv_print(libraries);
-                }
-                _ => {
-                    LibraryDetails::table_print(libraries);
-                }
-            }
-        }
-        Commands::GetScheduledTasks {
-            output_format,
-        } => {
-            let tasks: Vec<TaskDetails> = match get_scheduled_tasks(ServerInfo::new(
-                "/ScheduledTasks",
-                &cfg.server_url,
-                &cfg.api_key,
-            )) {
-                Err(e) => {
-                    eprintln!("Unable to get scheduled tasks, {e}");
-                    std::process::exit(1);
-                }
-                Ok(i) => i,
-            };
-
-            match output_format {
-                OutputFormat::Json => {
-                    TaskDetails::json_print(&tasks);
-                }
-                OutputFormat::Csv => {
-                    TaskDetails::csv_print(&tasks);
-                }
-                _ => {
-                    TaskDetails::table_print(tasks);
-                }
-            }
-        }
-        Commands::ExecuteTaskByName { task } => {
-            let taskid: String = match get_taskid_by_taskname(
-                ServerInfo::new("/ScheduledTasks", &cfg.server_url, &cfg.api_key),
-                &task,
-            ) {
-                Err(e) => {
-                    eprintln!("Unable to get task id by taskname, {e}");
-                    std::process::exit(1);
-                }
-                Ok(i) => i,
-            };
-            execute_task_by_id(
-                ServerInfo::new(
-                    "/ScheduledTasks/Running/{taskId}",
-                    &cfg.server_url,
-                    &cfg.api_key,
-                ),
-                &task,
-                &taskid,
-            );
-        }
-        Commands::ScanLibrary {
-            library_id,
-            scan_type,
-        } => {
-            if library_id == "all" {
-                scan_library_all(ServerInfo::new(
-                    "/Library/Refresh",
-                    &cfg.server_url,
-                    &cfg.api_key,
-                ));
-            } else {
-                let query_info = match scan_type {
-                    ScanType::NewUpdated => {
-                        vec![
-                            ("Recursive", "true"),
-                            ("ImageRefreshMode", "Default"),
-                            ("MetadataRefreshMode", "Default"),
-                            ("ReplaceAllImages", "false"),
-                            ("RegenerateTrickplay", "false"),
-                            ("ReplaceAllMetadata", "false"),
-                        ]
-                    }
-                    ScanType::MissingMetadata => {
-                        vec![
-                            ("Recursive", "true"),
-                            ("ImageRefreshMode", "FullRefresh"),
-                            ("MetadataRefreshMode", "FullRefresh"),
-                            ("ReplaceAllImages", "false"),
-                            ("RegenerateTrickplay", "false"),
-                            ("ReplaceAllMetadata", "false"),
-                        ]
-                    }
-                    ScanType::ReplaceMetadata => {
-                        vec![
-                            ("Recursive", "true"),
-                            ("ImageRefreshMode", "FullRefresh"),
-                            ("MetadataRefreshMode", "FullRefresh"),
-                            ("ReplaceAllImages", "false"),
-                            ("RegenerateTrickplay", "false"),
-                            ("ReplaceAllMetadata", "true"),
-                        ]
-                    }
-                    _ => std::process::exit(1),
-                };
-                scan_library(
-                    ServerInfo::new("/Items/{library_id}/Refresh", &cfg.server_url, &cfg.api_key),
-                    query_info,
-                    library_id,
-                );
-            }
-        }
-        Commands::RemoveDeviceByUsername { username } => {
-            let filtered: Vec<String> = match get_deviceid_by_username(
-                ServerInfo::new(DEVICES, &cfg.server_url, &cfg.api_key),
-                &username,
-            ) {
-                Err(_) => {
-                    eprintln!("Unable to get device id by username.");
-                    std::process::exit(1);
-                }
-                Ok(i) => i,
-            };
-            for item in filtered {
-                remove_device(
-                    ServerInfo::new(DEVICES, &cfg.server_url, &cfg.api_key),
-                    &item,
-                )
-                .expect("Unable to delete specified id.");
-            }
-        }
-        Commands::RestartJellyfin {} => {
-            restart_or_shutdown(ServerInfo::new(
-                "/System/Restart",
-                &cfg.server_url,
-                &cfg.api_key,
-            ));
-        }
-        Commands::ShutdownJellyfin {} => {
-            restart_or_shutdown(ServerInfo::new(
-                "/System/Shutdown",
-                &cfg.server_url,
-                &cfg.api_key,
-            ));
-        }
-        Commands::GetPlugins {
-            output_format,
-        } => {
-            let plugins: Vec<PluginDetails> = match PluginInfo::get_plugins(PluginInfo::new(
-                "/Plugins",
-                &cfg.server_url,
-                cfg.api_key,
-            )) {
-                Err(_) => {
-                    eprintln!("Unable to get plugin information.");
-                    std::process::exit(1);
-                }
-                Ok(i) => i,
-            };
-
-            match output_format {
-                OutputFormat::Json => {
-                    PluginDetails::json_print(&plugins);
-                }
-                OutputFormat::Csv => {
-                    PluginDetails::csv_print(plugins);
-                }
-                _ => {
-                    PluginDetails::table_print(plugins);
-                }
-            }
-        }
-        Commands::CreateReport {
-            report_type,
-            limit,
-            filename,
-        } => match report_type {
-            ReportType::Activity => {
-                println!("Gathering Activity information.....");
-                let activities: ActivityDetails = match get_activity(
-                    ServerInfo::new("/System/ActivityLog/Entries", &cfg.server_url, &cfg.api_key),
-                    &limit,
-                ) {
-                    Err(e) => {
-                        eprintln!("Unable to gather activity log entries, {e}");
-                        std::process::exit(1);
-                    }
-                    Ok(i) => i,
-                };
-                if !filename.is_empty() {
-                    println!("Exporting Activity information to {}.....", &filename);
-                    let csv = ActivityDetails::print_as_csv(activities);
-                    export_data(&csv, filename);
-                    println!("Export complete.");
-                } else {
-                    ActivityDetails::table_print(activities);
-                }
-            }
-            ReportType::Movie => {
-                let user_id: String = match UserList::get_current_user_information(UserList::new(
-                    "/Users/Me",
-                    &cfg.server_url,
-                    &cfg.api_key,
-                )) {
-                    Err(e) => {
-                        eprintln!("Unable to gather information about current user, {e}");
-                        std::process::exit(1);
-                    }
-                    Ok(i) => i.id,
-                };
-                let movies: MovieDetails = match export_library(
-                    ServerInfo::new("/Users/{userId}/Items", &cfg.server_url, &cfg.api_key),
-                    &user_id,
-                ) {
-                    Err(e) => {
-                        eprintln!("Unable to export library, {e}");
-                        std::process::exit(1);
-                    }
-                    Ok(i) => i,
-                };
-                if !filename.is_empty() {
-                    println!("Exporting Movie information to {}.....", &filename);
-                    let csv = MovieDetails::print_as_csv(movies);
-                    export_data(&csv, filename);
-                    println!("Export complete.");
-                } else {
-                    MovieDetails::table_print(movies);
-                }
-            }
-        },
-        Commands::SearchMedia {
-            term,
-            mediatype,
-            parentid,
-            include_filepath,
-            output_format,
-            table_columns,
-        } => {
-            let search_result = execute_search(&term, mediatype, parentid, include_filepath, &cfg);
-
-            let mut used_table_columns = table_columns.clone();
-
-            if include_filepath {
-                used_table_columns.push("Path".to_string());
-            }
-
-            match output_format {
-                OutputFormat::Json => {
-                    MediaRoot::json_print(search_result);
-                }
-                OutputFormat::Csv => {
-                    MediaRoot::csv_print(search_result, &used_table_columns);
-                }
-                _ => {
-                    MediaRoot::table_print(search_result, &used_table_columns);
-                }
-            }
-        }
+        Commands::AddUsers { inputfile } => command_add_users(cfg, inputfile),
+        Commands::DeleteUser { username } => command_delete_user(cfg, username),
+        Commands::DisableUser { username } => command_disable_user(cfg, username, USER_POLICY, USER_ID),
+        Commands::EnableUser { username } => command_enable_user(cfg, username, USER_POLICY, USER_ID),
+        Commands::GrantAdmin { username } => command_grant_admin(cfg, username, USER_POLICY, USER_ID),
+        Commands::ListUsers { export, output, username } => command_list_users(cfg, export, output, username, USERS, USER_ID),
+        Commands::RemoveDeviceByUsername { username } => command_remove_device_by_username(cfg, username, DEVICES),
+        Commands::ResetPassword { username, password } => command_reset_password(cfg, username, password, USERS),
+        Commands::RevokeAdmin { username } => command_revoke_admin(cfg, username, USER_POLICY, USER_ID),
+        Commands::UpdateUsers { inputfile } => command_update_users(cfg, inputfile, USER_ID),
+        
+        // Other
         Commands::Completions { shell } => {
             let cmd = &mut Cli::command();
-
             generate(shell, cmd, cmd.get_name().to_string(), &mut io::stdout());
         }
     }
 
     Ok(())
-}
-
-///
-/// Executes a search with the passed parameters.
-///
-fn execute_search(
-    term: &str,
-    mediatype: String,
-    parentid: String,
-    include_filepath: bool,
-    cfg: &AppConfig,
-) -> MediaRoot {
-    let mut query = vec![
-        ("SortBy", "SortName,ProductionYear"),
-        ("Recursive", "true"),
-        ("searchTerm", term),
-    ];
-    if mediatype != "all" {
-        query.push(("IncludeItemTypes", &mediatype));
-    }
-
-    if include_filepath {
-        query.push(("fields", "Path"));
-    }
-
-    if !parentid.is_empty() {
-        query.push(("parentId", &parentid));
-    }
-
-    match get_search_results(
-        ServerInfo::new("/Items", &cfg.server_url, &cfg.api_key),
-        query,
-    ) {
-        Err(e) => {
-            eprintln!("Unable to execute search, {e}");
-            std::process::exit(1);
-        }
-        Ok(i) => i,
-    }
-}
-
-///
-/// Retrieve the id for the specified user.  Most API calls require the id of the user rather than the username.
-///
-fn get_user_id(cfg: &AppConfig, username: &String) -> String {
-    UserList::get_user_id(
-        UserList::new("/Users", &cfg.server_url, &cfg.api_key),
-        username,
-    )
-}
-
-///
-/// Gathers user information.
-///
-fn gather_user_information(cfg: &AppConfig, username: &String, id: &str) -> UserDetails {
-    match UserList::get_user_information(UserList::new(USER_ID, &cfg.server_url, &cfg.api_key), id)
-    {
-        Err(_) => {
-            println!("Unable to get user id for {username}");
-            std::process::exit(1);
-        }
-        Ok(ul) => ul,
-    }
-}
-
-///
-/// Helper function to standardize the call for adding a user with a password.
-///
-fn add_user(cfg: &AppConfig, username: String, password: String) {
-    let server_path = format!("{}/Users/New", cfg.server_url);
-    match UserWithPass::create_user(UserWithPass::new(
-        Some(username),
-        Some(password),
-        None,
-        server_path,
-        cfg.api_key.clone(),
-    )) {
-        Err(_) => {
-            println!("Unable to create user");
-            std::process::exit(1);
-        }
-        Ok(i) => i,
-    }
 }
 
 ///
@@ -1333,18 +565,6 @@ fn token_to_api(mut cfg: AppConfig) {
     confy::store("jellyroller", "jellyroller", cfg)
         .expect("[ERROR] Unable to store updated configuration.");
     println!("[INFO] Auth token successfully converted to API key.");
-}
-
-///
-/// Function that converts an image into a base64 png image.
-///
-fn image_to_base64(path: String) -> String {
-    let base_img = image::open(path).unwrap();
-    let mut image_data: Vec<u8> = Vec::new();
-    base_img
-        .write_to(&mut Cursor::new(&mut image_data), ImageFormat::Png)
-        .unwrap();
-    general_purpose::STANDARD.encode(image_data)
 }
 
 ///
