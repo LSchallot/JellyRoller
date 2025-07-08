@@ -28,11 +28,12 @@ use entities::user_details::{Policy, UserDetails};
 mod utils;
 use utils::status_handler::{handle_others, handle_unauthorized};
 
+// All public functions in the below use statements are used within this file, so just get them all.
 mod commands;
-use commands::server_commands::{ command_execute_task_by_name, command_initialize, command_get_devices, command_get_packages, command_get_plugins, command_get_scheduled_tasks, command_get_repositories, command_install_package, command_register_repository };
-use commands::media_commands::{command_register_libarary, command_update_metadata, command_update_image_by_name, command_update_image_by_id, command_get_libraries, command_scan_library, command_search_media};
-use commands::log_commands::{command_generate_report, command_list_logs, command_create_report};
-use commands::user_commands::{command_delete_user, command_list_users, command_enable_user, command_disable_user, command_grant_admin, command_revoke_admin, command_reset_password, command_add_user, command_add_users, command_update_users, command_remove_device_by_username};
+use commands::server_commands::*;
+use commands::media_commands::*;
+use commands::log_commands::*;
+use commands::user_commands::*;
 
 #[macro_use]
 extern crate serde_derive;
@@ -427,36 +428,8 @@ fn main() -> Result<(), confy::ConfyError> {
     }
 
     let args = Cli::parse();
-    /*
-        This large command match section may be able to be rewritten for better readability.
-        Example:
-        ```
-            match args.command {
-                Commands::Initialize { username, password, server_url } => command_initialize(cfg, ...),
-                Commands::RegisterLibrary { ... } => command_register_library,
-                ...
-            }
-        ```
-     */
+
     match args.command {
-        // Server Commands
-        Commands::ExecuteTaskByName { task } => command_execute_task_by_name(cfg, task),
-        Commands::GetDevices { active, output_format} => command_get_devices(cfg, active, output_format, DEVICES),
-        Commands::GetPackages { output_format } => command_get_packages(cfg, output_format),
-        Commands::GetPlugins { output_format} => command_get_plugins(cfg, output_format),
-        Commands::GetRepositories { output_format } => command_get_repositories(cfg, output_format),
-        Commands::GetScheduledTasks { output_format } => command_get_scheduled_tasks(cfg, output_format),
-        Commands::Initialize { username, password, server_url } => command_initialize(cfg, username, password, server_url),
-        Commands::InstallPackage { package, version, repository} => command_install_package(cfg, package, version, repository),
-        Commands::Reconfigure {} => initial_config(cfg),
-        Commands::RegisterRepository { name, path } => command_register_repository(cfg, name, path),
-        Commands::RestartJellyfin {} => restart_or_shutdown(ServerInfo::new("/System/Restart",&cfg.server_url,&cfg.api_key,)),
-        Commands::ServerInfo {} => get_server_info(ServerInfo::new("/System/Info", &cfg.server_url, &cfg.api_key,)).expect("Unable to gather server information."),        
-        Commands::ShutdownJellyfin {} => restart_or_shutdown(ServerInfo::new("/System/Shutdown",&cfg.server_url,&cfg.api_key,)),
-        
-        // User Commands
-        Commands::AddUser { username, password } => command_add_user(cfg, username, password),
-        
         // Log Commands
         Commands::CreateReport { report_type, limit, filename } => command_create_report(cfg, report_type, limit, filename),
         Commands::GenerateReport {} => command_generate_report(cfg),
@@ -472,7 +445,23 @@ fn main() -> Result<(), confy::ConfyError> {
         Commands::UpdateImageByName {title, path, imagetype} => command_update_image_by_name(cfg, title, path, imagetype),
         Commands::UpdateImageById { id, path, imagetype } => command_update_image_by_id(cfg, id, path, imagetype),
         
-        // User based commands
+        // Server Commands
+        Commands::ExecuteTaskByName { task } => command_execute_task_by_name(cfg, task),
+        Commands::GetDevices { active, output_format} => command_get_devices(cfg, active, output_format, DEVICES),
+        Commands::GetPackages { output_format } => command_get_packages(cfg, output_format),
+        Commands::GetPlugins { output_format} => command_get_plugins(cfg, output_format),
+        Commands::GetRepositories { output_format } => command_get_repositories(cfg, output_format),
+        Commands::GetScheduledTasks { output_format } => command_get_scheduled_tasks(cfg, output_format),
+        Commands::Initialize { username, password, server_url } => command_initialize(cfg, username, password, server_url),
+        Commands::InstallPackage { package, version, repository} => command_install_package(cfg, package, version, repository),
+        Commands::Reconfigure {} => initial_config(cfg),
+        Commands::RegisterRepository { name, path } => command_register_repository(cfg, name, path),
+        Commands::RestartJellyfin {} => restart_or_shutdown(ServerInfo::new("/System/Restart",&cfg.server_url,&cfg.api_key,)),
+        Commands::ServerInfo {} => get_server_info(ServerInfo::new("/System/Info", &cfg.server_url, &cfg.api_key,)).expect("Unable to gather server information."),        
+        Commands::ShutdownJellyfin {} => restart_or_shutdown(ServerInfo::new("/System/Shutdown",&cfg.server_url,&cfg.api_key,)),
+
+        // User commands
+        Commands::AddUser { username, password } => command_add_user(cfg, username, password),
         Commands::AddUsers { inputfile } => command_add_users(cfg, inputfile),
         Commands::DeleteUser { username } => command_delete_user(cfg, username),
         Commands::DisableUser { username } => command_disable_user(cfg, username, USER_POLICY, USER_ID),
