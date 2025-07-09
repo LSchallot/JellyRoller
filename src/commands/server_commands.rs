@@ -12,7 +12,7 @@ use crate::{ AppConfig, OutputFormat,
     entities::task_details::TaskDetails
 };
 
-pub fn command_initialize(mut cfg: AppConfig, username: String, password: String, server_url: String) {
+pub fn command_initialize(mut cfg: AppConfig, username: &str, password: String, server_url: &str) {
     println!("Configuring JellyRoller with supplied values.....");
     env::consts::OS.clone_into(&mut cfg.os);
     server_url.trim().clone_into(&mut cfg.server_url);
@@ -22,7 +22,7 @@ pub fn command_initialize(mut cfg: AppConfig, username: String, password: String
             token_to_api(cfg);
 }
 
-pub fn command_get_devices(cfg: AppConfig, active: bool, output_format: OutputFormat, devices_endpoint: &str) {
+pub fn command_get_devices(cfg: &AppConfig, active: bool, output_format: &OutputFormat, devices_endpoint: &str) {
     let devices: Vec<DeviceDetails> = match get_devices(
         ServerInfo::new(devices_endpoint, &cfg.server_url, &cfg.api_key),
         active,
@@ -41,16 +41,16 @@ pub fn command_get_devices(cfg: AppConfig, active: bool, output_format: OutputFo
         OutputFormat::Csv => {
             DeviceDetails::csv_print(&devices);
         }
-        _ => {
+        OutputFormat::Table => {
             DeviceDetails::table_print(devices);
         }
     }
 }
 
-pub fn command_execute_task_by_name(cfg: AppConfig, task: String) {
+pub fn command_execute_task_by_name(cfg: &AppConfig, task: &str) {
     let taskid: String = match get_taskid_by_taskname(
         ServerInfo::new("/ScheduledTasks", &cfg.server_url, &cfg.api_key),
-        &task,
+        task,
     ) {
         Err(e) => {
             eprintln!("Unable to get task id by taskname, {e}");
@@ -59,17 +59,17 @@ pub fn command_execute_task_by_name(cfg: AppConfig, task: String) {
         Ok(i) => i,
     };
     execute_task_by_id(
-        ServerInfo::new(
+        &ServerInfo::new(
             "/ScheduledTasks/Running/{taskId}",
             &cfg.server_url,
             &cfg.api_key,
         ),
-        &task,
+        task,
         &taskid,
     );
 }
 
-pub fn command_get_packages(cfg: AppConfig, output_format: OutputFormat) {
+pub fn command_get_packages(cfg: &AppConfig, output_format: &OutputFormat) {
     let packages =
         get_packages_info(ServerInfo::new("/Packages", &cfg.server_url, &cfg.api_key))
             .unwrap();
@@ -81,13 +81,13 @@ pub fn command_get_packages(cfg: AppConfig, output_format: OutputFormat) {
         OutputFormat::Csv => {
             PackageDetails::csv_print(packages);
         }
-        _ => {
+        OutputFormat::Table => {
             PackageDetails::table_print(packages);
         }
     }
 }
 
-pub fn command_get_plugins(cfg: AppConfig, output_format: OutputFormat) {
+pub fn command_get_plugins(cfg: AppConfig, output_format: &OutputFormat) {
     let plugins: Vec<PluginDetails> = match PluginInfo::get_plugins(PluginInfo::new(
         "/Plugins",
         &cfg.server_url,
@@ -107,13 +107,13 @@ pub fn command_get_plugins(cfg: AppConfig, output_format: OutputFormat) {
         OutputFormat::Csv => {
             PluginDetails::csv_print(plugins);
         }
-        _ => {
+        OutputFormat::Table => {
             PluginDetails::table_print(plugins);
         }
     }
 }
 
-pub fn command_get_repositories(cfg: AppConfig, output_format: OutputFormat) {
+pub fn command_get_repositories(cfg: &AppConfig, output_format: &OutputFormat) {
     let repos = get_repo_info(ServerInfo::new(
         "/Repositories",
         &cfg.server_url,
@@ -128,13 +128,13 @@ pub fn command_get_repositories(cfg: AppConfig, output_format: OutputFormat) {
         OutputFormat::Csv => {
             RepositoryDetails::csv_print(repos);
         }
-        _ => {
+        OutputFormat::Table => {
             RepositoryDetails::table_print(repos);
         }
     }
 }
 
-pub fn command_get_scheduled_tasks(cfg: AppConfig, output_format: OutputFormat) {
+pub fn command_get_scheduled_tasks(cfg: &AppConfig, output_format: &OutputFormat) {
     let tasks: Vec<TaskDetails> = match get_scheduled_tasks(ServerInfo::new(
         "/ScheduledTasks",
         &cfg.server_url,
@@ -154,28 +154,28 @@ pub fn command_get_scheduled_tasks(cfg: AppConfig, output_format: OutputFormat) 
         OutputFormat::Csv => {
             TaskDetails::csv_print(&tasks);
         }
-        _ => {
+        OutputFormat::Table => {
             TaskDetails::table_print(tasks);
         }
     }
 }
 
-pub fn command_install_package(cfg: AppConfig, package: String, version: String, repository: String) {
+pub fn command_install_package(cfg: &AppConfig, package: &str, version: &str, repository: &str) {
      // Check if package name has spaces and replace them as needed
-    let encoded = package.replace(" ", "%20");
+    let encoded = package.replace(' ', "%20");
     install_package(
-        ServerInfo::new(
+        &ServerInfo::new(
             "/Packages/Installed/{package}",
             &cfg.server_url,
             &cfg.api_key,
         ),
         &encoded,
-        &version,
-        &repository,
+        version,
+        repository,
     );
 }
 
-pub fn command_register_repository(cfg: AppConfig, name: String, path: String) {
+pub fn command_register_repository(cfg: &AppConfig, name: String, path: String) {
     let mut repos = get_repo_info(ServerInfo::new(
         "/Repositories",
         &cfg.server_url,

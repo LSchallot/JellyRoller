@@ -15,6 +15,7 @@ pub struct PackageDetails {
     pub image_url: String,
 }
 
+#[allow(clippy::struct_field_names)]
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Version {
@@ -33,7 +34,7 @@ pub struct Version {
 impl PackageDetails {
     pub fn csv_print(packages: Vec<PackageDetails>) {
         for package in packages {
-            let mut version_output: String = "".to_string();
+            let mut version_output: String = String::new();
             for version in package.versions {
                 version_output.push_str(version.version.as_str());
                 version_output.push(' ');
@@ -69,7 +70,7 @@ impl PackageDetails {
                 "Versions",
             ]);
         for package in packages {
-            let mut version_output: String = "".to_string();
+            let mut version_output: String = String::new();
             for version in package.versions {
                 version_output.push_str(version.version.as_str());
                 version_output.push(' ');

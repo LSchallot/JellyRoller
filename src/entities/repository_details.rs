@@ -24,7 +24,7 @@ impl RepositoryDetails {
                 repo.name, 
                 repo.url,
                 repo.enabled,
-            )
+            );
         }
     }
 

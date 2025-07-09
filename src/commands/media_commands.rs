@@ -4,12 +4,12 @@ use std::fs::{self,File};
 use std::io::{Read, Cursor};
 use crate::{AppConfig, ImageType, OutputFormat, ScanType, system_actions::{get_libraries, get_search_results, register_library, update_metadata, update_image, scan_library, scan_library_all}, CollectionType, entities::library_details::LibraryDetails, entities::server_info::ServerInfo, entities::media_details::MediaRoot};
 
-pub fn command_register_libarary(cfg: AppConfig, name: String, collectiontype: CollectionType, filename: String) {
+pub fn command_register_libarary(cfg: &AppConfig, name: &str, collectiontype: &CollectionType, filename: String) {
     let mut endpoint = String::from("/Library/VirtualFolders?CollectionType=");
     endpoint.push_str(collectiontype.to_string().as_str());
     endpoint.push_str("&refreshLibrary=true");
     endpoint.push_str("&name=");
-    endpoint.push_str(name.as_str());
+    endpoint.push_str(name);
     let mut file = File::open(filename).expect("Unable to open file.");
     let mut contents = String::new();
     file.read_to_string(&mut contents)
@@ -17,22 +17,22 @@ pub fn command_register_libarary(cfg: AppConfig, name: String, collectiontype: C
     register_library(
         ServerInfo::new(endpoint.as_str(), &cfg.server_url, &cfg.api_key),
         contents,
-    )
+    );
 }
 
-pub fn command_update_metadata(cfg: AppConfig, id: String, filename: String) {
+pub fn command_update_metadata(cfg: &AppConfig, id: &str, filename: String) {
     // Read the JSON file and prepare it for upload.
     let json: String = fs::read_to_string(filename).unwrap();
     update_metadata(
-        ServerInfo::new("/Items/{itemId}", &cfg.server_url, &cfg.api_key),
+        &ServerInfo::new("/Items/{itemId}", &cfg.server_url, &cfg.api_key),
         id,
         json,
     );
 }
 
-pub fn command_update_image_by_name(cfg: AppConfig, title: String, path: String, imagetype: ImageType) {
+pub fn command_update_image_by_name(cfg: &AppConfig, title: &str, path: String, imagetype: &ImageType) {
     let search: MediaRoot =
-        execute_search(&title, "all".to_string(), "".to_string(), false, &cfg);
+        execute_search(title, "all", "", false, cfg);
     if search.total_record_count > 1 {
         eprintln!(
             "Too many results found.  Updating by name requires a unique search term."
@@ -42,33 +42,33 @@ pub fn command_update_image_by_name(cfg: AppConfig, title: String, path: String,
     let img_base64 = image_to_base64(path);
     for item in search.items {
         update_image(
-            ServerInfo::new(
+            &ServerInfo::new(
                 "/Items/{itemId}/Images/{imageType}",
                 &cfg.server_url,
                 &cfg.api_key,
             ),
-            item.id,
-            &imagetype,
+            &item.id,
+            imagetype,
             &img_base64,
         );
     }
 }
 
-pub fn command_update_image_by_id(cfg: AppConfig, id: String, path: String, imagetype: ImageType) {
+pub fn command_update_image_by_id(cfg: &AppConfig, id: &str, path: String, imagetype: &ImageType) {
     let img_base64 = image_to_base64(path);
     update_image(
-        ServerInfo::new(
+        &ServerInfo::new(
             "/Items/{itemId}/Images/{imageType}",
             &cfg.server_url,
             &cfg.api_key,
         ),
         id,
-        &imagetype,
+        imagetype,
         &img_base64,
     );
 }
 
-pub fn command_get_libraries(cfg: AppConfig, output_format: OutputFormat) {
+pub fn command_get_libraries(cfg: &AppConfig, output_format: &OutputFormat) {
     let libraries: Vec<LibraryDetails> = match get_libraries(ServerInfo::new(
         "/Library/VirtualFolders",
         &cfg.server_url,
@@ -88,13 +88,13 @@ pub fn command_get_libraries(cfg: AppConfig, output_format: OutputFormat) {
         OutputFormat::Csv => {
             LibraryDetails::csv_print(libraries);
         }
-        _ => {
+        OutputFormat::Table => {
             LibraryDetails::table_print(libraries);
         }
     }
 }
 
-pub fn command_scan_library(cfg: AppConfig, library_id: String, scan_type: ScanType) {
+pub fn command_scan_library(cfg: &AppConfig, library_id: &str, scan_type: &ScanType) {
     if library_id == "all" {
         scan_library_all(ServerInfo::new(
             "/Library/Refresh",
@@ -102,9 +102,9 @@ pub fn command_scan_library(cfg: AppConfig, library_id: String, scan_type: ScanT
             &cfg.api_key,
         ));
     } else {
-        let query_info = match scan_type {
+        let query_info  = match scan_type {
             ScanType::NewUpdated => {
-                vec![
+                [
                     ("Recursive", "true"),
                     ("ImageRefreshMode", "Default"),
                     ("MetadataRefreshMode", "Default"),
@@ -114,7 +114,7 @@ pub fn command_scan_library(cfg: AppConfig, library_id: String, scan_type: ScanT
                 ]
             }
             ScanType::MissingMetadata => {
-                vec![
+                [
                     ("Recursive", "true"),
                     ("ImageRefreshMode", "FullRefresh"),
                     ("MetadataRefreshMode", "FullRefresh"),
@@ -124,7 +124,7 @@ pub fn command_scan_library(cfg: AppConfig, library_id: String, scan_type: ScanT
                 ]
             }
             ScanType::ReplaceMetadata => {
-                vec![
+                [
                     ("Recursive", "true"),
                     ("ImageRefreshMode", "FullRefresh"),
                     ("MetadataRefreshMode", "FullRefresh"),
@@ -133,20 +133,20 @@ pub fn command_scan_library(cfg: AppConfig, library_id: String, scan_type: ScanT
                     ("ReplaceAllMetadata", "true"),
                 ]
             }
-            _ => std::process::exit(1),
+            ScanType::All => std::process::exit(1), // Handled elsewhere.
         };
         scan_library(
-            ServerInfo::new("/Items/{library_id}/Refresh", &cfg.server_url, &cfg.api_key),
-            query_info,
+            &ServerInfo::new("/Items/{library_id}/Refresh", &cfg.server_url, &cfg.api_key),
+            &query_info,
             library_id,
         );
     }
 }
 
-pub fn command_search_media(cfg:AppConfig, term: String, mediatype: String, parentid: String, output_format: OutputFormat, include_filepath: bool, table_columns: Vec<String>) {
-    let search_result = execute_search(&term, mediatype, parentid, include_filepath, &cfg);
+pub fn command_search_media(cfg: &AppConfig, term: &str, mediatype: &str, parentid: &str, output_format: &OutputFormat, include_filepath: bool, table_columns: &[String]) {
+    let search_result = execute_search(term, mediatype, parentid, include_filepath, cfg);
 
-    let mut used_table_columns = table_columns.clone();
+    let mut used_table_columns = table_columns.to_owned();
 
     if include_filepath {
         used_table_columns.push("Path".to_string());
@@ -154,12 +154,12 @@ pub fn command_search_media(cfg:AppConfig, term: String, mediatype: String, pare
 
     match output_format {
         OutputFormat::Json => {
-            MediaRoot::json_print(search_result);
+            MediaRoot::json_print(&search_result);
         }
         OutputFormat::Csv => {
             MediaRoot::csv_print(search_result, &used_table_columns);
         }
-        _ => {
+        OutputFormat::Table => {
             MediaRoot::table_print(search_result, &used_table_columns);
         }
     }
@@ -176,8 +176,8 @@ pub fn command_search_media(cfg:AppConfig, term: String, mediatype: String, pare
 ///
 fn execute_search(
     term: &str,
-    mediatype: String,
-    parentid: String,
+    mediatype: &str,
+    parentid: &str,
     include_filepath: bool,
     cfg: &AppConfig,
 ) -> MediaRoot {
@@ -187,7 +187,7 @@ fn execute_search(
         ("searchTerm", term),
     ];
     if mediatype != "all" {
-        query.push(("IncludeItemTypes", &mediatype));
+        query.push(("IncludeItemTypes", mediatype));
     }
 
     if include_filepath {
@@ -195,7 +195,7 @@ fn execute_search(
     }
 
     if !parentid.is_empty() {
-        query.push(("parentId", &parentid));
+        query.push(("parentId", parentid));
     }
 
     match get_search_results(

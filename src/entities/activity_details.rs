@@ -13,6 +13,7 @@ pub struct ActivityDetails {
     pub start_index: i64,
 }
 
+#[allow(clippy::struct_field_names)]
 #[derive(Default, Clone, Serialize, Deserialize)]
 pub struct Item {
     #[serde(rename = "Id")]

@@ -1,3 +1,4 @@
+#[allow(clippy::struct_excessive_bools)]
 #[derive(Debug, Serialize, Deserialize)]
 pub struct UserDetails {
     #[serde(rename = "Name")]
@@ -31,6 +32,7 @@ pub struct UserDetails {
 }
 
 // Struct to contain the Policy information that is a part of the user details.
+#[allow(clippy::struct_excessive_bools)]
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Policy {
     #[serde(rename = "IsAdministrator")]
@@ -113,6 +115,7 @@ pub struct Policy {
     pub sync_play_access: String,
 }
 
+#[allow(clippy::struct_excessive_bools)]
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Configuration {
     #[serde(rename = "AudioLanguagePreference", default)]

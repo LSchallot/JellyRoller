@@ -2,7 +2,7 @@ use std::env;
 
 use crate::{ AppConfig, ReportType, ActivityDetails, UserList, MovieDetails, OutputFormat, utils::output_writer::export_data, system_actions::{get_activity, export_library, return_server_info, get_log_filenames}, entities::server_info::ServerInfo, entities::log_details::LogDetails};
 
-pub fn command_generate_report(cfg: AppConfig) {
+pub fn command_generate_report(cfg: &AppConfig) {
     let info = return_server_info(ServerInfo::new(
         "/System/Info",
         &cfg.server_url,
@@ -29,7 +29,7 @@ pub fn command_generate_report(cfg: AppConfig) {
     );
 }
 
-pub fn command_list_logs(cfg: AppConfig, output_format: OutputFormat) {
+pub fn command_list_logs(cfg: &AppConfig, output_format: &OutputFormat) {
     let logs = match get_log_filenames(ServerInfo::new(
         "/System/Logs",
         &cfg.server_url,
@@ -49,19 +49,19 @@ pub fn command_list_logs(cfg: AppConfig, output_format: OutputFormat) {
         OutputFormat::Csv => {
             LogDetails::csv_print(logs);
         }
-        _ => {
+        OutputFormat::Table => {
             LogDetails::table_print(logs);
         }
     }
 }
 
-pub fn command_create_report(cfg: AppConfig, report_type: ReportType, limit: String, filename: String) {
+pub fn command_create_report(cfg: &AppConfig, report_type: &ReportType, limit: &str, filename: String) {
     match report_type {
         ReportType::Activity => {
             println!("Gathering Activity information.....");
             let activities: ActivityDetails = match get_activity(
                 ServerInfo::new("/System/ActivityLog/Entries", &cfg.server_url, &cfg.api_key),
-                &limit,
+                limit,
             ) {
                 Err(e) => {
                     eprintln!("Unable to gather activity log entries, {e}");
@@ -69,13 +69,13 @@ pub fn command_create_report(cfg: AppConfig, report_type: ReportType, limit: Str
                 }
                 Ok(i) => i,
             };
-            if !filename.is_empty() {
+            if filename.is_empty() {
+                ActivityDetails::table_print(activities);
+            } else {
                 println!("Exporting Activity information to {}.....", &filename);
                 let csv = ActivityDetails::print_as_csv(activities);
                 export_data(&csv, filename);
                 println!("Export complete.");
-            } else {
-                ActivityDetails::table_print(activities);
             }
         }
         ReportType::Movie => {
@@ -91,7 +91,7 @@ pub fn command_create_report(cfg: AppConfig, report_type: ReportType, limit: Str
                 Ok(i) => i.id,
             };
             let movies: MovieDetails = match export_library(
-                ServerInfo::new("/Users/{userId}/Items", &cfg.server_url, &cfg.api_key),
+                &ServerInfo::new("/Users/{userId}/Items", &cfg.server_url, &cfg.api_key),
                 &user_id,
             ) {
                 Err(e) => {
@@ -100,13 +100,13 @@ pub fn command_create_report(cfg: AppConfig, report_type: ReportType, limit: Str
                 }
                 Ok(i) => i,
             };
-            if !filename.is_empty() {
+            if filename.is_empty() {
+                MovieDetails::table_print(movies);
+            } else {
                 println!("Exporting Movie information to {}.....", &filename);
                 let csv = MovieDetails::print_as_csv(movies);
                 export_data(&csv, filename);
                 println!("Export complete.");
-            } else {
-                MovieDetails::table_print(movies);
             }
         }
     }

@@ -18,7 +18,7 @@ pub type ScheduledTasksVec = Vec<TaskDetails>;
 
 // Currently used for server-info, restart-jellyfin, shutdown-jellyfin
 pub fn get_server_info(server_info: ServerInfo) -> Result<(), Box<dyn std::error::Error>> {
-    let response = simple_get(server_info.server_url, server_info.api_key, Vec::new());
+    let response = simple_get(server_info.server_url, &server_info.api_key, Vec::new());
     match response.status() {
         StatusCode::OK => {
             let body: Value = response.json()?;
@@ -28,7 +28,7 @@ pub fn get_server_info(server_info: ServerInfo) -> Result<(), Box<dyn std::error
             handle_unauthorized();
         }
         _ => {
-            handle_others(response);
+            handle_others(&response);
         }
     }
 
@@ -38,13 +38,13 @@ pub fn get_server_info(server_info: ServerInfo) -> Result<(), Box<dyn std::error
 pub fn get_repo_info(
     server_info: ServerInfo,
 ) -> Result<Vec<RepositoryDetails>, Box<dyn std::error::Error>> {
-    let response = simple_get(server_info.server_url, server_info.api_key, Vec::new());
+    let response = simple_get(server_info.server_url, &server_info.api_key, Vec::new());
     let mut repos = Vec::new();
     match response.status() {
         StatusCode::OK => {
             repos = response.json::<RepositoryDetailsRoot>()?;
         }
-        _ => handle_others(response),
+        _ => handle_others(&response),
     }
     Ok(repos)
 }
@@ -52,7 +52,7 @@ pub fn get_repo_info(
 pub fn set_repo_info(server_info: ServerInfo, repos: Vec<RepositoryDetails>) {
     simple_post(
         server_info.server_url,
-        server_info.api_key,
+        &server_info.api_key,
         serde_json::to_string(&repos).unwrap(),
     );
 }
@@ -60,22 +60,22 @@ pub fn set_repo_info(server_info: ServerInfo, repos: Vec<RepositoryDetails>) {
 pub fn get_packages_info(
     server_info: ServerInfo,
 ) -> Result<Vec<PackageDetails>, Box<dyn std::error::Error>> {
-    let response = simple_get(server_info.server_url, server_info.api_key, Vec::new());
+    let response = simple_get(server_info.server_url, &server_info.api_key, Vec::new());
     let mut packages = Vec::new();
     match response.status() {
         StatusCode::OK => {
             packages = response.json::<PackageDetailsRoot>()?;
         }
-        _ => handle_others(response),
+        _ => handle_others(&response),
     }
     Ok(packages)
 }
 
-pub fn install_package(server_info: ServerInfo, package: &str, version: &str, repository: &str) {
-    let query = vec![("version", version), ("repository", repository)];
+pub fn install_package(server_info: &ServerInfo, package: &str, version: &str, repository: &str) {
+    let query = &[("version", version), ("repository", repository)];
     let response = simple_post_with_query(
         server_info.server_url.replace("{package}", package),
-        server_info.api_key,
+        &server_info.api_key,
         String::new(),
         query,
     );
@@ -87,27 +87,24 @@ pub fn install_package(server_info: ServerInfo, package: &str, version: &str, re
             handle_unauthorized();
         }
         _ => {
-            handle_others(response);
+            handle_others(&response);
         }
     }
 }
 
 pub fn return_server_info(server_info: ServerInfo) -> String {
-    let response = simple_get(server_info.server_url, server_info.api_key, Vec::new());
-    match response.status() {
-        StatusCode::OK => {
-            let body: Value = response.json().unwrap();
-            body.to_string()
-        }
-        _ => {
-            handle_others(response);
-            "".to_string()
-        }
+    let response = simple_get(server_info.server_url, &server_info.api_key, Vec::new());
+    if response.status() == StatusCode::OK {
+        let body: Value = response.json().unwrap();
+        body.to_string()
+    } else {
+        handle_others(&response);
+        String::new()
     }
 }
 
 pub fn restart_or_shutdown(server_info: ServerInfo) {
-    let response = simple_post(server_info.server_url, server_info.api_key, String::new());
+    let response = simple_post(server_info.server_url, &server_info.api_key, String::new());
     match response.status() {
         StatusCode::NO_CONTENT => {
             println!("Command successful.");
@@ -116,7 +113,7 @@ pub fn restart_or_shutdown(server_info: ServerInfo) {
             handle_unauthorized();
         }
         _ => {
-            handle_others(response);
+            handle_others(&response);
         }
     }
 }
@@ -124,7 +121,7 @@ pub fn restart_or_shutdown(server_info: ServerInfo) {
 pub fn get_log_filenames(
     server_info: ServerInfo,
 ) -> Result<Vec<LogDetails>, Box<dyn std::error::Error>> {
-    let response = simple_get(server_info.server_url, server_info.api_key, Vec::new());
+    let response = simple_get(server_info.server_url, &server_info.api_key, Vec::new());
     let mut details = Vec::new();
     match response.status() {
         StatusCode::OK => {
@@ -142,7 +139,7 @@ pub fn get_log_filenames(
             handle_unauthorized();
         }
         _ => {
-            handle_others(response);
+            handle_others(&response);
         }
     }
 
@@ -153,7 +150,7 @@ pub fn get_devices(
     server_info: ServerInfo,
     active: bool,
 ) -> Result<Vec<DeviceDetails>, Box<dyn std::error::Error>> {
-    let response = simple_get(server_info.server_url, server_info.api_key, Vec::new());
+    let response = simple_get(server_info.server_url, &server_info.api_key, Vec::new());
     let mut details = Vec::new();
     match response.status() {
         StatusCode::OK => {
@@ -185,7 +182,7 @@ pub fn get_devices(
             handle_unauthorized();
         }
         _ => {
-            handle_others(response);
+            handle_others(&response);
         }
     }
 
@@ -195,7 +192,7 @@ pub fn get_devices(
 pub fn get_libraries(
     server_info: ServerInfo,
 ) -> Result<Vec<LibraryDetails>, Box<dyn std::error::Error>> {
-    let response = simple_get(server_info.server_url, server_info.api_key, Vec::new());
+    let response = simple_get(server_info.server_url, &server_info.api_key, Vec::new());
     let mut details = Vec::new();
     match response.status() {
         StatusCode::OK => {
@@ -214,14 +211,14 @@ pub fn get_libraries(
             handle_unauthorized();
         }
         _ => {
-            handle_others(response);
+            handle_others(&response);
         }
     }
     Ok(details)
 }
 
 pub fn export_library(
-    server_info: ServerInfo,
+    server_info: &ServerInfo,
     user_id: &str,
 ) -> Result<MovieDetails, Box<dyn std::error::Error>> {
     let query = vec![
@@ -232,18 +229,16 @@ pub fn export_library(
     ];
     let response = simple_get(
         server_info.server_url.replace("{userId}", user_id),
-        server_info.api_key,
+        &server_info.api_key,
         query,
     );
-    match response.status() {
-        StatusCode::OK => {
-            let details = response.json::<MovieDetails>()?;
-            Ok(details)
-        }
-        _ => {
-            handle_others(response);
-            std::process::exit(1)
-        }
+
+    if response.status() == StatusCode::OK {
+        let details = response.json::<MovieDetails>()?;
+        Ok(details)
+    } else {
+        handle_others(&response);
+        std::process::exit(1)
     }
 }
 
@@ -252,16 +247,13 @@ pub fn get_activity(
     limit: &str,
 ) -> Result<ActivityDetails, Box<dyn std::error::Error>> {
     let query = vec![("limit", limit)];
-    let response = simple_get(server_info.server_url, server_info.api_key, query);
-    match response.status() {
-        StatusCode::OK => {
-            let activities = response.json::<ActivityDetails>()?;
-            Ok(activities)
-        }
-        _ => {
-            handle_others(response);
-            std::process::exit(1);
-        }
+    let response = simple_get(server_info.server_url, &server_info.api_key, query);
+    if response.status() == StatusCode::OK {
+        let activities = response.json::<ActivityDetails>()?;
+        Ok(activities)
+    } else {
+        handle_others(&response);
+        std::process::exit(1);
     }
 }
 
@@ -269,7 +261,7 @@ pub fn get_taskid_by_taskname(
     server_info: ServerInfo,
     taskname: &str,
 ) -> Result<String, Box<dyn std::error::Error>> {
-    let response = simple_get(server_info.server_url, server_info.api_key, Vec::new());
+    let response = simple_get(server_info.server_url, &server_info.api_key, Vec::new());
     match response.status() {
         StatusCode::OK => {
             let tasks = response.json::<ScheduledTasksVec>()?;
@@ -283,16 +275,16 @@ pub fn get_taskid_by_taskname(
             handle_unauthorized();
         }
         _ => {
-            handle_others(response);
+            handle_others(&response);
         }
     }
     Ok(String::new())
 }
 
-pub fn execute_task_by_id(server_info: ServerInfo, taskname: &str, taskid: &str) {
+pub fn execute_task_by_id(server_info: &ServerInfo, taskname: &str, taskid: &str) {
     let response = simple_post(
         server_info.server_url.replace("{taskId}", taskid),
-        server_info.api_key,
+        &server_info.api_key,
         String::new(),
     );
     match response.status() {
@@ -303,7 +295,7 @@ pub fn execute_task_by_id(server_info: ServerInfo, taskname: &str, taskid: &str)
             handle_unauthorized();
         }
         _ => {
-            handle_others(response);
+            handle_others(&response);
         }
     }
 }
@@ -312,7 +304,7 @@ pub fn get_deviceid_by_username(
     server_info: ServerInfo,
     username: &str,
 ) -> Result<Vec<String>, Box<dyn std::error::Error>> {
-    let response = simple_get(server_info.server_url, server_info.api_key, Vec::new());
+    let response = simple_get(server_info.server_url, &server_info.api_key, Vec::new());
     let mut filtered = Vec::new();
     match response.status() {
         StatusCode::OK => {
@@ -328,7 +320,7 @@ pub fn get_deviceid_by_username(
             handle_unauthorized();
         }
         _ => {
-            handle_others(response);
+            handle_others(&response);
         }
     }
 
@@ -337,7 +329,7 @@ pub fn get_deviceid_by_username(
 
 pub fn remove_device(server_info: ServerInfo, id: &str) -> Result<(), reqwest::Error> {
     let client = Client::new();
-    let apikey = server_info.api_key;
+    let apikey = &server_info.api_key;
     let response = client
         .delete(server_info.server_url)
         .header("Authorization", format!("MediaBrowser Token=\"{apikey}\""))
@@ -351,14 +343,14 @@ pub fn remove_device(server_info: ServerInfo, id: &str) -> Result<(), reqwest::E
             handle_unauthorized();
         }
         _ => {
-            handle_others(response);
+            handle_others(&response);
         }
     }
     Ok(())
 }
 
 pub fn get_scheduled_tasks(server_info: ServerInfo) -> Result<Vec<TaskDetails>, reqwest::Error> {
-    let response = simple_get(server_info.server_url, server_info.api_key, Vec::new());
+    let response = simple_get(server_info.server_url, &server_info.api_key, Vec::new());
     let mut details = Vec::new();
     match response.status() {
         StatusCode::OK => {
@@ -376,19 +368,19 @@ pub fn get_scheduled_tasks(server_info: ServerInfo) -> Result<Vec<TaskDetails>, 
             handle_unauthorized();
         }
         _ => {
-            handle_others(response);
+            handle_others(&response);
         }
     }
 
     Ok(details)
 }
 
-pub fn scan_library(server_info: ServerInfo, scan_options: Vec<(&str, &str)>, library_id: String) {
+pub fn scan_library(server_info: &ServerInfo, scan_options: &[(&str, &str)], library_id: &str) {
     let response = simple_post_with_query(
         server_info
             .server_url
-            .replace("{library_id}", library_id.as_str()),
-        server_info.api_key,
+            .replace("{library_id}", library_id),
+        &server_info.api_key,
         String::new(),
         scan_options,
     );
@@ -400,13 +392,13 @@ pub fn scan_library(server_info: ServerInfo, scan_options: Vec<(&str, &str)>, li
             handle_unauthorized();
         }
         _ => {
-            handle_others(response);
+            handle_others(&response);
         }
     }
 }
 
 pub fn scan_library_all(server_info: ServerInfo) {
-    let response = simple_post(server_info.server_url, server_info.api_key, String::new());
+    let response = simple_post(server_info.server_url, &server_info.api_key, String::new());
     match response.status() {
         StatusCode::NO_CONTENT => {
             println!("Library scan initiated.");
@@ -415,13 +407,13 @@ pub fn scan_library_all(server_info: ServerInfo) {
             handle_unauthorized();
         }
         _ => {
-            handle_others(response);
+            handle_others(&response);
         }
     }
 }
 
 pub fn register_library(server_info: ServerInfo, json_contents: String) {
-    let response = simple_post(server_info.server_url, server_info.api_key, json_contents);
+    let response = simple_post(server_info.server_url, &server_info.api_key, json_contents);
     match response.status() {
         StatusCode::NO_CONTENT => {
             println!("Library successfully added.");
@@ -430,23 +422,23 @@ pub fn register_library(server_info: ServerInfo, json_contents: String) {
             handle_unauthorized();
         }
         _ => {
-            handle_others(response);
+            handle_others(&response);
         }
     }
 }
 
 pub fn update_image(
-    server_info: ServerInfo,
-    id: String,
+    server_info: &ServerInfo,
+    id: &str,
     imagetype: &ImageType,
     img_base64: &String,
 ) {
     let response = simple_post_image(
         server_info
             .server_url
-            .replace("{itemId}", id.as_str())
+            .replace("{itemId}", id)
             .replace("{imageType}", imagetype.to_string().as_str()),
-        server_info.api_key,
+        &server_info.api_key,
         img_base64.to_string(),
     );
     match response.status() {
@@ -457,15 +449,15 @@ pub fn update_image(
             handle_unauthorized();
         }
         _ => {
-            handle_others(response);
+            handle_others(&response);
         }
     }
 }
 
-pub fn update_metadata(server_info: ServerInfo, id: String, json: String) {
+pub fn update_metadata(server_info: &ServerInfo, id: &str, json: String) {
     let response = simple_post(
-        server_info.server_url.replace("{itemId}", id.as_str()),
-        server_info.api_key,
+        server_info.server_url.replace("{itemId}", id),
+        &server_info.api_key,
         json,
     );
     match response.status() {
@@ -476,7 +468,7 @@ pub fn update_metadata(server_info: ServerInfo, id: String, json: String) {
             handle_unauthorized();
         }
         _ => {
-            handle_others(response);
+            handle_others(&response);
         }
     }
 }
@@ -485,7 +477,7 @@ pub fn get_search_results(
     server_info: ServerInfo,
     query: Vec<(&str, &str)>,
 ) -> Result<MediaRoot, Box<dyn std::error::Error>> {
-    let response = simple_get(server_info.server_url, server_info.api_key, query);
+    let response = simple_get(server_info.server_url, &server_info.api_key, query);
     match response.status() {
         StatusCode::OK => {
             let media = response.json::<MediaRoot>()?;
@@ -496,7 +488,7 @@ pub fn get_search_results(
             std::process::exit(1);
         }
         _ => {
-            handle_others(response);
+            handle_others(&response);
             std::process::exit(1);
         }
     }
@@ -517,7 +509,7 @@ impl LogFile {
     pub fn get_logfile(self) -> Result<(), reqwest::Error> {
         
         let client = Client::new();
-        let apikey = self.server_info.api_key;
+        let apikey = &self.server_info.api_key;
         let response = client
             .get(self.server_info.server_url)
             .query(&[("name", self.logname)])
@@ -532,7 +524,7 @@ impl LogFile {
                 handle_unauthorized();
             }
             _ => {
-                handle_others(response);
+                handle_others(&response);
             }
         }
         Ok(())

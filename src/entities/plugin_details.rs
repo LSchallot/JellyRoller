@@ -36,7 +36,7 @@ impl PluginDetails {
                 plugin.can_uninstall,
                 plugin.has_image,
                 plugin.status,
-            )
+            );
         }
     }
     

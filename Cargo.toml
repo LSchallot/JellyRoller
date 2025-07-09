@@ -2,6 +2,12 @@
 name = "jellyroller"
 version = "1.0.0"
 edition = "2021"
+description = "The CLI Jellyfin Controller Utility for Linux and Windows."
+repository = "https://github.com/LSchallot/JellyRoller"
+readme = "README.md"
+license = "GPL-2.0"
+keywords = ["jellyroller", "jellyfin"]
+categories = ["command-line", "jellyfin"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

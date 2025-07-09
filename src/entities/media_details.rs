@@ -15,6 +15,7 @@ pub struct MediaRoot {
     pub start_index: i64,
 }
 
+#[allow(clippy::struct_excessive_bools)]
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct MediaItem {
@@ -332,6 +333,7 @@ pub struct ExternalUrl {
     pub url: String,
 }
 
+#[allow(clippy::struct_excessive_bools)]
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct MediaSource {
@@ -421,6 +423,7 @@ pub struct MediaSource {
     pub default_subtitle_stream_index: i64,
 }
 
+#[allow(clippy::struct_excessive_bools)]
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct MediaStream {
@@ -786,6 +789,7 @@ pub struct AlbumArtist {
     pub id: String,
 }
 
+#[allow(clippy::struct_excessive_bools)]
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct MediaStream2 {
@@ -1076,7 +1080,7 @@ impl MediaRoot {
         }
     }
 
-    pub fn json_print(media: MediaRoot) {
+    pub fn json_print(media: &MediaRoot) {
         println!("{}", serde_json::to_string_pretty(&media).unwrap());
     }
 }

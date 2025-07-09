@@ -1,3 +1,9 @@
+#![warn(clippy::all)]
+#![warn(clippy::pedantic)]
+// #![warn(clippy::restriction)]
+// #![warn(clippy::nursery)]
+#![warn(clippy::cargo)]
+
 use clap::{CommandFactory, Parser, Subcommand, ValueEnum};
 use clap_complete::{generate, Shell};
 use std::env;
@@ -8,7 +14,7 @@ mod user_actions;
 use user_actions::{UserAuth, UserList, UserWithPass};
 
 mod system_actions;
-use system_actions::*;
+use system_actions::{LogFile, restart_or_shutdown, get_server_info};
 
 mod plugin_actions;
 mod responder;
@@ -30,10 +36,10 @@ use utils::status_handler::{handle_others, handle_unauthorized};
 
 // All public functions in the below use statements are used within this file, so just get them all.
 mod commands;
-use commands::server_commands::*;
-use commands::media_commands::*;
-use commands::log_commands::*;
-use commands::user_commands::*;
+use commands::log_commands::{command_create_report, command_generate_report, command_list_logs};
+use commands::media_commands::{command_get_libraries, command_register_libarary, command_scan_library, command_search_media, command_update_metadata, command_update_image_by_name, command_update_image_by_id};
+use commands::server_commands::{command_execute_task_by_name, command_get_devices, command_get_packages, command_get_plugins, command_get_repositories, command_get_scheduled_tasks, command_initialize, command_install_package, command_register_repository};
+use commands::user_commands::{command_add_user, command_add_users, command_delete_user, command_disable_user, command_enable_user, command_grant_admin, command_list_users, command_remove_device_by_username, command_reset_password, command_revoke_admin, command_update_users};
 
 #[macro_use]
 extern crate serde_derive;
@@ -295,7 +301,7 @@ enum Commands {
         /// will tell the server to include the file path in the search results.
         #[clap(short = 'f', long, required = false)]
         include_filepath: bool,
-        /// Available columns: Name, Id, Type, Path, CriticRating, ProductionYear
+        /// Available columns: `Name`, `Id`, `Type`, `Path`, `CriticRating`, `ProductionYear`
         #[clap(short = 'c', long, value_parser, num_args = 0.., value_delimiter = ',', default_value = "Name,ID,Type")]
         table_columns: Vec<String>,
     },
@@ -431,47 +437,47 @@ fn main() -> Result<(), confy::ConfyError> {
 
     match args.command {
         // Log Commands
-        Commands::CreateReport { report_type, limit, filename } => command_create_report(cfg, report_type, limit, filename),
-        Commands::GenerateReport {} => command_generate_report(cfg),
-        Commands::ListLogs { output_format } => command_list_logs(cfg, output_format),
+        Commands::CreateReport { report_type, limit, filename } => command_create_report(&cfg, &report_type, &limit, filename),
+        Commands::GenerateReport {} => command_generate_report(&cfg),
+        Commands::ListLogs { output_format } => command_list_logs(&cfg, &output_format),
         Commands::ShowLog { logfile } => LogFile::get_logfile(LogFile::new(ServerInfo::new("/System/Logs/Log", &cfg.server_url, &cfg.api_key),logfile,)).expect("Unable to retrieve the specified logfile."),
         
         // Media Commands
-        Commands::GetLibraries { output_format } => command_get_libraries(cfg, output_format),
-        Commands::RegisterLibrary { name, collectiontype, filename } => command_register_libarary(cfg, name, collectiontype, filename),
-        Commands::ScanLibrary { library_id, scan_type } => command_scan_library(cfg, library_id, scan_type),
-        Commands::SearchMedia { term, mediatype, parentid, output_format, include_filepath, table_columns } => command_search_media(cfg, term, mediatype, parentid, output_format, include_filepath, table_columns),
-        Commands::UpdateMetadata { id, filename } => command_update_metadata(cfg, id, filename),
-        Commands::UpdateImageByName {title, path, imagetype} => command_update_image_by_name(cfg, title, path, imagetype),
-        Commands::UpdateImageById { id, path, imagetype } => command_update_image_by_id(cfg, id, path, imagetype),
+        Commands::GetLibraries { output_format } => command_get_libraries(&cfg, &output_format),
+        Commands::RegisterLibrary { name, collectiontype, filename } => command_register_libarary(&cfg, &name, &collectiontype, filename),
+        Commands::ScanLibrary { library_id, scan_type } => command_scan_library(&cfg, &library_id, &scan_type),
+        Commands::SearchMedia { term, mediatype, parentid, output_format, include_filepath, table_columns } => command_search_media(&cfg, &term, &mediatype, &parentid, &output_format, include_filepath, &table_columns),
+        Commands::UpdateMetadata { id, filename } => command_update_metadata(&cfg, &id, filename),
+        Commands::UpdateImageByName {title, path, imagetype} => command_update_image_by_name(&cfg, &title, path, &imagetype),
+        Commands::UpdateImageById { id, path, imagetype } => command_update_image_by_id(&cfg, &id, path, &imagetype),
         
         // Server Commands
-        Commands::ExecuteTaskByName { task } => command_execute_task_by_name(cfg, task),
-        Commands::GetDevices { active, output_format} => command_get_devices(cfg, active, output_format, DEVICES),
-        Commands::GetPackages { output_format } => command_get_packages(cfg, output_format),
-        Commands::GetPlugins { output_format} => command_get_plugins(cfg, output_format),
-        Commands::GetRepositories { output_format } => command_get_repositories(cfg, output_format),
-        Commands::GetScheduledTasks { output_format } => command_get_scheduled_tasks(cfg, output_format),
-        Commands::Initialize { username, password, server_url } => command_initialize(cfg, username, password, server_url),
-        Commands::InstallPackage { package, version, repository} => command_install_package(cfg, package, version, repository),
+        Commands::ExecuteTaskByName { task } => command_execute_task_by_name(&cfg, &task),
+        Commands::GetDevices { active, output_format} => command_get_devices(&cfg, active, &output_format, DEVICES),
+        Commands::GetPackages { output_format } => command_get_packages(&cfg, &output_format),
+        Commands::GetPlugins { output_format} => command_get_plugins(cfg, &output_format),
+        Commands::GetRepositories { output_format } => command_get_repositories(&cfg, &output_format),
+        Commands::GetScheduledTasks { output_format } => command_get_scheduled_tasks(&cfg, &output_format),
+        Commands::Initialize { username, password, server_url } => command_initialize(cfg, &username, password, &server_url),
+        Commands::InstallPackage { package, version, repository} => command_install_package(&cfg, &package, &version, &repository),
         Commands::Reconfigure {} => initial_config(cfg),
-        Commands::RegisterRepository { name, path } => command_register_repository(cfg, name, path),
+        Commands::RegisterRepository { name, path } => command_register_repository(&cfg, name, path),
         Commands::RestartJellyfin {} => restart_or_shutdown(ServerInfo::new("/System/Restart",&cfg.server_url,&cfg.api_key,)),
         Commands::ServerInfo {} => get_server_info(ServerInfo::new("/System/Info", &cfg.server_url, &cfg.api_key,)).expect("Unable to gather server information."),        
         Commands::ShutdownJellyfin {} => restart_or_shutdown(ServerInfo::new("/System/Shutdown",&cfg.server_url,&cfg.api_key,)),
 
         // User commands
-        Commands::AddUser { username, password } => command_add_user(cfg, username, password),
-        Commands::AddUsers { inputfile } => command_add_users(cfg, inputfile),
+        Commands::AddUser { username, password } => command_add_user(&cfg, username, password),
+        Commands::AddUsers { inputfile } => command_add_users(&cfg, inputfile),
         Commands::DeleteUser { username } => command_delete_user(cfg, username),
-        Commands::DisableUser { username } => command_disable_user(cfg, username, USER_POLICY, USER_ID),
-        Commands::EnableUser { username } => command_enable_user(cfg, username, USER_POLICY, USER_ID),
-        Commands::GrantAdmin { username } => command_grant_admin(cfg, username, USER_POLICY, USER_ID),
-        Commands::ListUsers { export, output, username } => command_list_users(cfg, export, output, username, USERS, USER_ID),
-        Commands::RemoveDeviceByUsername { username } => command_remove_device_by_username(cfg, username, DEVICES),
-        Commands::ResetPassword { username, password } => command_reset_password(cfg, username, password, USERS),
-        Commands::RevokeAdmin { username } => command_revoke_admin(cfg, username, USER_POLICY, USER_ID),
-        Commands::UpdateUsers { inputfile } => command_update_users(cfg, inputfile, USER_ID),
+        Commands::DisableUser { username } => command_disable_user(&cfg, &username, USER_POLICY, USER_ID),
+        Commands::EnableUser { username } => command_enable_user(&cfg, &username, USER_POLICY, USER_ID),
+        Commands::GrantAdmin { username } => command_grant_admin(&cfg, &username, USER_POLICY, USER_ID),
+        Commands::ListUsers { export, output, username } => command_list_users(&cfg, export, output, &username, USERS, USER_ID),
+        Commands::RemoveDeviceByUsername { username } => command_remove_device_by_username(&cfg, &username, DEVICES),
+        Commands::ResetPassword { username, password } => command_reset_password(cfg, &username, password, USERS),
+        Commands::RevokeAdmin { username } => command_revoke_admin(&cfg, &username, USER_POLICY, USER_ID),
+        Commands::UpdateUsers { inputfile } => command_update_users(&cfg, inputfile, USER_ID),
         
         // Other
         Commands::Completions { shell } => {
@@ -517,7 +523,7 @@ fn initial_config(mut cfg: AppConfig) {
 }
 
 ///
-/// Due to an issue with api key processing in Jellyfin, JellyRoller was initially relied on using auto tokens to communicate.
+/// Due to an issue with api key processing in Jellyfin, `JellyRoller` was initially relied on using auto tokens to communicate.
 /// Now that the issue has been fixed, the auto tokens need to be converted to an API key.  The single purpose of this function
 /// is to handle the conversion with no input required from the user.
 ///
@@ -557,7 +563,7 @@ fn token_to_api(mut cfg: AppConfig) {
 }
 
 ///
-/// Custom implementation to convert the ImageType enum into Strings
+/// Custom implementation to convert the `ImageType` enum into Strings
 /// for easy comparison.
 ///
 impl fmt::Display for ImageType {
