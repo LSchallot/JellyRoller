@@ -49,7 +49,7 @@ pub fn get_repo_info(
     Ok(repos)
 }
 
-pub fn set_repo_info(server_info: ServerInfo, repos: Vec<RepositoryDetails>) {
+pub fn set_repo_info(server_info: ServerInfo, repos: &[RepositoryDetails]) {
     simple_post(
         server_info.server_url,
         &server_info.api_key,

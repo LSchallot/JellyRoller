@@ -185,7 +185,7 @@ pub fn command_register_repository(cfg: &AppConfig, name: String, path: String) 
     repos.push(RepositoryDetails::new(name, path, true));
     set_repo_info(
         ServerInfo::new("/Repositories", &cfg.server_url, &cfg.api_key),
-        repos,
+        &repos,
     );
 }
 
