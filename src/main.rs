@@ -1,7 +1,5 @@
 #![warn(clippy::all)]
 #![warn(clippy::pedantic)]
-// #![warn(clippy::restriction)]
-// #![warn(clippy::nursery)]
 #![warn(clippy::cargo)]
 
 use clap::{CommandFactory, Parser, Subcommand, ValueEnum};
@@ -38,7 +36,7 @@ use utils::status_handler::{handle_others, handle_unauthorized};
 mod commands;
 use commands::log_commands::{command_create_report, command_generate_report, command_list_logs};
 use commands::media_commands::{command_get_libraries, command_register_libarary, command_scan_library, command_search_media, command_update_metadata, command_update_image_by_name, command_update_image_by_id};
-use commands::server_commands::{command_execute_task_by_name, command_get_devices, command_get_packages, command_get_plugins, command_get_repositories, command_get_scheduled_tasks, command_initialize, command_install_package, command_register_repository};
+use commands::server_commands::{command_execute_task_by_name, command_get_backups, command_get_devices, command_get_packages, command_get_plugins, command_get_repositories, command_get_scheduled_tasks, command_initialize, command_install_package, command_register_repository};
 use commands::user_commands::{command_add_user, command_add_users, command_delete_user, command_disable_user, command_enable_user, command_grant_admin, command_list_users, command_remove_device_by_username, command_reset_password, command_revoke_admin, command_update_users};
 
 #[macro_use]
@@ -51,6 +49,7 @@ const USER_POLICY: &str = "/Users/{userId}/Policy";
 const USER_ID: &str = "/Users/{userId}";
 const USERS: &str = "/Users";
 const DEVICES: &str = "/Devices";
+const BACKUPS: &str = "/Backup";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
@@ -145,6 +144,12 @@ enum Commands {
     },
     /// Generate a report for an issue.
     GenerateReport {},
+    /// Get a list of current backups
+    GetBackups {
+        /// Specify the output format
+        #[clap(short = 'o', long, value_enum, default_value = "table")]
+        output_format: OutputFormat,
+    },
     /// Show all devices.
     GetDevices {
         /// Only show devices active in the last hour
@@ -351,7 +356,7 @@ enum Commands {
         /// File that contains the user JSON information.
         #[clap(required = true, value_parser)]
         inputfile: String,
-    }
+    },
 }
 
 #[derive(ValueEnum, Clone, Debug, PartialEq)]
@@ -453,6 +458,7 @@ fn main() -> Result<(), confy::ConfyError> {
         
         // Server Commands
         Commands::ExecuteTaskByName { task } => command_execute_task_by_name(&cfg, &task),
+        Commands::GetBackups { output_format } => command_get_backups(&cfg, &output_format, BACKUPS),
         Commands::GetDevices { active, output_format} => command_get_devices(&cfg, active, &output_format, DEVICES),
         Commands::GetPackages { output_format } => command_get_packages(&cfg, &output_format),
         Commands::GetPlugins { output_format} => command_get_plugins(cfg, &output_format),

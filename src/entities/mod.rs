@@ -1,4 +1,5 @@
 pub mod activity_details;
+pub mod backup_details;
 pub mod device_details;
 pub mod library_details;
 pub mod log_details;

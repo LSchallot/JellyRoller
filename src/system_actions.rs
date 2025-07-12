@@ -1,5 +1,5 @@
 use crate::entities::{
-    activity_details::ActivityDetails, media_details::MediaRoot,
+    activity_details::ActivityDetails, backup_details::{BackupRootJson, BackupDetails}, media_details::MediaRoot,
     repository_details::RepositoryDetails, task_details::TaskDetails,
 };
 
@@ -33,6 +33,23 @@ pub fn get_server_info(server_info: ServerInfo) -> Result<(), Box<dyn std::error
     }
 
     Ok(())
+}
+
+pub fn get_backups_info(server_info: ServerInfo) -> Result<Vec<BackupDetails>, Box<dyn std::error::Error>> {
+    let response = simple_get(server_info.server_url, &server_info.api_key, Vec::new());
+    let mut backups = Vec::new();
+    match response.status() {
+        StatusCode::OK => {
+            backups = response.json::<BackupRootJson>()?;
+        }
+        StatusCode::UNAUTHORIZED => {
+            handle_unauthorized();
+        }
+        _ => {
+            handle_others(&response);
+        }
+    }
+    Ok(backups)
 }
 
 pub fn get_repo_info(

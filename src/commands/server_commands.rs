@@ -1,15 +1,6 @@
 use std::env;
 
-use crate::{ AppConfig, OutputFormat,
-    user_actions::{ UserAuth, UserWithPass }, 
-    system_actions::{ get_devices, get_packages_info, get_taskid_by_taskname, execute_task_by_id, get_repo_info, get_scheduled_tasks, install_package, set_repo_info },
-    plugin_actions::PluginInfo,
-    entities::device_details::{ DeviceDetails },
-    entities::package_details::PackageDetails,
-    entities::server_info::ServerInfo,
-    entities::plugin_details::PluginDetails,
-    entities::repository_details::RepositoryDetails,
-    entities::task_details::TaskDetails
+use crate::{ entities::{backup_details::BackupDetails, device_details::DeviceDetails, package_details::PackageDetails, plugin_details::PluginDetails, repository_details::RepositoryDetails, server_info::ServerInfo, task_details::TaskDetails}, plugin_actions::PluginInfo, system_actions::{ get_backups_info, execute_task_by_id, get_devices, get_packages_info, get_repo_info, get_scheduled_tasks, get_taskid_by_taskname, install_package, set_repo_info }, user_actions::{ UserAuth, UserWithPass }, AppConfig, OutputFormat
 };
 
 pub fn command_initialize(mut cfg: AppConfig, username: &str, password: String, server_url: &str) {
@@ -187,6 +178,33 @@ pub fn command_register_repository(cfg: &AppConfig, name: String, path: String) 
         ServerInfo::new("/Repositories", &cfg.server_url, &cfg.api_key),
         &repos,
     );
+}
+
+pub fn command_get_backups(cfg: &AppConfig, output_format: &OutputFormat, backups_endpoint: &str) {
+    let backups = match get_backups_info(ServerInfo::new(
+        backups_endpoint,
+        &cfg.server_url,
+        &cfg.api_key
+    )) {
+        Err(e) => {
+            eprintln!("Unable to get backups, {e}");
+            std::process::exit(1);
+        }
+        Ok(i) => i
+    };
+    
+    match output_format {
+        OutputFormat::Json =>{
+            BackupDetails::json_print(&backups);
+        }
+        OutputFormat::Csv => {
+            BackupDetails::csv_print(backups);
+        }
+        OutputFormat::Table => {
+            BackupDetails::table_print(backups);
+        }
+    }
+    
 }
 
 /* 
