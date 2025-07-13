@@ -36,7 +36,7 @@ use utils::status_handler::{handle_others, handle_unauthorized};
 mod commands;
 use commands::log_commands::{command_create_report, command_generate_report, command_list_logs};
 use commands::media_commands::{command_get_libraries, command_register_libarary, command_scan_library, command_search_media, command_update_metadata, command_update_image_by_name, command_update_image_by_id};
-use commands::server_commands::{command_create_backup, command_execute_task_by_name, command_get_backups, command_get_devices, command_get_packages, command_get_plugins, command_get_repositories, command_get_scheduled_tasks, command_initialize, command_install_package, command_register_repository};
+use commands::server_commands::{command_apply_backup, command_create_backup, command_execute_task_by_name, command_get_backups, command_get_devices, command_get_packages, command_get_plugins, command_get_repositories, command_get_scheduled_tasks, command_initialize, command_install_package, command_register_repository};
 use commands::user_commands::{command_add_user, command_add_users, command_delete_user, command_disable_user, command_enable_user, command_grant_admin, command_list_users, command_remove_device_by_username, command_reset_password, command_revoke_admin, command_update_users};
 
 #[macro_use]
@@ -102,6 +102,13 @@ enum Commands {
         /// File that contains the user information in "username,password" lines.
         #[clap(required = true, value_parser)]
         inputfile: String,
+    },
+
+    /// Applies the specified backup.
+    ApplyBackup {
+        /// Filename of the backup that will be applied.
+        #[clap(required = true, value_parser)]
+        filename: String,
     },
     /// Generate Shell completions
     Completions {
@@ -459,7 +466,8 @@ fn main() -> Result<(), confy::ConfyError> {
         Commands::UpdateImageById { id, path, imagetype } => command_update_image_by_id(&cfg, &id, path, &imagetype),
         
         // Server Commands
-        Commands::CreateBackup {} => command_create_backup(&cfg, BACKUPS),
+        Commands::ApplyBackup { filename } => command_apply_backup(&cfg, &filename),
+        Commands::CreateBackup {} => command_create_backup(&cfg),
         Commands::ExecuteTaskByName { task } => command_execute_task_by_name(&cfg, &task),
         Commands::GetBackups { output_format } => command_get_backups(&cfg, &output_format, BACKUPS),
         Commands::GetDevices { active, output_format} => command_get_devices(&cfg, active, &output_format, DEVICES),

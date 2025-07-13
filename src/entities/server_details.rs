@@ -3,7 +3,7 @@ use serde_derive::Serialize;
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct Root {
+pub struct ServerDetails {
     #[serde(rename = "LocalAddress")]
     pub local_address: String,
     #[serde(rename = "ServerName")]

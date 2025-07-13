@@ -1,6 +1,5 @@
 use crate::entities::{
-    activity_details::ActivityDetails, backup_details::{BackupRootJson, BackupDetails}, media_details::MediaRoot,
-    repository_details::RepositoryDetails, task_details::TaskDetails,
+    activity_details::ActivityDetails, backup_details::{BackupDetails, BackupRootJson}, media_details::MediaRoot, repository_details::RepositoryDetails, task_details::TaskDetails
 };
 
 use super::{

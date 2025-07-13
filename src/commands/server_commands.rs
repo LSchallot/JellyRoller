@@ -1,7 +1,9 @@
 use std::env;
 
-use crate::{ responder::simple_post, entities::{backup_details::BackupDetails, device_details::DeviceDetails, package_details::PackageDetails, plugin_details::PluginDetails, repository_details::RepositoryDetails, server_info::ServerInfo, task_details::TaskDetails}, plugin_actions::PluginInfo, system_actions::{ get_backups_info, execute_task_by_id, get_devices, get_packages_info, get_repo_info, get_scheduled_tasks, get_taskid_by_taskname, install_package, set_repo_info }, user_actions::{ UserAuth, UserWithPass }, AppConfig, OutputFormat
-};
+use reqwest::StatusCode;
+
+use crate::{ utils::status_handler::{handle_others, handle_unauthorized}, entities::{backup_details::BackupDetails, device_details::DeviceDetails, package_details::PackageDetails, plugin_details::PluginDetails, repository_details::RepositoryDetails, server_info::ServerInfo, task_details::TaskDetails}, plugin_actions::PluginInfo, responder::simple_post, system_actions::{ execute_task_by_id, get_backups_info, get_devices, get_packages_info, get_repo_info, get_scheduled_tasks, get_taskid_by_taskname, install_package, set_repo_info }, user_actions::{ UserAuth, UserWithPass }, AppConfig, OutputFormat};
+
 
 pub fn command_initialize(mut cfg: AppConfig, username: &str, password: String, server_url: &str) {
     println!("Configuring JellyRoller with supplied values.....");
@@ -180,13 +182,46 @@ pub fn command_register_repository(cfg: &AppConfig, name: String, path: String) 
     );
 }
 
-pub fn command_create_backup(cfg: &AppConfig, backups_endpoint: &str) {
-    let server_info = ServerInfo::new(backups_endpoint, &cfg.server_url, &cfg.api_key);
-    simple_post(
+pub fn command_create_backup(cfg: &AppConfig) {
+    let server_info = ServerInfo::new("/Backup/Create", &cfg.server_url, &cfg.api_key);
+    let body= "{\"Metadata\": true,\"Trickplay\": true,\"Subtitles\": true,\"Database\": true}";
+    let response = simple_post(
         server_info.server_url,
         &cfg.api_key,
-        String::new()
+        body.to_string()
     );
+    match response.status() {
+        StatusCode::OK => {
+            println!("Success");
+        }
+        StatusCode::UNAUTHORIZED => {
+            handle_unauthorized();
+        }
+        _ => {
+            handle_others(&response);
+        }
+    }
+}
+
+pub fn command_apply_backup(cfg: &AppConfig, filename: &str) {
+    let server_info = ServerInfo::new("/Backup/Restore", &cfg.server_url, &cfg.api_key);
+    let body = format!("{{\"ArchiveFileName\": \"{filename}\"}}");
+    let response = simple_post(
+        server_info.server_url,
+        &cfg.api_key,
+        body.to_string()
+    );
+    match response.status() {
+        StatusCode::OK => {
+            println!("Success");
+        }
+        StatusCode::UNAUTHORIZED => {
+            handle_unauthorized();
+        }
+        _ => {
+            handle_others(&response);
+        }
+    }
 }
 
 pub fn command_get_backups(cfg: &AppConfig, output_format: &OutputFormat, backups_endpoint: &str) {
