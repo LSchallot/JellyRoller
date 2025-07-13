@@ -20,6 +20,7 @@ pub struct BackupDetails {
     pub options: Options,
 }
 
+#[allow(clippy::struct_excessive_bools)]
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Options {
