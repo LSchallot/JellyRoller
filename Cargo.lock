@@ -1033,6 +1033,7 @@ dependencies = [
  "confy",
  "csv",
  "image",
+ "prop_reader",
  "reqwest",
  "rpassword",
  "serde",
@@ -1395,6 +1396,12 @@ dependencies = [
  "quote",
  "syn",
 ]
+
+[[package]]
+name = "prop_reader"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "510fb0cac9b821ef55296efacb2fd20e8e301b7fc36b86f3849c23219a85e515"
 
 [[package]]
 name = "qoi"

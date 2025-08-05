@@ -36,7 +36,7 @@ use utils::status_handler::{handle_others, handle_unauthorized};
 mod commands;
 use commands::log_commands::{command_create_report, command_generate_report, command_list_logs};
 use commands::media_commands::{command_get_libraries, command_register_libarary, command_scan_library, command_search_media, command_update_metadata, command_update_image_by_name, command_update_image_by_id};
-use commands::server_commands::{command_apply_backup, command_create_backup, command_execute_task_by_name, command_get_backups, command_get_devices, command_get_packages, command_get_plugins, command_get_repositories, command_get_scheduled_tasks, command_initialize, command_install_package, command_register_repository};
+use commands::server_commands::{command_apply_backup, command_create_backup, command_execute_task_by_name, command_get_backups, command_get_devices, command_get_packages, command_get_plugins, command_get_repositories, command_get_scheduled_tasks, command_initialize, command_install_package, command_register_repository, command_server_setup};
 use commands::user_commands::{command_add_user, command_add_users, command_delete_user, command_disable_user, command_enable_user, command_grant_admin, command_list_users, command_remove_device_by_username, command_reset_password, command_revoke_admin, command_update_users};
 
 #[macro_use]
@@ -321,6 +321,25 @@ enum Commands {
     },
     /// Displays the server information.
     ServerInfo {},
+    /// Setup a new server using a configuration file.
+    #[clap(verbatim_doc_comment)]
+    ServerSetup {
+        /// Server URL
+        #[clap(required = true, value_parser)]
+        server_url: String,
+        /// Configuration file
+        /// Configuration file example:
+            ///     server_url: http://localhost:8096
+            ///     MetadataCountryCode: US
+            ///     PreferredMetadataLanguage: en
+            ///     UICulture: en-US
+            ///     user: test
+            ///     password: password
+            ///     EnableAutomcaticPortMapping: false
+            ///     EnableRemoteAccess: true
+        #[clap(required = true, value_parser, verbatim_doc_comment)]
+        filename: String,
+    },
     /// Displays the requested logfile.
     ShowLog {
         /// Name of the logfile to show.
@@ -436,7 +455,7 @@ fn main() -> Result<(), confy::ConfyError> {
 
     // Due to an oddity with confy and clap, manually check for help flag.
     let args: Vec<String> = env::args().collect();
-    if !(args.contains(&"initialize".to_string()) || args.contains(&"-h".to_string()) || args.contains(&"--help".to_string())) {
+    if !(args.contains(&"initialize".to_string()) || args.contains(&"server-setup".to_string()) || args.contains(&"-h".to_string()) || args.contains(&"--help".to_string())) {
         if cfg.status == "not configured" {
             println!("Application is not configured!");
             initial_config(cfg);
@@ -447,8 +466,9 @@ fn main() -> Result<(), confy::ConfyError> {
         }
     }
 
+    // Attempting to setup ability to execute certain commands prior to initialization
     let args = Cli::parse();
-
+    
     match args.command {
         // Log Commands
         Commands::CreateReport { report_type, limit, filename } => command_create_report(&cfg, &report_type, &limit, filename),
@@ -480,7 +500,8 @@ fn main() -> Result<(), confy::ConfyError> {
         Commands::Reconfigure {} => initial_config(cfg),
         Commands::RegisterRepository { name, path } => command_register_repository(&cfg, name, path),
         Commands::RestartJellyfin {} => restart_or_shutdown(ServerInfo::new("/System/Restart",&cfg.server_url,&cfg.api_key,)),
-        Commands::ServerInfo {} => get_server_info(ServerInfo::new("/System/Info", &cfg.server_url, &cfg.api_key,)).expect("Unable to gather server information."),        
+        Commands::ServerInfo {} => get_server_info(ServerInfo::new("/System/Info", &cfg.server_url, &cfg.api_key,)).expect("Unable to gather server information."),
+        Commands::ServerSetup { server_url, filename } => command_server_setup(server_url, filename),
         Commands::ShutdownJellyfin {} => restart_or_shutdown(ServerInfo::new("/System/Shutdown",&cfg.server_url,&cfg.api_key,)),
 
         // User commands

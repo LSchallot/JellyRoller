@@ -1,8 +1,9 @@
 use std::env;
 
 use reqwest::StatusCode;
+use prop_reader::PropReader;
 
-use crate::{ utils::status_handler::{handle_others, handle_unauthorized}, entities::{backup_details::BackupDetails, device_details::DeviceDetails, package_details::PackageDetails, plugin_details::PluginDetails, repository_details::RepositoryDetails, server_info::ServerInfo, task_details::TaskDetails}, plugin_actions::PluginInfo, responder::simple_post, system_actions::{ execute_task_by_id, get_backups_info, get_devices, get_packages_info, get_repo_info, get_scheduled_tasks, get_taskid_by_taskname, install_package, set_repo_info }, user_actions::{ UserAuth, UserWithPass }, AppConfig, OutputFormat};
+use crate::{ entities::{backup_details::BackupDetails, device_details::DeviceDetails, package_details::PackageDetails, plugin_details::PluginDetails, repository_details::RepositoryDetails, server_info::ServerInfo, task_details::TaskDetails}, plugin_actions::PluginInfo, responder::{simple_get, simple_post}, system_actions::{ execute_task_by_id, get_backups_info, get_devices, get_packages_info, get_repo_info, get_scheduled_tasks, get_taskid_by_taskname, install_package, set_repo_info }, user_actions::{ UserAuth, UserWithPass }, utils::status_handler::{handle_others, handle_unauthorized}, AppConfig, OutputFormat};
 
 
 pub fn command_initialize(mut cfg: AppConfig, username: &str, password: String, server_url: &str) {
@@ -249,6 +250,115 @@ pub fn command_get_backups(cfg: &AppConfig, output_format: &OutputFormat, backup
         }
     }
     
+}
+/// All of the following calls are POST
+/// 
+/// Call /Startup/Configuration with JSON body of:
+/// * MetadataCountryCode
+/// * PreferredMetadataLanguage
+/// * UICulture
+/// 
+/// Call /Startup/User with JSON body of:
+/// * Name
+/// * Password
+/// 
+/// Call /Startup/RemoteAccess with JSON body of:
+/// * EnableAutomaticPortMapping
+/// * EnableRemoteAccess
+/// 
+/// Call /Startup/Complete
+/// * No configuration items needed 
+pub fn command_server_setup(server_url: String, filename: String) {
+    let server_config = PropReader::new(&filename);
+
+    // Setup and execute the /Startup/Configuration call
+    let mut body = format!(
+        "{{\"MetadataCountryCode\": \"{}\",
+        \"PreferredMetadataLanguage\": \"{}\",
+        \"UICulture\": \"{}\"}}", 
+        server_config.get("MetadataCountryCode"),
+        server_config.get("PreferredMetadataLanguage"),
+        server_config.get("UICulture")
+    );
+
+    let mut response = simple_post(
+        format!("{server_url}/Startup/Configuration"),
+        "",
+        body.to_string()
+    );
+    match response.status() {
+        StatusCode::NO_CONTENT => {
+            println!("Configuration successfully submitted.")
+        }
+        _ => {
+            handle_others(&response);
+        }
+    }
+
+    // Jellyfin seemingly requires that a call to /Startup/User via GET is required before registering the first user.
+    simple_get(format!("{server_url}/Startup/User"), "", Vec::new());
+
+    // Setup and execute the /Startup/User call
+    body = format!(
+        "{{\"Name\":\"{}\",\"Password\":\"{}\"}}", 
+        server_config.get("Name"),
+        server_config.get("Password")
+    );
+
+    response = simple_post(
+        format!("{server_url}/Startup/User"),
+        "",
+        body.to_string()
+    );
+
+    match response.status() {
+        StatusCode::NO_CONTENT => {
+            println!("Initial user successfully submitted.")
+        }
+        _ => {
+            handle_others(&response);
+        }
+    };
+
+    // Setup and execute the /Setup/RemoteAccess call
+    body = format!(
+        "{{\"EnableAutomaticPortMapping\": {},
+        \"EnableRemoteAccess\": {}}}", 
+        server_config.get("EnableAutomaticPortMapping"),
+        server_config.get("EnableRemoteAccess")
+    );
+
+    response = simple_post(
+        format!("{server_url}/Startup/RemoteAccess"),
+        "",
+        body.to_string()
+    );
+
+    match response.status() {
+        StatusCode::NO_CONTENT => {
+            println!("Initial remote access successfully submitted.")
+        }
+        _ => {
+            handle_others(&response);
+        }
+    };
+
+    // Execute a call to /Startup/Complete to flag that the startup wizard has been completed
+    response = simple_post(
+        format!("{server_url}/Startup/Complete"),
+        "",
+        String::new()
+    );
+
+    match response.status() {
+        StatusCode::NO_CONTENT => {
+            println!("Startup wizard completed successfully.")
+        }
+        _ => {
+            handle_others(&response);
+        }
+    };
+
 }
 
 /* 
