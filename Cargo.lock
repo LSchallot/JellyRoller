@@ -1399,9 +1399,9 @@ dependencies = [
 
 [[package]]
 name = "prop_reader"
-version = "0.1.0"
+version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "510fb0cac9b821ef55296efacb2fd20e8e301b7fc36b86f3849c23219a85e515"
+checksum = "6815099ba11ed3ae40a48be21e380bcd3b8976ca1fbbe9f81f66a4d0b6b0ac5c"
 
 [[package]]
 name = "qoi"
