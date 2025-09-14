@@ -10,7 +10,6 @@ Any previous user auth tokens will be converted to an API key upon next executio
 ## Usage Information
 
 ```
-jellyroller 1.0.0
 A CLI controller for managing Jellyfin
 
 Usage: jellyroller.exe <COMMAND>
