@@ -17,13 +17,16 @@ Usage: jellyroller.exe <COMMAND>
 Commands:
   add-user                   Creates a new user
   add-users                  Uses the supplied file to mass create new users
+  apply-backup               Applies the specified backup
   completions                Generate Shell completions
+  create-backup              Creates a new backup (metadata, trickplay, subtitles, database)
   create-report              Creates a report of either activity or available movie items
   delete-user                Deletes an existing user
   disable-user               Disable a user
   enable-user                Enable a user
   execute-task-by-name       Executes a scheduled task by name
   generate-report            Generate a report for an issue
+  get-backups                Get a list of current backups
   get-devices                Show all devices
   get-libraries              Gets the libraries available to the configured user
   get-packages               Lists all available packages
@@ -45,6 +48,7 @@ Commands:
   scan-library               Start a library scan
   search-media               Executes a search of your media
   server-info                Displays the server information
+  server-setup               Setup a new server using a configuration file.
   show-log                   Displays the requested logfile
   shutdown-jellyfin          Shuts down Jellyfin
   update-image-by-id         Updates image of specified file by id
