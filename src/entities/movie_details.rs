@@ -65,8 +65,8 @@ impl MovieDetails {
                 &Self::genres_to_string(&movie),
                 &movie.official_rating,
                 &movie.community_rating.to_string(),
-                &Self::ticks_to_minutes(&movie.run_time_ticks).to_string(),
-                &Self::format_resolution(movie.width.to_string(), movie.height.to_string()),
+                &Self::ticks_to_minutes(movie.run_time_ticks).to_string(),
+                &Self::format_resolution(movie.width, movie.height),
                 &movie.has_subtitles.to_string(),
                 &movie.path,
             ]);
@@ -86,8 +86,8 @@ impl MovieDetails {
                 Self::genres_to_string(&movie),
                 movie.official_rating,
                 movie.community_rating,
-                Self::ticks_to_minutes(&movie.run_time_ticks),
-                Self::format_resolution(movie.width.to_string(), movie.height.to_string()),
+                Self::ticks_to_minutes(movie.run_time_ticks),
+                Self::format_resolution(movie.width, movie.height),
                 movie.has_subtitles,
                 movie.path
             );
@@ -96,8 +96,8 @@ impl MovieDetails {
         data
     }
 
-    fn ticks_to_minutes(ticks: &i64) -> i64 {
-        ticks / 10000000 / 60
+    fn ticks_to_minutes(ticks: i64) -> i64 {
+        ticks / 10_000_000 / 60
     }
 
     fn genres_to_string(movie: &Item) -> String {
@@ -109,7 +109,7 @@ impl MovieDetails {
         string.trim_end_matches(',').to_string()
     }
 
-    fn format_resolution(width: String, height: String) -> String {
-        format!("{} * {}", width, height)
+    fn format_resolution(width: i64, height: i64) -> String {
+        format!("{width} * {height}")
     }
 }

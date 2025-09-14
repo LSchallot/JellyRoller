@@ -10,7 +10,6 @@ Any previous user auth tokens will be converted to an API key upon next executio
 ## Usage Information
 
 ```
-jellyroller 0.8.0
 A CLI controller for managing Jellyfin
 
 Usage: jellyroller.exe <COMMAND>
@@ -18,12 +17,16 @@ Usage: jellyroller.exe <COMMAND>
 Commands:
   add-user                   Creates a new user
   add-users                  Uses the supplied file to mass create new users
+  apply-backup               Applies the specified backup
+  completions                Generate Shell completions
+  create-backup              Creates a new backup (metadata, trickplay, subtitles, database)
   create-report              Creates a report of either activity or available movie items
   delete-user                Deletes an existing user
   disable-user               Disable a user
   enable-user                Enable a user
   execute-task-by-name       Executes a scheduled task by name
   generate-report            Generate a report for an issue
+  get-backups                Get a list of current backups
   get-devices                Show all devices
   get-libraries              Gets the libraries available to the configured user
   get-packages               Lists all available packages
@@ -31,6 +34,7 @@ Commands:
   get-repositories           Lists all current repositories
   get-scheduled-tasks        Show all scheduled tasks and their status
   grant-admin                Grants the specified user admin rights
+  initialize                 Perform a silent initialization
   install-package            Installs the specified package
   list-logs                  Displays the available system logs
   list-users                 Lists the current users with basic information
@@ -44,6 +48,7 @@ Commands:
   scan-library               Start a library scan
   search-media               Executes a search of your media
   server-info                Displays the server information
+  server-setup               Setup a new server using a configuration file.
   show-log                   Displays the requested logfile
   shutdown-jellyfin          Shuts down Jellyfin
   update-image-by-id         Updates image of specified file by id
@@ -83,7 +88,7 @@ scoop install jellyroller
 
 ### Building From Source
 
-Currently built with rustc 1.85.0. If building on a Linux machine, you may need to install openssl-devel.
+Currently built with rustc 1.88.0. If building on a Linux machine, you may need to install openssl-devel.
 
 ```
 cargo install --git https://github.com/LSchallot/JellyRoller

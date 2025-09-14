@@ -12,13 +12,13 @@ pub struct PluginInfo {
 impl PluginInfo {
     pub fn new(endpoint: &str, server_url: &str, api_key: String) -> PluginInfo {
         PluginInfo {
-            server_url: format!("{}{}", server_url, endpoint),
+            server_url: format!("{server_url}{endpoint}"),
             api_key,
         }
     }
 
     pub fn get_plugins(self) -> Result<Vec<PluginDetails>, Box<dyn std::error::Error>> {
-        let response = simple_get(self.server_url, self.api_key, Vec::new());
+        let response = simple_get(self.server_url, &self.api_key, Vec::new());
         match response.status() {
             StatusCode::OK => {
                 let json = response.text()?;
@@ -29,7 +29,7 @@ impl PluginInfo {
                 handle_unauthorized();
             }
             _ => {
-                handle_others(response);
+                handle_others(&response);
             }
         }
 

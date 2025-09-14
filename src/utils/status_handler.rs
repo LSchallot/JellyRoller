@@ -5,7 +5,7 @@ pub fn handle_unauthorized() {
     std::process::exit(1);
 }
 
-pub fn handle_others(response: Response) {
+pub fn handle_others(response: &Response) {
     println!("Status Code: {}", response.status());
     std::process::exit(1);
 }

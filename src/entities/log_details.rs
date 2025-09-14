@@ -29,7 +29,7 @@ impl LogDetails {
                 log.size,
                 log.date_created,
                 log.date_modified,
-            )
+            );
         }
     }
 

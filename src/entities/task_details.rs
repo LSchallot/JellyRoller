@@ -29,7 +29,7 @@ impl TaskDetails {
 
     pub fn csv_print(tasks: &[TaskDetails]) {
         for task in tasks {
-            let mut per_comp: String = "".to_string();
+            let mut per_comp: String = String::new();
             if task.percent_complete > 0.0 {
                 per_comp = task.percent_complete.to_string();
             }
@@ -43,7 +43,7 @@ impl TaskDetails {
             .set_width(120)
             .set_header(vec!["Task Name", "State", "% Complete", "Id"]);
         for task in tasks {
-            let mut per_comp: String = "".to_string();
+            let mut per_comp: String = String::new();
             if task.percent_complete > 0.0 {
                 per_comp = task.percent_complete.to_string();
             }

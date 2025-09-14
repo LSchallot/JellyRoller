@@ -1,6 +1,6 @@
 use reqwest::{blocking::Client, blocking::Response, header::CONTENT_TYPE};
 
-pub fn simple_get(server_url: String, api_key: String, query: Vec<(&str, &str)>) -> Response {
+pub fn simple_get(server_url: String, api_key: &str, query: Vec<(&str, &str)>) -> Response {
     let client = Client::new();
     let response = client
         .get(server_url)
@@ -15,7 +15,7 @@ pub fn simple_get(server_url: String, api_key: String, query: Vec<(&str, &str)>)
     }
 }
 
-pub fn simple_post(server_url: String, api_key: String, body: String) -> Response {
+pub fn simple_post(server_url: String, api_key: &str, body: String) -> Response {
     let client = Client::new();
     let response = client
         .post(server_url)
@@ -33,9 +33,9 @@ pub fn simple_post(server_url: String, api_key: String, body: String) -> Respons
 
 pub fn simple_post_with_query(
     server_url: String,
-    api_key: String,
+    api_key: &str,
     body: String,
-    query: Vec<(&str, &str)>,
+    query: &[(&str, &str)],
 ) -> Response {
     let client = Client::new();
     let response = client
@@ -53,7 +53,7 @@ pub fn simple_post_with_query(
     }
 }
 
-pub fn simple_post_image(server_url: String, api_key: String, body: String) -> Response {
+pub fn simple_post_image(server_url: String, api_key: &str, body: String) -> Response {
     let client = Client::new();
     let response = client
         .post(server_url)
