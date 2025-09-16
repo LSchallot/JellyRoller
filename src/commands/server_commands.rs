@@ -254,17 +254,17 @@ pub fn command_get_backups(cfg: &AppConfig, output_format: &OutputFormat, backup
 /// All of the following calls are POST
 /// 
 /// Call /Startup/Configuration with JSON body of:
-/// * MetadataCountryCode
-/// * PreferredMetadataLanguage
-/// * UICulture
+/// * `MetadataCountryCode`
+/// * `PreferredMetadataLanguage`
+/// * `UICulture`
 /// 
 /// Call /Startup/User with JSON body of:
 /// * Name
 /// * Password
 /// 
 /// Call /Startup/RemoteAccess with JSON body of:
-/// * EnableAutomaticPortMapping
-/// * EnableRemoteAccess
+/// * `EnableAutomaticPortMapping`
+/// * `EnableRemoteAccess`
 /// 
 /// Call /Startup/Complete
 /// * No configuration items needed 
@@ -288,7 +288,7 @@ pub fn command_server_setup(server_url: String, filename: String) {
     );
     match response.status() {
         StatusCode::NO_CONTENT => {
-            println!("Configuration successfully submitted.")
+            println!("Configuration successfully submitted.");
         }
         _ => {
             handle_others(&response);
@@ -313,12 +313,12 @@ pub fn command_server_setup(server_url: String, filename: String) {
 
     match response.status() {
         StatusCode::NO_CONTENT => {
-            println!("Initial user successfully submitted.")
+            println!("Initial user successfully submitted.");
         }
         _ => {
             handle_others(&response);
         }
-    };
+    }
 
     // Setup and execute the /Setup/RemoteAccess call
     body = format!(
@@ -336,12 +336,12 @@ pub fn command_server_setup(server_url: String, filename: String) {
 
     match response.status() {
         StatusCode::NO_CONTENT => {
-            println!("Initial remote access successfully submitted.")
+            println!("Initial remote access successfully submitted.");
         }
         _ => {
             handle_others(&response);
         }
-    };
+    }
 
     // Execute a call to /Startup/Complete to flag that the startup wizard has been completed
     response = simple_post(
@@ -352,12 +352,12 @@ pub fn command_server_setup(server_url: String, filename: String) {
 
     match response.status() {
         StatusCode::NO_CONTENT => {
-            println!("Startup wizard completed successfully.")
+            println!("Startup wizard completed successfully.");
         }
         _ => {
             handle_others(&response);
         }
-    };
+    }
 
 }
 

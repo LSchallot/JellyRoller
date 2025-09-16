@@ -1,6 +1,5 @@
 #![warn(clippy::all)]
 #![warn(clippy::pedantic)]
-#![warn(clippy::cargo)]
 
 use clap::{CommandFactory, Parser, Subcommand, ValueEnum};
 use clap_complete::{generate, Shell};
@@ -329,14 +328,14 @@ enum Commands {
         server_url: String,
         /// Configuration file
         /// Configuration file example:
-            ///     server_url: http://localhost:8096
-            ///     MetadataCountryCode: US
-            ///     PreferredMetadataLanguage: en
-            ///     UICulture: en-US
+            ///     `server_url`: <http://localhost:8096>
+            ///     `MetadataCountryCode`: US
+            ///     `PreferredMetadataLanguage`: en
+            ///     `UICulture`: en-US
             ///     user: test
             ///     password: password
-            ///     EnableAutomcaticPortMapping: false
-            ///     EnableRemoteAccess: true
+            ///     `EnableAutomcaticPortMapping`: false
+            ///     `EnableRemoteAccess`: true
         #[clap(required = true, value_parser, verbatim_doc_comment)]
         filename: String,
     },
