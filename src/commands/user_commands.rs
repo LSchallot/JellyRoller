@@ -1,8 +1,10 @@
 use std::io::{BufRead, BufReader};
 use std::fs::{self, File};
 use crate::{AppConfig, 
+    ImageType,
     utils::output_writer::export_data, 
-    system_actions::{remove_device, get_deviceid_by_username}, 
+    utils::common::image_to_base64,
+    system_actions::{remove_device, get_deviceid_by_username, update_image}, 
     user_actions::{UserList, UserWithPass}, 
     entities::{user_details::UserDetails, server_info::ServerInfo}};
 
@@ -181,6 +183,22 @@ pub fn command_update_users(cfg: &AppConfig, inputfile: String, passed_user_id: 
             eprintln!("Unable to update user.  {e}");
         }
     }
+}
+
+pub fn command_update_profile_picture(cfg: &AppConfig, username: &str, path: &str) {
+    let id = get_user_id(cfg, username);
+    let img_base64 = image_to_base64(path.to_string());
+    update_image(
+        &ServerInfo::new(
+            "/Users/{itemId}/Images/Primary",
+            &cfg.server_url,
+            &cfg.api_key,
+        ),
+        &id,
+        &ImageType::Primary,
+        &img_base64,
+    )
+
 }
 
 pub fn command_remove_device_by_username(cfg: &AppConfig, username: &str, devices_endpoint: &str) {

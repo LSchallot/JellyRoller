@@ -36,7 +36,7 @@ mod commands;
 use commands::log_commands::{command_create_report, command_generate_report, command_list_logs};
 use commands::media_commands::{command_get_libraries, command_register_libarary, command_scan_library, command_search_media, command_update_metadata, command_update_image_by_name, command_update_image_by_id};
 use commands::server_commands::{command_apply_backup, command_create_backup, command_execute_task_by_name, command_get_backups, command_get_devices, command_get_packages, command_get_plugins, command_get_repositories, command_get_scheduled_tasks, command_initialize, command_install_package, command_register_repository, command_server_setup};
-use commands::user_commands::{command_add_user, command_add_users, command_delete_user, command_disable_user, command_enable_user, command_grant_admin, command_list_users, command_remove_device_by_username, command_reset_password, command_revoke_admin, command_update_users};
+use commands::user_commands::{command_add_user, command_add_users, command_delete_user, command_disable_user, command_enable_user, command_grant_admin, command_list_users, command_remove_device_by_username, command_reset_password, command_revoke_admin, command_update_users, command_update_profile_picture};
 
 #[macro_use]
 extern crate serde_derive;
@@ -384,6 +384,15 @@ enum Commands {
         #[clap(required = true, value_parser)]
         inputfile: String,
     },
+    /// Update a user's profile picture
+    UpdateUserProfilePicture {
+        /// User to update
+        #[clap(required = true, short, long)]
+        username: String,
+        /// Image file to be used for profile picture
+        #[clap(required = true, short, long)]
+        path: String
+    }
 }
 
 #[derive(ValueEnum, Clone, Debug, PartialEq)]
@@ -515,6 +524,7 @@ fn main() -> Result<(), confy::ConfyError> {
         Commands::ResetPassword { username, password } => command_reset_password(cfg, &username, password, USERS),
         Commands::RevokeAdmin { username } => command_revoke_admin(&cfg, &username, USER_POLICY, USER_ID),
         Commands::UpdateUsers { inputfile } => command_update_users(&cfg, inputfile, USER_ID),
+        Commands::UpdateUserProfilePicture { username, path } => command_update_profile_picture(&cfg, &username, &path),
         
         // Other
         Commands::Completions { shell } => {
