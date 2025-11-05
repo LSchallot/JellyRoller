@@ -1,8 +1,6 @@
-use base64::{engine::general_purpose, Engine as _};
-use image::ImageFormat;
 use std::fs::{self,File};
-use std::io::{Read, Cursor};
-use crate::{AppConfig, ImageType, OutputFormat, ScanType, system_actions::{get_libraries, get_search_results, register_library, update_metadata, update_image, scan_library, scan_library_all}, CollectionType, entities::library_details::LibraryDetails, entities::server_info::ServerInfo, entities::media_details::MediaRoot};
+use std::io::Read;
+use crate::{AppConfig, ImageType, OutputFormat, ScanType, system_actions::{get_libraries, get_search_results, register_library, update_metadata, update_image, scan_library, scan_library_all}, CollectionType, entities::library_details::LibraryDetails, entities::server_info::ServerInfo, entities::media_details::MediaRoot, utils::common::image_to_base64,};
 
 pub fn command_register_libarary(cfg: &AppConfig, name: &str, collectiontype: &CollectionType, filename: String) {
     let mut endpoint = String::from("/Library/VirtualFolders?CollectionType=");
@@ -208,16 +206,4 @@ fn execute_search(
         }
         Ok(i) => i,
     }
-}
-
-///
-/// Function that converts an image into a base64 png image.
-///
-fn image_to_base64(path: String) -> String {
-    let base_img = image::open(path).unwrap();
-    let mut image_data: Vec<u8> = Vec::new();
-    base_img
-        .write_to(&mut Cursor::new(&mut image_data), ImageFormat::Png)
-        .unwrap();
-    general_purpose::STANDARD.encode(image_data)
 }
