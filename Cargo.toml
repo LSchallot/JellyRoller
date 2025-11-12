@@ -14,7 +14,7 @@ categories = ["command-line", "jellyfin"]
 [dependencies]
 chrono = "0.4.42" 
 clap = { version = "4.5.47", features = ["derive"] }
-confy = "0.6.1"
+confy = "2.0.0"
 serde = "1.0.224"
 serde_derive = "1.0.224"
 serde_json = "1.0.145"
