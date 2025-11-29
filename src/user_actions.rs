@@ -6,9 +6,7 @@ use super::{
     Policy, UserDetails,
 };
 use reqwest::{
-    blocking::Client,
-    header::{CONTENT_LENGTH, CONTENT_TYPE},
-    StatusCode,
+    StatusCode, blocking::Client, header::{CONTENT_LENGTH, CONTENT_TYPE}
 };
 
 #[derive(Serialize, Deserialize)]
@@ -251,11 +249,6 @@ impl UserList {
             Vec::new(),
         );
         Ok(serde_json::from_str(response.text()?.as_str())?)
-    }
-
-    pub fn get_current_user_information(self) -> Result<UserDetails, Box<dyn std::error::Error>> {
-        let response = simple_get(self.server_url, &self.api_key, Vec::new());
-        Ok(response.json::<UserDetails>()?)
     }
 
     pub fn update_user_config_bool(
