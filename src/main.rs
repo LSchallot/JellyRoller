@@ -113,9 +113,9 @@ enum Commands {
     },
     /// Creates a new backup (metadata, trickplay, subtitles, database)
     CreateBackup {},
-    /// Creates a report of either activity or available movie items
+    /// Creates a report of either activity or available items (movie, series, boxset)
     CreateReport {
-        /// Type of report (activity or movie)
+        /// Type of report (activity, movie, series, boxset)
         #[clap(required = true)]
         report_type: ReportType,
         /// Total number of records to return (defaults to 100)
