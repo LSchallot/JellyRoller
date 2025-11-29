@@ -20,7 +20,7 @@ Commands:
   apply-backup                 Applies the specified backup
   completions                  Generate Shell completions
   create-backup                Creates a new backup (metadata, trickplay, subtitles, database)
-  create-report                Creates a report of either activity or available movie items
+  create-report                Creates a report of either activity or available items (movie, series, boxset)
   delete-user                  Deletes an existing user
   disable-user                 Disable a user
   enable-user                  Enable a user
