@@ -1,3 +1,4 @@
+pub mod auth_commands;
 pub mod log_commands;
 pub mod media_commands;
 pub mod server_commands;

@@ -2,10 +2,10 @@ use clap::{CommandFactory, Parser, Subcommand, ValueEnum};
 use clap_complete::{generate, Shell};
 use std::env;
 use std::fmt;
-use std::io::{self, Write};
+use std::io;
 
 mod user_actions;
-use user_actions::{UserAuth, UserList, UserWithPass};
+use user_actions::UserList;
 
 mod system_actions;
 use system_actions::{LogFile, restart_or_shutdown, get_server_info};
@@ -30,6 +30,7 @@ use utils::status_handler::{handle_others, handle_unauthorized};
 
 // All public functions in the below use statements are used within this file, so just get them all.
 mod commands;
+use commands::auth_commands::{command_auth_login, command_auth_logout, command_auth_status, require_auth};
 use commands::log_commands::{command_create_report, command_generate_report, command_list_logs};
 use commands::media_commands::{command_get_libraries, command_register_libarary, command_scan_library, command_search_media, command_update_metadata, command_update_image_by_name, command_update_image_by_id};
 use commands::server_commands::{command_apply_backup, command_create_backup, command_execute_task_by_name, command_get_backups, command_get_devices, command_get_packages, command_get_plugins, command_get_repositories, command_get_scheduled_tasks, command_initialize, command_install_package, command_register_repository, command_server_setup};
@@ -83,6 +84,9 @@ struct Cli {
 
 #[derive(Debug, Subcommand)]
 enum Commands {
+    /// Authentication commands
+    #[clap(subcommand)]
+    Auth(AuthCommands),
     /// Creates a new user
     #[clap(arg_required_else_help = true)]
     AddUser {
@@ -241,8 +245,6 @@ enum Commands {
         #[clap(short, long, default_value = "")]
         username: String,
     },
-    /// Reconfigure the connection information.
-    Reconfigure {},
     /// Registers a new library.
     RegisterLibrary {
         /// Name of the new library
@@ -392,6 +394,26 @@ enum Commands {
     }
 }
 
+#[derive(Debug, Subcommand)]
+enum AuthCommands {
+    /// Login to Jellyfin server and store credentials
+    Login {
+        /// Username for authentication
+        #[clap(short = 'u', long = "username")]
+        username: Option<String>,
+        /// URL of the Jellyfin server
+        #[clap(long = "url")]
+        server_url: Option<String>,
+        /// Read password from stdin (use with piped input)
+        #[clap(long = "stdin", default_value = "false")]
+        stdin: bool,
+    },
+    /// Logout and clear stored credentials
+    Logout {},
+    /// Check authentication status
+    Status {},
+}
+
 #[derive(ValueEnum, Clone, Debug, PartialEq)]
 enum CollectionType {
     Movies,
@@ -458,152 +480,186 @@ fn main() -> Result<(), confy::ConfyError> {
         confy::load("jellyroller", "jellyroller")?
     };
 
-    // Due to an oddity with confy and clap, manually check for help flag.
-    let args: Vec<String> = env::args().collect();
-    if !(args.contains(&"initialize".to_string()) || args.contains(&"server-setup".to_string()) || args.contains(&"-h".to_string()) || args.contains(&"--help".to_string())) {
-        if cfg.status == "not configured" {
-            println!("Application is not configured!");
-            initial_config(cfg);
-            std::process::exit(0);
-        } else if cfg.token == "Unknown" {
-            println!("[INFO] Username/Password detected.  Reconfiguring to use API key.");
-            token_to_api(cfg.clone());
-        }
-    }
-
-    // Attempting to setup ability to execute certain commands prior to initialization
+    // Parse command line arguments
     let args = Cli::parse();
     
     match args.command {
-        // Log Commands
-        Commands::CreateReport { report_type, limit, filename } => command_create_report(&cfg, &report_type, &limit, filename),
-        Commands::GenerateReport {} => command_generate_report(&cfg),
-        Commands::ListLogs { output_format } => command_list_logs(&cfg, &output_format),
-        Commands::ShowLog { logfile } => LogFile::get_logfile(LogFile::new(ServerInfo::new("/System/Logs/Log", &cfg.server_url, &cfg.api_key),logfile,)).expect("Unable to retrieve the specified logfile."),
+        // Auth Commands (no auth required)
+        Commands::Auth(auth_cmd) => {
+            match auth_cmd {
+                AuthCommands::Login { username, server_url, stdin } => command_auth_login(cfg, username, server_url, stdin),
+                AuthCommands::Logout {} => command_auth_logout(),
+                AuthCommands::Status {} => command_auth_status(&cfg),
+            }
+        }
         
-        // Media Commands
-        Commands::GetLibraries { output_format } => command_get_libraries(&cfg, &output_format),
-        Commands::RegisterLibrary { name, collectiontype, filename } => command_register_libarary(&cfg, &name, &collectiontype, filename),
-        Commands::ScanLibrary { library_id, scan_type } => command_scan_library(&cfg, &library_id, &scan_type),
-        Commands::SearchMedia { term, mediatype, parentid, output_format, include_filepath, table_columns } => command_search_media(&cfg, &term, &mediatype, &parentid, &output_format, include_filepath, &table_columns),
-        Commands::UpdateMetadata { id, filename } => command_update_metadata(&cfg, &id, filename),
-        Commands::UpdateImageByName {title, path, imagetype} => command_update_image_by_name(&cfg, &title, path, &imagetype),
-        Commands::UpdateImageById { id, path, imagetype } => command_update_image_by_id(&cfg, &id, path, &imagetype),
-        
-        // Server Commands
-        Commands::ApplyBackup { filename } => command_apply_backup(&cfg, &filename),
-        Commands::CreateBackup {} => command_create_backup(&cfg),
-        Commands::ExecuteTaskByName { task } => command_execute_task_by_name(&cfg, &task),
-        Commands::GetBackups { output_format } => command_get_backups(&cfg, &output_format, BACKUPS),
-        Commands::GetDevices { active, output_format} => command_get_devices(&cfg, active, &output_format, DEVICES),
-        Commands::GetPackages { output_format } => command_get_packages(&cfg, &output_format),
-        Commands::GetPlugins { output_format} => command_get_plugins(cfg, &output_format),
-        Commands::GetRepositories { output_format } => command_get_repositories(&cfg, &output_format),
-        Commands::GetScheduledTasks { output_format } => command_get_scheduled_tasks(&cfg, &output_format),
-        Commands::Initialize { username, password, server_url } => command_initialize(cfg, &username, password, &server_url),
-        Commands::InstallPackage { package, version, repository} => command_install_package(&cfg, &package, &version, &repository),
-        Commands::Reconfigure {} => initial_config(cfg),
-        Commands::RegisterRepository { name, path } => command_register_repository(&cfg, name, path),
-        Commands::RestartJellyfin {} => restart_or_shutdown(ServerInfo::new("/System/Restart",&cfg.server_url,&cfg.api_key,)),
-        Commands::ServerInfo {} => get_server_info(ServerInfo::new("/System/Info", &cfg.server_url, &cfg.api_key,)).expect("Unable to gather server information."),
-        Commands::ServerSetup { server_url, filename } => command_server_setup(server_url, filename),
-        Commands::ShutdownJellyfin {} => restart_or_shutdown(ServerInfo::new("/System/Shutdown",&cfg.server_url,&cfg.api_key,)),
-
-        // User commands
-        Commands::AddUser { username, password } => command_add_user(&cfg, username, password),
-        Commands::AddUsers { inputfile } => command_add_users(&cfg, inputfile),
-        Commands::DeleteUser { username } => command_delete_user(cfg, username),
-        Commands::DisableUser { username } => command_disable_user(&cfg, &username, USER_POLICY, USER_ID),
-        Commands::EnableUser { username } => command_enable_user(&cfg, &username, USER_POLICY, USER_ID),
-        Commands::GrantAdmin { username } => command_grant_admin(&cfg, &username, USER_POLICY, USER_ID),
-        Commands::ListUsers { export, output, username } => command_list_users(&cfg, export, output, &username, USERS, USER_ID),
-        Commands::RemoveDeviceByUsername { username } => command_remove_device_by_username(&cfg, &username, DEVICES),
-        Commands::ResetPassword { username, password } => command_reset_password(cfg, &username, password, USERS),
-        Commands::RevokeAdmin { username } => command_revoke_admin(&cfg, &username, USER_POLICY, USER_ID),
-        Commands::UpdateUsers { inputfile } => command_update_users(&cfg, inputfile, USER_ID),
-        Commands::UpdateUserProfilePicture { username, path } => command_update_profile_picture(&cfg, &username, &path),
-        
-        // Other
+        // Commands that don't require auth
         Commands::Completions { shell } => {
             let cmd = &mut Cli::command();
             generate(shell, cmd, cmd.get_name().to_string(), &mut io::stdout());
         }
+        Commands::Initialize { username, password, server_url } => command_initialize(cfg, &username, password, &server_url),
+        Commands::ServerSetup { server_url, filename } => command_server_setup(server_url, filename),
+        
+        // All other commands require authentication
+        // Log Commands
+        Commands::CreateReport { report_type, limit, filename } => {
+            require_auth(&cfg);
+            command_create_report(&cfg, &report_type, &limit, filename)
+        },
+        Commands::GenerateReport {} => {
+            require_auth(&cfg);
+            command_generate_report(&cfg)
+        },
+        Commands::ListLogs { output_format } => {
+            require_auth(&cfg);
+            command_list_logs(&cfg, &output_format)
+        },
+        Commands::ShowLog { logfile } => {
+            require_auth(&cfg);
+            LogFile::get_logfile(LogFile::new(ServerInfo::new("/System/Logs/Log", &cfg.server_url, &cfg.api_key),logfile,)).expect("Unable to retrieve the specified logfile.")
+        },
+        
+        // Media Commands
+        Commands::GetLibraries { output_format } => {
+            require_auth(&cfg);
+            command_get_libraries(&cfg, &output_format)
+        },
+        Commands::RegisterLibrary { name, collectiontype, filename } => {
+            require_auth(&cfg);
+            command_register_libarary(&cfg, &name, &collectiontype, filename)
+        },
+        Commands::ScanLibrary { library_id, scan_type } => {
+            require_auth(&cfg);
+            command_scan_library(&cfg, &library_id, &scan_type)
+        },
+        Commands::SearchMedia { term, mediatype, parentid, output_format, include_filepath, table_columns } => {
+            require_auth(&cfg);
+            command_search_media(&cfg, &term, &mediatype, &parentid, &output_format, include_filepath, &table_columns)
+        },
+        Commands::UpdateMetadata { id, filename } => {
+            require_auth(&cfg);
+            command_update_metadata(&cfg, &id, filename)
+        },
+        Commands::UpdateImageByName {title, path, imagetype} => {
+            require_auth(&cfg);
+            command_update_image_by_name(&cfg, &title, path, &imagetype)
+        },
+        Commands::UpdateImageById { id, path, imagetype } => {
+            require_auth(&cfg);
+            command_update_image_by_id(&cfg, &id, path, &imagetype)
+        },
+        
+        // Server Commands
+        Commands::ApplyBackup { filename } => {
+            require_auth(&cfg);
+            command_apply_backup(&cfg, &filename)
+        },
+        Commands::CreateBackup {} => {
+            require_auth(&cfg);
+            command_create_backup(&cfg)
+        },
+        Commands::ExecuteTaskByName { task } => {
+            require_auth(&cfg);
+            command_execute_task_by_name(&cfg, &task)
+        },
+        Commands::GetBackups { output_format } => {
+            require_auth(&cfg);
+            command_get_backups(&cfg, &output_format, BACKUPS)
+        },
+        Commands::GetDevices { active, output_format} => {
+            require_auth(&cfg);
+            command_get_devices(&cfg, active, &output_format, DEVICES)
+        },
+        Commands::GetPackages { output_format } => {
+            require_auth(&cfg);
+            command_get_packages(&cfg, &output_format)
+        },
+        Commands::GetPlugins { output_format} => {
+            require_auth(&cfg);
+            command_get_plugins(cfg, &output_format)
+        },
+        Commands::GetRepositories { output_format } => {
+            require_auth(&cfg);
+            command_get_repositories(&cfg, &output_format)
+        },
+        Commands::GetScheduledTasks { output_format } => {
+            require_auth(&cfg);
+            command_get_scheduled_tasks(&cfg, &output_format)
+        },
+        Commands::InstallPackage { package, version, repository} => {
+            require_auth(&cfg);
+            command_install_package(&cfg, &package, &version, &repository)
+        },
+        Commands::RegisterRepository { name, path } => {
+            require_auth(&cfg);
+            command_register_repository(&cfg, name, path)
+        },
+        Commands::RestartJellyfin {} => {
+            require_auth(&cfg);
+            restart_or_shutdown(ServerInfo::new("/System/Restart",&cfg.server_url,&cfg.api_key,))
+        },
+        Commands::ServerInfo {} => {
+            require_auth(&cfg);
+            get_server_info(ServerInfo::new("/System/Info", &cfg.server_url, &cfg.api_key,)).expect("Unable to gather server information.")
+        },
+        Commands::ShutdownJellyfin {} => {
+            require_auth(&cfg);
+            restart_or_shutdown(ServerInfo::new("/System/Shutdown",&cfg.server_url,&cfg.api_key,))
+        },
+
+        // User commands
+        Commands::AddUser { username, password } => {
+            require_auth(&cfg);
+            command_add_user(&cfg, username, password)
+        },
+        Commands::AddUsers { inputfile } => {
+            require_auth(&cfg);
+            command_add_users(&cfg, inputfile)
+        },
+        Commands::DeleteUser { username } => {
+            require_auth(&cfg);
+            command_delete_user(cfg, username)
+        },
+        Commands::DisableUser { username } => {
+            require_auth(&cfg);
+            command_disable_user(&cfg, &username, USER_POLICY, USER_ID)
+        },
+        Commands::EnableUser { username } => {
+            require_auth(&cfg);
+            command_enable_user(&cfg, &username, USER_POLICY, USER_ID)
+        },
+        Commands::GrantAdmin { username } => {
+            require_auth(&cfg);
+            command_grant_admin(&cfg, &username, USER_POLICY, USER_ID)
+        },
+        Commands::ListUsers { export, output, username } => {
+            require_auth(&cfg);
+            command_list_users(&cfg, export, output, &username, USERS, USER_ID)
+        },
+        Commands::RemoveDeviceByUsername { username } => {
+            require_auth(&cfg);
+            command_remove_device_by_username(&cfg, &username, DEVICES)
+        },
+        Commands::ResetPassword { username, password } => {
+            require_auth(&cfg);
+            command_reset_password(cfg, &username, password, USERS)
+        },
+        Commands::RevokeAdmin { username } => {
+            require_auth(&cfg);
+            command_revoke_admin(&cfg, &username, USER_POLICY, USER_ID)
+        },
+        Commands::UpdateUsers { inputfile } => {
+            require_auth(&cfg);
+            command_update_users(&cfg, inputfile, USER_ID)
+        },
+        Commands::UpdateUserProfilePicture { username, path } => {
+            require_auth(&cfg);
+            command_update_profile_picture(&cfg, &username, &path)
+        },
     }
 
     Ok(())
-}
-
-///
-/// Executed on initial run or when user wants to redo configuration.  Will attempt to auto-configure
-/// the application prior to allowing customization by
-/// the user.
-///
-fn initial_config(mut cfg: AppConfig) {
-    println!("[INFO] Attempting to determine Jellyfin information.....");
-    env::consts::OS.clone_into(&mut cfg.os);
-    println!("[INFO] OS detected as {}.", cfg.os);
-
-    print!("[INPUT] Please enter your Jellyfin URL:  ");
-    io::stdout().flush().expect("Unable to get Jellyfin URL.");
-    let mut server_url_input = String::new();
-    io::stdin()
-        .read_line(&mut server_url_input)
-        .expect("Could not read server url information");
-    server_url_input.trim().clone_into(&mut cfg.server_url);
-
-    print!("[INPUT] Please enter your Jellyfin username:  ");
-    io::stdout().flush().expect("Unable to get username.");
-    let mut username = String::new();
-    io::stdin()
-        .read_line(&mut username)
-        .expect("[ERROR] Could not read Jellyfin username");
-    let password = rpassword::prompt_password("Please enter your Jellyfin password: ").unwrap();
-    println!("[INFO] Attempting to authenticate user.");
-    cfg.api_key = UserAuth::auth_user(UserAuth::new(&cfg.server_url, username.trim(), password))
-        .expect("Unable to generate user auth token.  Please assure your configuration information was input correctly\n");
-
-    "configured".clone_into(&mut cfg.status);
-    token_to_api(cfg);
-}
-
-///
-/// Due to an issue with api key processing in Jellyfin, `JellyRoller` was initially relied on using auto tokens to communicate.
-/// Now that the issue has been fixed, the auto tokens need to be converted to an API key.  The single purpose of this function
-/// is to handle the conversion with no input required from the user.
-///
-fn token_to_api(mut cfg: AppConfig) {
-    println!("[INFO] Attempting to auto convert user auth token to API key.....");
-    // Check if api key already exists
-    if UserWithPass::retrieve_api_token(UserWithPass::new(
-        None,
-        None,
-        None,
-        format!("{}/Auth/Keys", cfg.server_url),
-        cfg.api_key.clone(),
-    ))
-    .unwrap()
-    .is_empty()
-    {
-        UserWithPass::create_api_token(UserWithPass::new(
-            None,
-            None,
-            None,
-            format!("{}/Auth/Keys", cfg.server_url),
-            cfg.api_key.clone(),
-        ));
-    }
-    cfg.api_key = UserWithPass::retrieve_api_token(UserWithPass::new(
-        None,
-        None,
-        None,
-        format!("{}/Auth/Keys", cfg.server_url),
-        cfg.api_key,
-    ))
-    .unwrap();
-    cfg.token = "apiKey".to_string();
-    confy::store("jellyroller", "jellyroller", cfg)
-        .expect("[ERROR] Unable to store updated configuration.");
-    println!("[INFO] Auth token successfully converted to API key.");
 }
 
 ///
