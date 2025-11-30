@@ -1,31 +1,57 @@
 use std::env;
-use std::io::{self, Write};
+use std::io::{self, BufRead, Write};
 
 use crate::{user_actions::{UserAuth, UserWithPass}, AppConfig};
 
 /// Handles the `auth login` command - authenticates user and stores API key
-pub fn command_auth_login(mut cfg: AppConfig) {
+/// 
+/// Supports three modes:
+/// 1. Fully interactive: prompts for all values
+/// 2. Partially interactive: uses provided args, prompts for missing
+/// 3. Non-interactive with stdin: `echo "PASSWORD" | jellyroller auth login -u "user" --url "http://server:123" --stdin`
+pub fn command_auth_login(mut cfg: AppConfig, username_arg: Option<String>, server_url_arg: Option<String>, use_stdin: bool) {
     println!("[INFO] Starting authentication process...");
     
-    print!("[INPUT] Please enter your Jellyfin URL: ");
-    io::stdout().flush().expect("Unable to flush stdout.");
-    let mut server_url_input = String::new();
-    io::stdin()
-        .read_line(&mut server_url_input)
-        .expect("Could not read server url information");
-    server_url_input.trim().clone_into(&mut cfg.server_url);
+    // Get server URL from argument or prompt
+    let server_url = if let Some(url) = server_url_arg {
+        url
+    } else {
+        print!("[INPUT] Please enter your Jellyfin URL: ");
+        io::stdout().flush().expect("Unable to flush stdout.");
+        let mut server_url_input = String::new();
+        io::stdin()
+            .read_line(&mut server_url_input)
+            .expect("Could not read server url information");
+        server_url_input.trim().to_string()
+    };
+    server_url.trim().clone_into(&mut cfg.server_url);
 
-    print!("[INPUT] Please enter your Jellyfin username: ");
-    io::stdout().flush().expect("Unable to flush stdout.");
-    let mut username = String::new();
-    io::stdin()
-        .read_line(&mut username)
-        .expect("[ERROR] Could not read Jellyfin username");
+    // Get username from argument or prompt
+    let username = if let Some(user) = username_arg {
+        user
+    } else {
+        print!("[INPUT] Please enter your Jellyfin username: ");
+        io::stdout().flush().expect("Unable to flush stdout.");
+        let mut username_input = String::new();
+        io::stdin()
+            .read_line(&mut username_input)
+            .expect("[ERROR] Could not read Jellyfin username");
+        username_input.trim().to_string()
+    };
     
-    let password = rpassword::prompt_password("Please enter your Jellyfin password: ").unwrap();
+    // Get password from stdin (piped) or prompt interactively
+    let password = if use_stdin {
+        let stdin = io::stdin();
+        let mut handle = stdin.lock();
+        let mut password_input = String::new();
+        handle.read_line(&mut password_input).expect("[ERROR] Could not read password from stdin");
+        password_input.trim().to_string()
+    } else {
+        rpassword::prompt_password("Please enter your Jellyfin password: ").unwrap()
+    };
     
     println!("[INFO] Attempting to authenticate user...");
-    cfg.api_key = match UserAuth::auth_user(UserAuth::new(&cfg.server_url, username.trim(), password)) {
+    cfg.api_key = match UserAuth::auth_user(UserAuth::new(&cfg.server_url, &username, password)) {
         Ok(token) => token,
         Err(e) => {
             eprintln!("[ERROR] Authentication failed: {}", e);

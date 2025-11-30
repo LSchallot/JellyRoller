@@ -397,7 +397,17 @@ enum Commands {
 #[derive(Debug, Subcommand)]
 enum AuthCommands {
     /// Login to Jellyfin server and store credentials
-    Login {},
+    Login {
+        /// Username for authentication
+        #[clap(short = 'u', long = "username")]
+        username: Option<String>,
+        /// URL of the Jellyfin server
+        #[clap(long = "url")]
+        server_url: Option<String>,
+        /// Read password from stdin (use with piped input)
+        #[clap(long = "stdin", default_value = "false")]
+        stdin: bool,
+    },
     /// Logout and clear stored credentials
     Logout {},
     /// Check authentication status
@@ -477,7 +487,7 @@ fn main() -> Result<(), confy::ConfyError> {
         // Auth Commands (no auth required)
         Commands::Auth(auth_cmd) => {
             match auth_cmd {
-                AuthCommands::Login {} => command_auth_login(cfg),
+                AuthCommands::Login { username, server_url, stdin } => command_auth_login(cfg, username, server_url, stdin),
                 AuthCommands::Logout {} => command_auth_logout(),
                 AuthCommands::Status {} => command_auth_status(&cfg),
             }

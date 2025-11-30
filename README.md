@@ -71,6 +71,27 @@ JellyRoller requires explicit authentication. The following auth subcommands are
 | `jellyroller auth logout` | Logout and clear stored credentials |
 | `jellyroller auth status` | Check current authentication status |
 
+#### Login Options
+
+The `auth login` command supports optional parameters for scripted/non-interactive use:
+
+```bash
+# Fully interactive (prompts for all values)
+jellyroller auth login
+
+# Provide username and URL, prompt for password
+jellyroller auth login -u "admin" --url "http://localhost:8096"
+
+# Non-interactive with password from stdin
+echo "PASSWORD" | jellyroller auth login -u "admin" --url "http://localhost:8096" --stdin
+```
+
+| Option | Description |
+| ------ | ----------- |
+| `-u, --username` | Username for authentication |
+| `--url` | URL of the Jellyfin server |
+| `--stdin` | Read password from stdin (for piped input) |
+
 If you try to run a command without being authenticated, you will see:
 ```
 [ERROR] Not authenticated. Please run 'jellyroller auth login' to authenticate.
