@@ -255,7 +255,19 @@ impl UserList {
 
     pub fn get_current_user_information(self) -> Result<UserDetails, Box<dyn std::error::Error>> {
         let response = simple_get(self.server_url, &self.api_key, Vec::new());
-        Ok(response.json::<UserDetails>()?)
+        let status = response.status();
+        let body = response.text()?;
+        
+        // Log the response body in verbose mode
+        crate::utils::debug::log_response(status.as_u16(), status.as_str(), Some(&body));
+        
+        match serde_json::from_str::<UserDetails>(&body) {
+            Ok(user) => Ok(user),
+            Err(e) => {
+                crate::utils::debug::log_parse_error(&e, &body);
+                Err(Box::new(e))
+            }
+        }
     }
 
     pub fn update_user_config_bool(
