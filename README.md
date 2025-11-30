@@ -3,9 +3,7 @@
 JellyRoller is an open source CLI Jellyfin Controller written in Rust that works on Windows and Linux. Its primary purpose is to allow administration of a Jellyfin application from the command line.
 
 ## How it works
-On the first execution, JellyRoller prompts for information to authenticate as an admin user.  Once this authentication has succeeded, an API key is created and stored within the JellyrRoller configuration.  JellyRoller then uses the Jellyfin API to manage the server.
-
-Any previous user auth tokens will be converted to an API key upon next execution when upgrading from JellyRoller < 0.3.
+JellyRoller requires explicit authentication before you can use most commands. Use `jellyroller auth login` to authenticate with your Jellyfin server. Once authenticated, an API key is created and stored within the JellyRoller configuration. JellyRoller then uses the Jellyfin API to manage the server.
 
 ## Usage Information
 
@@ -15,6 +13,7 @@ A CLI controller for managing Jellyfin
 Usage: jellyroller <COMMAND>
 
 Commands:
+  auth                         Authentication commands
   add-user                     Creates a new user
   add-users                    Uses the supplied file to mass create new users
   apply-backup                 Applies the specified backup
@@ -38,7 +37,6 @@ Commands:
   install-package              Installs the specified package
   list-logs                    Displays the available system logs
   list-users                   Lists the current users with basic information
-  reconfigure                  Reconfigure the connection information
   register-library             Registers a new library
   register-repository          Registers a new Plugin Repository
   remove-device-by-username    Removes all devices associated with the specified user
@@ -61,8 +59,21 @@ Commands:
 Options:
   -h, --help     Print help
   -V, --version  Print version
+```
 
+### Authentication Commands
 
+JellyRoller requires explicit authentication. The following auth subcommands are available:
+
+| Command | Description |
+| ------- | ----------- |
+| `jellyroller auth login` | Login to Jellyfin server and store credentials interactively |
+| `jellyroller auth logout` | Logout and clear stored credentials |
+| `jellyroller auth status` | Check current authentication status |
+
+If you try to run a command without being authenticated, you will see:
+```
+[ERROR] Not authenticated. Please run 'jellyroller auth login' to authenticate.
 ```
 
 ## Installation
@@ -98,12 +109,24 @@ cargo install --git https://github.com/LSchallot/JellyRoller
 
 ### Initial Configuration
 
-When running JellyRoller for the first time, you will be prompted to configure against your Jellyfin instance. You will be prompted for various items which are described below.
+To get started with JellyRoller, run:
+
+```
+jellyroller auth login
+```
+
+You will be prompted for the following information:
+
 | Prompt | Description |
 | ------------- | ------------- |
 | Please enter your Jellyfin URL: | The URL to your Jellyfin instance. Depending on your setup, you may need to provide the port. Examples include http://myjellyfin.lab or http://localhost:8096. |
 | Please enter your Jellyfin username: | Username with admin rights that JellyRoller will use to execute commands. |
 | Please enter your Jellyfin password: | Password associated with the username being used. |
+
+You can also use `jellyroller initialize` for non-interactive (scripted) setup:
+```
+jellyroller initialize --username admin --password mypassword --url http://localhost:8096
+```
 
 ### Custom Configuration
 As of 0.5.0, it is possible to keep your configuration file alongside of the JellyRoller executable.  Simply save your configuration in the same directory with the name "jellyroller.config" and it will be used automatically.  Keep in mind that this configurtion file will contain your API key, so secure the file as needed.

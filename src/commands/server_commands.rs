@@ -12,8 +12,44 @@ pub fn command_initialize(mut cfg: AppConfig, username: &str, password: String, 
     server_url.trim().clone_into(&mut cfg.server_url);
     cfg.api_key = UserAuth::auth_user(UserAuth::new(&cfg.server_url, username.trim(), password))
                 .expect("Unable to generate user auth token.  Please assure your configuration information was input correctly\n");
-            "configured".clone_into(&mut cfg.status);
-            token_to_api(cfg);
+    
+    // Convert auth token to API key
+    println!("[INFO] Converting auth token to API key...");
+    if UserWithPass::retrieve_api_token(UserWithPass::new(
+        None,
+        None,
+        None,
+        format!("{}/Auth/Keys", cfg.server_url),
+        cfg.api_key.clone(),
+    ))
+    .unwrap_or_default()
+    .is_empty()
+    {
+        UserWithPass::create_api_token(UserWithPass::new(
+            None,
+            None,
+            None,
+            format!("{}/Auth/Keys", cfg.server_url),
+            cfg.api_key.clone(),
+        ));
+    }
+    
+    cfg.api_key = UserWithPass::retrieve_api_token(UserWithPass::new(
+        None,
+        None,
+        None,
+        format!("{}/Auth/Keys", cfg.server_url),
+        cfg.api_key,
+    ))
+    .unwrap_or_default();
+    
+    cfg.token = "apiKey".to_string();
+    cfg.status = "configured".to_string();
+    
+    confy::store("jellyroller", "jellyroller", cfg)
+        .expect("[ERROR] Unable to store updated configuration.");
+    println!("[INFO] Auth token successfully converted to API key.");
+    println!("[SUCCESS] JellyRoller configured successfully!");
 }
 
 pub fn command_get_devices(cfg: &AppConfig, active: bool, output_format: &OutputFormat, devices_endpoint: &str) {
@@ -366,38 +402,3 @@ pub fn command_server_setup(server_url: String, filename: String) {
     functions that are used to support the server_commands
     base functions.
 */
-
-fn token_to_api(mut cfg: AppConfig) {
-    println!("[INFO] Attempting to auto convert user auth token to API key.....");
-    // Check if api key already exists
-    if UserWithPass::retrieve_api_token(UserWithPass::new(
-        None,
-        None,
-        None,
-        format!("{}/Auth/Keys", cfg.server_url),
-        cfg.api_key.clone(),
-    ))
-    .unwrap()
-    .is_empty()
-    {
-        UserWithPass::create_api_token(UserWithPass::new(
-            None,
-            None,
-            None,
-            format!("{}/Auth/Keys", cfg.server_url),
-            cfg.api_key.clone(),
-        ));
-    }
-    cfg.api_key = UserWithPass::retrieve_api_token(UserWithPass::new(
-        None,
-        None,
-        None,
-        format!("{}/Auth/Keys", cfg.server_url),
-        cfg.api_key,
-    ))
-    .unwrap();
-    cfg.token = "apiKey".to_string();
-    confy::store("jellyroller", "jellyroller", cfg)
-        .expect("[ERROR] Unable to store updated configuration.");
-    println!("[INFO] Auth token successfully converted to API key.");
-}
