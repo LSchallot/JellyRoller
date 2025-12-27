@@ -77,6 +77,10 @@ impl Default for AppConfig {
 #[clap(name = "jellyroller", author, version)]
 #[clap(about = "A CLI controller for managing Jellyfin", long_about = None)]
 struct Cli {
+    /// Enable verbose output for debugging (shows HTTP requests/responses)
+    #[clap(short, long, global = true)]
+    verbose: bool,
+    
     #[clap(subcommand)]
     command: Commands,
 }
@@ -475,6 +479,9 @@ fn main() -> Result<(), confy::ConfyError> {
 
     // Attempting to setup ability to execute certain commands prior to initialization
     let args = Cli::parse();
+    
+    // Initialize verbose mode
+    utils::debug::set_verbose(args.verbose);
     
     match args.command {
         // Log Commands
