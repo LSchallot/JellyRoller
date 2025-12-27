@@ -2,7 +2,7 @@ use reqwest::blocking::Response;
 
 pub fn handle_unauthorized() {
     eprintln!("[ERROR] Authentication failed (HTTP 401 Unauthorized)");
-    eprintln!("[HINT] Please run 'jellyroller auth login' to re-authenticate");
+    eprintln!("[HINT] Please run 'jellyroller reconfigure' to re-authenticate");
     std::process::exit(1);
 }
 
