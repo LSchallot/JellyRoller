@@ -6,9 +6,7 @@ use super::{
     Policy, UserDetails,
 };
 use reqwest::{
-    blocking::Client,
-    header::{CONTENT_LENGTH, CONTENT_TYPE},
-    StatusCode,
+    StatusCode, blocking::Client, header::{CONTENT_LENGTH, CONTENT_TYPE}
 };
 
 #[derive(Serialize, Deserialize)]

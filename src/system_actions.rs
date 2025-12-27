@@ -1,6 +1,6 @@
-use crate::entities::{
+use crate::{ReportType, entities::{
     activity_details::ActivityDetails, backup_details::{BackupDetails, BackupRootJson}, media_details::MediaRoot, repository_details::RepositoryDetails, task_details::TaskDetails
-};
+}};
 
 use super::{
     handle_others, handle_unauthorized,
@@ -234,17 +234,17 @@ pub fn get_libraries(
 }
 
 pub fn export_library(
-    server_info: &ServerInfo,
-    user_id: &str,
+    server_info: &ServerInfo, report_type: &ReportType,
 ) -> Result<MovieDetails, Box<dyn std::error::Error>> {
+    let binding = report_type.to_string();
     let query = vec![
         ("SortBy", "SortName,ProductionYear"),
-        ("IncludeItemTypes", "Movie"),
+        ("IncludeItemTypes", binding.as_str()),
         ("Recursive", "true"),
         ("fields", "Genres,DateCreated,Width,Height,Path"),
     ];
     let response = simple_get(
-        server_info.server_url.replace("{userId}", user_id),
+        server_info.server_url.clone(),
         &server_info.api_key,
         query,
     );

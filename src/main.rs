@@ -5,7 +5,7 @@ use std::fmt;
 use std::io::{self, Write};
 
 mod user_actions;
-use user_actions::{UserAuth, UserList, UserWithPass};
+use user_actions::{UserAuth, UserWithPass};
 
 mod system_actions;
 use system_actions::{LogFile, restart_or_shutdown, get_server_info};
@@ -117,9 +117,9 @@ enum Commands {
     },
     /// Creates a new backup (metadata, trickplay, subtitles, database)
     CreateBackup {},
-    /// Creates a report of either activity or available movie items
+    /// Creates a report of either activity or available items (movie, series, boxset)
     CreateReport {
-        /// Type of report (activity or movie)
+        /// Type of report (activity, movie, series, boxset)
         #[clap(required = true)]
         report_type: ReportType,
         /// Total number of records to return (defaults to 100)
@@ -441,6 +441,8 @@ enum OutputFormat {
 enum ReportType {
     Activity,
     Movie,
+    Series,
+    Boxset
 }
 
 #[derive(ValueEnum, Clone, Debug, PartialEq)]
@@ -650,6 +652,20 @@ impl fmt::Display for CollectionType {
             CollectionType::BoxSets => write!(f, "boxsets"),
             CollectionType::Books => write!(f, "books"),
             CollectionType::Mixed => write!(f, "mixed"),
+        }
+    }
+}
+
+///
+/// Custom implementation to convert ReportType enum into Strings
+/// 
+impl fmt::Display for ReportType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            ReportType::Activity => write!(f, "activity"),
+            ReportType::Movie => write!(f, "movie"),
+            ReportType::Series => write!(f, "series"),
+            ReportType::Boxset => write!(f, "boxset"),
         }
     }
 }
