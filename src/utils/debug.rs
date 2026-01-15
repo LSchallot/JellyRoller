@@ -68,17 +68,3 @@ pub fn log_response(status: u16, status_text: &str, body: Option<&str>) {
     }
 }
 
-/// Log a parsing/deserialization error with the raw response body
-pub fn log_parse_error(error: &dyn std::error::Error, body: &str) {
-    eprintln!("[ERROR] Failed to parse response: {}", error);
-    if is_verbose() {
-        eprintln!("[DEBUG] Raw response body that failed to parse:");
-        if body.len() > 2000 {
-            eprintln!("{}...\n[truncated, {} bytes total]", &body[..2000], body.len());
-        } else {
-            eprintln!("{}", body);
-        }
-    } else {
-        eprintln!("[HINT] Run with --verbose flag to see the raw response body");
-    }
-}
