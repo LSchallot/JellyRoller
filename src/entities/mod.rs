@@ -2,7 +2,6 @@ pub mod activity_details;
 pub mod backup_details;
 pub mod device_details;
 pub mod library_details;
-pub mod library_details_full;
 pub mod library_options;
 pub mod log_details;
 pub mod media_details;

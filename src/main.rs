@@ -16,7 +16,6 @@ mod responder;
 mod entities;
 use entities::activity_details::ActivityDetails;
 use entities::device_details::{DeviceDetails, DeviceRootJson};
-use entities::library_details::{LibraryDetails, LibraryRootJson};
 use entities::log_details::LogDetails;
 use entities::movie_details::MovieDetails;
 use entities::package_details::{PackageDetails, PackageDetailsRoot};

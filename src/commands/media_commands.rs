@@ -1,7 +1,8 @@
 use std::fs::{self,File};
 use std::io::Read;
+use crate::entities::library_details::LibraryDetails;
 use crate::system_actions::{get_libraries_full, update_library};
-use crate::{AppConfig, ImageType, OutputFormat, ScanType, system_actions::{get_libraries, get_search_results, register_library, update_metadata, update_image, scan_library, scan_library_all}, CollectionType, entities::library_options::LibraryOptionsRoot, entities::library_details::LibraryDetails, entities::server_info::ServerInfo, entities::media_details::MediaRoot, utils::common::image_to_base64,};
+use crate::{AppConfig, ImageType, OutputFormat, ScanType, system_actions::{get_libraries, get_search_results, register_library, update_metadata, update_image, scan_library, scan_library_all}, CollectionType, entities::library_options::LibraryOptionsRoot, entities::server_info::ServerInfo, entities::media_details::MediaRoot, utils::common::image_to_base64,};
 
 pub fn command_register_libarary(cfg: &AppConfig, name: &str, collectiontype: &CollectionType, filename: String) {
     let mut endpoint = String::from("/Library/VirtualFolders?CollectionType=");

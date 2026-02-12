@@ -1,11 +1,11 @@
 use crate::{ReportType, entities::{
-    activity_details::ActivityDetails, backup_details::{BackupDetails, BackupRootJson}, library_details_full::{LibraryDetailsFullVec}, library_options::LibraryOptionsRoot, media_details::MediaRoot, repository_details::RepositoryDetails, task_details::TaskDetails
+    activity_details::ActivityDetails, backup_details::{BackupDetails, BackupRootJson}, library_details::{LibraryDetails, LibraryDetailsVec}, library_options::LibraryOptionsRoot, media_details::MediaRoot, repository_details::RepositoryDetails, task_details::TaskDetails
 }};
 
 use super::{
     handle_others, handle_unauthorized,
     responder::{simple_get, simple_post, simple_post_image, simple_post_with_query},
-    DeviceDetails, DeviceRootJson, ImageType, LibraryDetails, LibraryRootJson, LogDetails,
+    DeviceDetails, DeviceRootJson, ImageType, LogDetails,
     MovieDetails, PackageDetails, PackageDetailsRoot, RepositoryDetailsRoot, ServerInfo,
 };
 use chrono::{DateTime, Duration};
@@ -213,15 +213,10 @@ pub fn get_libraries(
     match response.status() {
         StatusCode::OK => {
             let json = response.text()?;
-            let libraries = serde_json::from_str::<LibraryRootJson>(&json)?;
+            // let libraries = serde_json::from_str::<LibraryRootJson>(&json)?;
+            let libraries = serde_json::from_str::<LibraryDetailsVec>(&json)?;
             for library in libraries {
-                details.push(LibraryDetails::new(
-                    library.name,
-                    library.collection_type,
-                    library.library_options,
-                    library.item_id,
-                    library.refresh_status,
-                ));
+                details.push(library);
             }
         }
         StatusCode::UNAUTHORIZED => {
@@ -234,14 +229,14 @@ pub fn get_libraries(
     Ok(details)
 }
 
-pub fn get_libraries_full(server_info: ServerInfo) -> Result<LibraryDetailsFullVec, Box<dyn std::error::Error>> {
+pub fn get_libraries_full(server_info: ServerInfo) -> Result<LibraryDetailsVec, Box<dyn std::error::Error>> {
     let response = simple_get(
         server_info.server_url.clone(),
         &server_info.api_key,
         Vec::new(),
     );
     if response.status() == StatusCode::OK {
-        let libraries = response.json::<LibraryDetailsFullVec>()?;
+        let libraries = response.json::<LibraryDetailsVec>()?;
         Ok(libraries)
     } else {
         handle_others(&response);
