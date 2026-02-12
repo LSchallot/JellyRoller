@@ -8,22 +8,32 @@ pub struct LibraryDetails {
     pub name: String,
     #[serde(rename = "CollectionType")]
     pub collection_type: String,
+    #[serde(rename = "LibraryOptions")]
+    pub library_options: LibraryOptions,
     #[serde(rename = "ItemId")]
     pub item_id: String,
     #[serde(rename = "RefreshStatus")]
     pub refresh_status: String,
 }
 
+#[derive(Default, Clone, Serialize, Deserialize)]
+pub struct LibraryOptions {
+    #[serde(rename = "Enabled")]
+    pub enabled: bool
+}
+
 impl LibraryDetails {
     pub fn new(
         name: String,
         collection_type: String,
+        library_options: LibraryOptions,
         item_id: String,
         refresh_status: String,
     ) -> LibraryDetails {
         LibraryDetails {
             name,
             collection_type,
+            library_options,
             item_id,
             refresh_status,
         }
@@ -49,6 +59,7 @@ impl LibraryDetails {
                 "Collection Type",
                 "Library Id",
                 "Refresh Status",
+                "Enabled",
             ]);
         for library in libraries {
             table.add_row(vec![
@@ -56,6 +67,7 @@ impl LibraryDetails {
                 library.collection_type,
                 library.item_id,
                 library.refresh_status,
+                library.library_options.enabled.to_string(),
             ]);
         }
         println!("{table}");

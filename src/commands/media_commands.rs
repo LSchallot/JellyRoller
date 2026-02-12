@@ -1,6 +1,7 @@
 use std::fs::{self,File};
 use std::io::Read;
-use crate::{AppConfig, ImageType, OutputFormat, ScanType, system_actions::{get_libraries, get_search_results, register_library, update_metadata, update_image, scan_library, scan_library_all}, CollectionType, entities::library_details::LibraryDetails, entities::server_info::ServerInfo, entities::media_details::MediaRoot, utils::common::image_to_base64,};
+use crate::system_actions::{get_libraries_full, update_library};
+use crate::{AppConfig, ImageType, OutputFormat, ScanType, system_actions::{get_libraries, get_search_results, register_library, update_metadata, update_image, scan_library, scan_library_all}, CollectionType, entities::library_options::LibraryOptionsRoot, entities::library_details::LibraryDetails, entities::server_info::ServerInfo, entities::media_details::MediaRoot, utils::common::image_to_base64,};
 
 pub fn command_register_libarary(cfg: &AppConfig, name: &str, collectiontype: &CollectionType, filename: String) {
     let mut endpoint = String::from("/Library/VirtualFolders?CollectionType=");
@@ -159,6 +160,25 @@ pub fn command_search_media(cfg: &AppConfig, term: &str, mediatype: &str, parent
         }
         OutputFormat::Table => {
             MediaRoot::table_print(search_result, &used_table_columns);
+        }
+    }
+}
+
+pub fn command_library_enable_disable(cfg: &AppConfig, library: String, status: bool) {
+    let response = get_libraries_full(ServerInfo::new(
+            "/Library/VirtualFolders",
+            &cfg.server_url,
+            &cfg.api_key,
+        ));
+    for item in response.unwrap() {
+        if library.to_uppercase() == item.name.to_uppercase() {
+            let mut update: LibraryOptionsRoot = LibraryOptionsRoot { id: item.item_id, library_options: item.library_options };
+            update.library_options.enabled = status;
+            update_library(ServerInfo::new(
+                "/Library/VirtualFolders/LibraryOptions",
+                &cfg.server_url,
+                &cfg.api_key,
+            ), update);
         }
     }
 }

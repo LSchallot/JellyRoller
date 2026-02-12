@@ -1,5 +1,5 @@
 use crate::{ReportType, entities::{
-    activity_details::ActivityDetails, backup_details::{BackupDetails, BackupRootJson}, media_details::MediaRoot, repository_details::RepositoryDetails, task_details::TaskDetails
+    activity_details::ActivityDetails, backup_details::{BackupDetails, BackupRootJson}, library_details_full::{LibraryDetailsFullVec}, library_options::LibraryOptionsRoot, media_details::MediaRoot, repository_details::RepositoryDetails, task_details::TaskDetails
 }};
 
 use super::{
@@ -218,6 +218,7 @@ pub fn get_libraries(
                 details.push(LibraryDetails::new(
                     library.name,
                     library.collection_type,
+                    library.library_options,
                     library.item_id,
                     library.refresh_status,
                 ));
@@ -231,6 +232,34 @@ pub fn get_libraries(
         }
     }
     Ok(details)
+}
+
+pub fn get_libraries_full(server_info: ServerInfo) -> Result<LibraryDetailsFullVec, Box<dyn std::error::Error>> {
+    let response = simple_get(
+        server_info.server_url.clone(),
+        &server_info.api_key,
+        Vec::new(),
+    );
+    if response.status() == StatusCode::OK {
+        let libraries = response.json::<LibraryDetailsFullVec>()?;
+        Ok(libraries)
+    } else {
+        handle_others(&response);
+        std::process::exit(1)
+    }
+}
+
+pub fn update_library(server_info: ServerInfo, library_options: LibraryOptionsRoot) {
+    let response = simple_post(
+            server_info.server_url, 
+            &server_info.api_key, 
+            serde_json::to_string(&library_options).unwrap());
+    if response.status() == StatusCode::NO_CONTENT {
+        println!("Library updated successfully.");
+    } else {
+        handle_others(&response);
+        std::process::exit(1)
+    }
 }
 
 pub fn export_library(
