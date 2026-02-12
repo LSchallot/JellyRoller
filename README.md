@@ -22,7 +22,9 @@ Commands:
   create-backup                Creates a new backup (metadata, trickplay, subtitles, database)
   create-report                Creates a report of either activity or available items (movie, series, boxset)
   delete-user                  Deletes an existing user
+  disable-library              Disable a library
   disable-user                 Disable a user
+  enable-library               Enable a library
   enable-user                  Enable a user
   execute-task-by-name         Executes a scheduled task by name
   generate-report              Generate a report for an issue
