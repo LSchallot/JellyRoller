@@ -5,7 +5,7 @@ use std::fmt;
 use std::io::{self, Write};
 
 mod user_actions;
-use user_actions::{UserAuth, UserList, UserWithPass};
+use user_actions::{UserAuth, UserWithPass};
 
 mod system_actions;
 use system_actions::{LogFile, restart_or_shutdown, get_server_info};
@@ -31,7 +31,7 @@ use utils::status_handler::{handle_others, handle_unauthorized};
 // All public functions in the below use statements are used within this file, so just get them all.
 mod commands;
 use commands::log_commands::{command_create_report, command_generate_report, command_list_logs};
-use commands::media_commands::{command_get_libraries, command_register_libarary, command_scan_library, command_search_media, command_update_metadata, command_update_image_by_name, command_update_image_by_id};
+use commands::media_commands::{command_get_libraries, command_library_enable_disable, command_register_libarary, command_scan_library, command_search_media, command_update_metadata, command_update_image_by_name, command_update_image_by_id};
 use commands::server_commands::{command_apply_backup, command_create_backup, command_execute_task_by_name, command_get_backups, command_get_devices, command_get_packages, command_get_plugins, command_get_repositories, command_get_scheduled_tasks, command_initialize, command_install_package, command_register_repository, command_server_setup};
 use commands::user_commands::{command_add_user, command_add_users, command_delete_user, command_disable_user, command_enable_user, command_grant_admin, command_list_users, command_remove_device_by_username, command_reset_password, command_revoke_admin, command_update_users, command_update_profile_picture};
 
@@ -77,6 +77,10 @@ impl Default for AppConfig {
 #[clap(name = "jellyroller", author, version)]
 #[clap(about = "A CLI controller for managing Jellyfin", long_about = None)]
 struct Cli {
+    /// Enable verbose output for debugging (shows HTTP requests/responses)
+    #[clap(short, long, global = true)]
+    verbose: bool,
+    
     #[clap(subcommand)]
     command: Commands,
 }
@@ -113,9 +117,9 @@ enum Commands {
     },
     /// Creates a new backup (metadata, trickplay, subtitles, database)
     CreateBackup {},
-    /// Creates a report of either activity or available movie items
+    /// Creates a report of either activity or available items (movie, series, boxset)
     CreateReport {
-        /// Type of report (activity or movie)
+        /// Type of report (activity, movie, series, boxset)
         #[clap(required = true)]
         report_type: ReportType,
         /// Total number of records to return (defaults to 100)
@@ -132,10 +136,20 @@ enum Commands {
         #[clap(required = true, value_parser)]
         username: String,
     },
+    /// Disable a library.
+    DisableLibrary {
+        #[clap(required = true, value_parser)]
+        library: String,
+    },
     /// Disable a user.
     DisableUser {
         #[clap(required = true, value_parser)]
         username: String,
+    },
+    /// Enable a library
+    EnableLibrary {
+        #[clap(required = true, value_parser)]
+        library: String,
     },
     /// Enable a user.
     EnableUser {
@@ -437,6 +451,8 @@ enum OutputFormat {
 enum ReportType {
     Activity,
     Movie,
+    Series,
+    Boxset
 }
 
 #[derive(ValueEnum, Clone, Debug, PartialEq)]
@@ -474,6 +490,9 @@ fn main() -> Result<(), confy::ConfyError> {
     // Attempting to setup ability to execute certain commands prior to initialization
     let args = Cli::parse();
     
+    // Initialize verbose mode
+    utils::debug::set_verbose(args.verbose);
+    
     match args.command {
         // Log Commands
         Commands::CreateReport { report_type, limit, filename } => command_create_report(&cfg, &report_type, &limit, filename),
@@ -482,6 +501,8 @@ fn main() -> Result<(), confy::ConfyError> {
         Commands::ShowLog { logfile } => LogFile::get_logfile(LogFile::new(ServerInfo::new("/System/Logs/Log", &cfg.server_url, &cfg.api_key),logfile,)).expect("Unable to retrieve the specified logfile."),
         
         // Media Commands
+        Commands::DisableLibrary { library } => command_library_enable_disable(&cfg, library, false),
+        Commands::EnableLibrary { library } => command_library_enable_disable(&cfg, library, true),
         Commands::GetLibraries { output_format } => command_get_libraries(&cfg, &output_format),
         Commands::RegisterLibrary { name, collectiontype, filename } => command_register_libarary(&cfg, &name, &collectiontype, filename),
         Commands::ScanLibrary { library_id, scan_type } => command_scan_library(&cfg, &library_id, &scan_type),
@@ -643,6 +664,20 @@ impl fmt::Display for CollectionType {
             CollectionType::BoxSets => write!(f, "boxsets"),
             CollectionType::Books => write!(f, "books"),
             CollectionType::Mixed => write!(f, "mixed"),
+        }
+    }
+}
+
+///
+/// Custom implementation to convert ReportType enum into Strings
+/// 
+impl fmt::Display for ReportType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            ReportType::Activity => write!(f, "activity"),
+            ReportType::Movie => write!(f, "movie"),
+            ReportType::Series => write!(f, "series"),
+            ReportType::Boxset => write!(f, "boxset"),
         }
     }
 }

@@ -1,6 +1,6 @@
 use std::env;
 
-use crate::{ AppConfig, ReportType, ActivityDetails, UserList, MovieDetails, OutputFormat, utils::output_writer::export_data, system_actions::{get_activity, export_library, return_server_info, get_log_filenames}, entities::server_info::ServerInfo, entities::log_details::LogDetails};
+use crate::{ AppConfig, ReportType, ActivityDetails, MovieDetails, OutputFormat, utils::output_writer::export_data, system_actions::{get_activity, export_library, return_server_info, get_log_filenames}, entities::server_info::ServerInfo, entities::log_details::LogDetails};
 
 pub fn command_generate_report(cfg: &AppConfig) {
     let info = return_server_info(ServerInfo::new(
@@ -78,21 +78,10 @@ pub fn command_create_report(cfg: &AppConfig, report_type: &ReportType, limit: &
                 println!("Export complete.");
             }
         }
-        ReportType::Movie => {
-            let user_id: String = match UserList::get_current_user_information(UserList::new(
-                "/Users/Me",
-                &cfg.server_url,
-                &cfg.api_key,
-            )) {
-                Err(e) => {
-                    eprintln!("Unable to gather information about current user, {e}");
-                    std::process::exit(1);
-                }
-                Ok(i) => i.id,
-            };
+        // ReportType::Movie => {
+        _ => {
             let movies: MovieDetails = match export_library(
-                &ServerInfo::new("/Users/{userId}/Items", &cfg.server_url, &cfg.api_key),
-                &user_id,
+                &ServerInfo::new("/Items", &cfg.server_url, &cfg.api_key), report_type
             ) {
                 Err(e) => {
                     eprintln!("Unable to export library, {e}");
