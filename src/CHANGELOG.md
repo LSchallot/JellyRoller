@@ -2,9 +2,11 @@
 All notable changes to this project will be documented in this file.
  
 ## [1.1.0] - In progress
+Special thanks to @JKamsker or their contributions to this release!
 
 ### Added
 - Added ability to create Reports for Series and BoxSets
+- Added ability to enable/disable a library
 
 ### Fixed
 - Corrected issue with Movie report generation
