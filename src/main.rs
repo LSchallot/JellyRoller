@@ -5,7 +5,7 @@ use std::fmt;
 use std::io::{self, Write};
 
 mod user_actions;
-use user_actions::{UserAuth, UserWithPass};
+use user_actions::UserAuth;
 
 mod system_actions;
 use system_actions::{LogFile, restart_or_shutdown, get_server_info};
@@ -31,7 +31,7 @@ use utils::status_handler::{handle_others, handle_unauthorized};
 mod commands;
 use commands::log_commands::{command_create_report, command_generate_report, command_list_logs};
 use commands::media_commands::{command_get_libraries, command_library_enable_disable, command_register_libarary, command_scan_library, command_search_media, command_update_metadata, command_update_image_by_name, command_update_image_by_id};
-use commands::server_commands::{command_apply_backup, command_create_backup, command_execute_task_by_name, command_get_backups, command_get_devices, command_get_packages, command_get_plugins, command_get_repositories, command_get_scheduled_tasks, command_initialize, command_install_package, command_register_repository, command_server_setup};
+use commands::server_commands::{command_apply_backup, command_create_backup, command_execute_task_by_name, command_get_backups, command_get_devices, command_get_packages, command_get_plugins, command_get_repositories, command_get_scheduled_tasks, command_initialize, command_install_package, command_register_repository, command_server_setup, token_to_api};
 use commands::user_commands::{command_add_user, command_add_users, command_delete_user, command_disable_user, command_enable_user, command_grant_admin, command_list_users, command_remove_device_by_username, command_reset_password, command_revoke_admin, command_update_users, command_update_profile_picture};
 
 #[macro_use]
@@ -583,47 +583,8 @@ fn initial_config(mut cfg: AppConfig) {
         .expect("Unable to generate user auth token.  Please assure your configuration information was input correctly\n");
 
     "configured".clone_into(&mut cfg.status);
+    println!("[INFO] Converting token to api");
     token_to_api(cfg);
-}
-
-///
-/// Due to an issue with api key processing in Jellyfin, `JellyRoller` was initially relied on using auto tokens to communicate.
-/// Now that the issue has been fixed, the auto tokens need to be converted to an API key.  The single purpose of this function
-/// is to handle the conversion with no input required from the user.
-///
-fn token_to_api(mut cfg: AppConfig) {
-    println!("[INFO] Attempting to auto convert user auth token to API key.....");
-    // Check if api key already exists
-    if UserWithPass::retrieve_api_token(UserWithPass::new(
-        None,
-        None,
-        None,
-        format!("{}/Auth/Keys", cfg.server_url),
-        cfg.api_key.clone(),
-    ))
-    .unwrap()
-    .is_empty()
-    {
-        UserWithPass::create_api_token(UserWithPass::new(
-            None,
-            None,
-            None,
-            format!("{}/Auth/Keys", cfg.server_url),
-            cfg.api_key.clone(),
-        ));
-    }
-    cfg.api_key = UserWithPass::retrieve_api_token(UserWithPass::new(
-        None,
-        None,
-        None,
-        format!("{}/Auth/Keys", cfg.server_url),
-        cfg.api_key,
-    ))
-    .unwrap();
-    cfg.token = "apiKey".to_string();
-    confy::store("jellyroller", "jellyroller", cfg)
-        .expect("[ERROR] Unable to store updated configuration.");
-    println!("[INFO] Auth token successfully converted to API key.");
 }
 
 ///

@@ -4,7 +4,7 @@ use crate::{ReportType, entities::{
 
 use super::{
     handle_others, handle_unauthorized,
-    responder::{simple_get, simple_post, simple_post_image, simple_post_with_query},
+    responder::{simple_get, simple_post, simple_post_with_query},
     DeviceDetails, DeviceRootJson, ImageType, LogDetails,
     MovieDetails, PackageDetails, PackageDetailsRoot, RepositoryDetailsRoot, ServerInfo,
 };
@@ -70,6 +70,7 @@ pub fn set_repo_info(server_info: ServerInfo, repos: &[RepositoryDetails]) {
         server_info.server_url,
         &server_info.api_key,
         serde_json::to_string(&repos).unwrap(),
+        "application/json"
     );
 }
 
@@ -120,7 +121,7 @@ pub fn return_server_info(server_info: ServerInfo) -> String {
 }
 
 pub fn restart_or_shutdown(server_info: ServerInfo) {
-    let response = simple_post(server_info.server_url, &server_info.api_key, String::new());
+    let response = simple_post(server_info.server_url, &server_info.api_key, String::new(), "application/json");
     match response.status() {
         StatusCode::NO_CONTENT => {
             println!("Command successful.");
@@ -248,7 +249,8 @@ pub fn update_library(server_info: ServerInfo, library_options: LibraryOptionsRo
     let response = simple_post(
             server_info.server_url, 
             &server_info.api_key, 
-            serde_json::to_string(&library_options).unwrap());
+            serde_json::to_string(&library_options).unwrap(),
+        "application/json");
     if response.status() == StatusCode::NO_CONTENT {
         println!("Library updated successfully.");
     } else {
@@ -326,6 +328,7 @@ pub fn execute_task_by_id(server_info: &ServerInfo, taskname: &str, taskid: &str
         server_info.server_url.replace("{taskId}", taskid),
         &server_info.api_key,
         String::new(),
+        "application/json"
     );
     match response.status() {
         StatusCode::NO_CONTENT => {
@@ -438,7 +441,7 @@ pub fn scan_library(server_info: &ServerInfo, scan_options: &[(&str, &str)], lib
 }
 
 pub fn scan_library_all(server_info: ServerInfo) {
-    let response = simple_post(server_info.server_url, &server_info.api_key, String::new());
+    let response = simple_post(server_info.server_url, &server_info.api_key, String::new(), "application/json");
     match response.status() {
         StatusCode::NO_CONTENT => {
             println!("Library scan initiated.");
@@ -453,7 +456,7 @@ pub fn scan_library_all(server_info: ServerInfo) {
 }
 
 pub fn register_library(server_info: ServerInfo, json_contents: String) {
-    let response = simple_post(server_info.server_url, &server_info.api_key, json_contents);
+    let response = simple_post(server_info.server_url, &server_info.api_key, json_contents, "application/json");
     match response.status() {
         StatusCode::NO_CONTENT => {
             println!("Library successfully added.");
@@ -473,13 +476,14 @@ pub fn update_image(
     imagetype: &ImageType,
     img_base64: &String,
 ) {
-    let response = simple_post_image(
+    let response = simple_post(
         server_info
             .server_url
             .replace("{itemId}", id)
             .replace("{imageType}", imagetype.to_string().as_str()),
         &server_info.api_key,
         img_base64.to_string(),
+        "image/png"
     );
     match response.status() {
         StatusCode::NO_CONTENT => {
@@ -499,6 +503,7 @@ pub fn update_metadata(server_info: &ServerInfo, id: &str, json: String) {
         server_info.server_url.replace("{itemId}", id),
         &server_info.api_key,
         json,
+        "application/json"
     );
     match response.status() {
         StatusCode::NO_CONTENT => {

@@ -44,6 +44,7 @@ impl UserWithPass {
             self.server_url.clone(),
             &self.auth_key.clone(),
             serde_json::to_string_pretty(&self)?,
+            "application/json"
         );
         match response.status() {
             StatusCode::NO_CONTENT => {
@@ -66,6 +67,7 @@ impl UserWithPass {
             self.server_url.clone(),
             &self.auth_key.clone(),
             serde_json::to_string_pretty(&self)?,
+            "application/json"
         );
         match response.status() {
             StatusCode::OK => {
@@ -262,6 +264,7 @@ impl UserList {
             self.server_url.replace("{userId}", id),
             &self.api_key.clone(),
             body,
+            "application/json"
         );
         if response.status() == StatusCode::NO_CONTENT {
             println!("User {username} successfully updated.");
@@ -290,6 +293,7 @@ impl UserList {
             self.server_url.replace("{userId}", id),
             &self.api_key.clone(),
             body,
+            "application/json"
         );
         if user_response.status() == StatusCode::NO_CONTENT {
         } else {
@@ -305,6 +309,7 @@ impl UserList {
             policy_url.replace("{userId}", id),
             &self.api_key,
             serde_json::to_string_pretty(&info.policy)?,
+            "application/json"
         );
         if response.status() == StatusCode::NO_CONTENT {
             println!("{} successfully updated.", info.name);
