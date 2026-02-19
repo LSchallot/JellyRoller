@@ -43,9 +43,9 @@ pub fn log_request(method: &str, url: &str, body: Option<&str>) {
 }
 
 /// Print response details if verbose mode is enabled
-pub fn log_response(status: u16, status_text: &str, body: Option<&str>) {
+pub fn log_response(status: u16, body: Option<&str>) {
     if is_verbose() {
-        eprintln!("[DEBUG] Response Status: {} {}", status, status_text);
+        eprintln!("[DEBUG] Response Status: {}", status);
         if let Some(b) = body {
             if !b.is_empty() {
                 eprintln!("[DEBUG] Response Body:");

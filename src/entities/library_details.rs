@@ -12,13 +12,13 @@ pub struct LibraryDetails {
     pub name: String,
     #[serde(rename = "Locations")]
     pub locations: Vec<String>,
-    #[serde(rename = "CollectionType")]
+    #[serde(rename = "CollectionType", default)]  // Mixed collection doesn't have a CollectionType
     pub collection_type: String,
     #[serde(rename = "LibraryOptions")]
     pub library_options: LibraryOptions,
     #[serde(rename = "ItemId")]
     pub item_id: String,
-    #[serde(rename = "PrimaryImageItemId")]
+    #[serde(rename = "PrimaryImageItemId", default)] // Potentially doesn't exist on library creation
     pub primary_image_item_id: String,
     #[serde(rename = "RefreshProgress", default)]
     pub refresh_progress: f64,

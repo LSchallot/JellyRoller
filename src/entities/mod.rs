@@ -13,3 +13,4 @@ pub mod server_info;
 pub mod task_details;
 pub mod token_details;
 pub mod user_details;
+pub mod version;

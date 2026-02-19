@@ -214,7 +214,6 @@ pub fn get_libraries(
     match response.status() {
         StatusCode::OK => {
             let json = response.text()?;
-            // let libraries = serde_json::from_str::<LibraryRootJson>(&json)?;
             let libraries = serde_json::from_str::<LibraryDetailsVec>(&json)?;
             for library in libraries {
                 details.push(library);

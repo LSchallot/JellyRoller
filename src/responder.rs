@@ -11,7 +11,7 @@ pub fn simple_get(server_url: String, api_key: &str, query: Vec<(&str, &str)>) -
         .query(&query)
         .send();
     if let Ok(resp) = response {
-        log_response(resp.status().as_u16(), resp.status().as_str(), None);
+        log_response(resp.status().as_u16(), None);
         resp
     } else {
         eprintln!("[ERROR] GET request failed: {}", server_url);
@@ -33,7 +33,7 @@ pub fn simple_post(server_url: String, api_key: &str, body: String, content_type
         .body(body)
         .send();
     if let Ok(resp) = response {
-        log_response(resp.status().as_u16(), resp.status().as_str(), None);
+        log_response(resp.status().as_u16(), None);
         resp
     } else {
         eprintln!("[ERROR] POST request failed: {}", server_url);
@@ -61,7 +61,7 @@ pub fn simple_post_with_query(
         .query(&query)
         .send();
     if let Ok(resp) = response {
-        log_response(resp.status().as_u16(), resp.status().as_str(), None);
+        log_response(resp.status().as_u16(),  None);
         resp
     } else {
         eprintln!("[ERROR] POST request failed: {}", server_url);
