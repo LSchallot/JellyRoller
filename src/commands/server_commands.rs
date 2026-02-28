@@ -189,7 +189,8 @@ pub fn command_create_backup(cfg: &AppConfig) {
     let response = simple_post(
         server_info.server_url,
         &cfg.api_key,
-        body.to_string()
+        body.to_string(),
+        "application/json"
     );
     match response.status() {
         StatusCode::OK => {
@@ -210,7 +211,8 @@ pub fn command_apply_backup(cfg: &AppConfig, filename: &str) {
     let response = simple_post(
         server_info.server_url,
         &cfg.api_key,
-        body.to_string()
+        body.to_string(),
+        "application/json"
     );
     match response.status() {
         StatusCode::OK => {
@@ -284,7 +286,8 @@ pub fn command_server_setup(server_url: String, filename: String) {
     let mut response = simple_post(
         format!("{server_url}/Startup/Configuration"),
         "",
-        body.to_string()
+        body.to_string(),
+        "application/json"
     );
     match response.status() {
         StatusCode::NO_CONTENT => {
@@ -308,7 +311,8 @@ pub fn command_server_setup(server_url: String, filename: String) {
     response = simple_post(
         format!("{server_url}/Startup/User"),
         "",
-        body.to_string()
+        body.to_string(),
+        "application/json"
     );
 
     match response.status() {
@@ -331,7 +335,8 @@ pub fn command_server_setup(server_url: String, filename: String) {
     response = simple_post(
         format!("{server_url}/Startup/RemoteAccess"),
         "",
-        body.to_string()
+        body.to_string(),
+        "application/json"
     );
 
     match response.status() {
@@ -347,7 +352,8 @@ pub fn command_server_setup(server_url: String, filename: String) {
     response = simple_post(
         format!("{server_url}/Startup/Complete"),
         "",
-        String::new()
+        String::new(),
+        "application/json"
     );
 
     match response.status() {
@@ -367,7 +373,7 @@ pub fn command_server_setup(server_url: String, filename: String) {
     base functions.
 */
 
-fn token_to_api(mut cfg: AppConfig) {
+pub fn token_to_api(mut cfg: AppConfig) {
     println!("[INFO] Attempting to auto convert user auth token to API key.....");
     // Check if api key already exists
     if UserWithPass::retrieve_api_token(UserWithPass::new(

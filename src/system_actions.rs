@@ -1,11 +1,11 @@
-use crate::entities::{
-    activity_details::ActivityDetails, backup_details::{BackupDetails, BackupRootJson}, media_details::MediaRoot, repository_details::RepositoryDetails, task_details::TaskDetails
-};
+use crate::{ReportType, entities::{
+    activity_details::ActivityDetails, backup_details::{BackupDetails, BackupRootJson}, library_details::{LibraryDetails, LibraryDetailsVec}, library_options::LibraryOptionsRoot, media_details::MediaRoot, repository_details::RepositoryDetails, task_details::TaskDetails
+}};
 
 use super::{
     handle_others, handle_unauthorized,
-    responder::{simple_get, simple_post, simple_post_image, simple_post_with_query},
-    DeviceDetails, DeviceRootJson, ImageType, LibraryDetails, LibraryRootJson, LogDetails,
+    responder::{simple_get, simple_post, simple_post_with_query},
+    DeviceDetails, DeviceRootJson, ImageType, LogDetails,
     MovieDetails, PackageDetails, PackageDetailsRoot, RepositoryDetailsRoot, ServerInfo,
 };
 use chrono::{DateTime, Duration};
@@ -70,6 +70,7 @@ pub fn set_repo_info(server_info: ServerInfo, repos: &[RepositoryDetails]) {
         server_info.server_url,
         &server_info.api_key,
         serde_json::to_string(&repos).unwrap(),
+        "application/json"
     );
 }
 
@@ -120,7 +121,7 @@ pub fn return_server_info(server_info: ServerInfo) -> String {
 }
 
 pub fn restart_or_shutdown(server_info: ServerInfo) {
-    let response = simple_post(server_info.server_url, &server_info.api_key, String::new());
+    let response = simple_post(server_info.server_url, &server_info.api_key, String::new(), "application/json");
     match response.status() {
         StatusCode::NO_CONTENT => {
             println!("Command successful.");
@@ -213,14 +214,9 @@ pub fn get_libraries(
     match response.status() {
         StatusCode::OK => {
             let json = response.text()?;
-            let libraries = serde_json::from_str::<LibraryRootJson>(&json)?;
+            let libraries = serde_json::from_str::<LibraryDetailsVec>(&json)?;
             for library in libraries {
-                details.push(LibraryDetails::new(
-                    library.name,
-                    library.collection_type,
-                    library.item_id,
-                    library.refresh_status,
-                ));
+                details.push(library);
             }
         }
         StatusCode::UNAUTHORIZED => {
@@ -233,18 +229,47 @@ pub fn get_libraries(
     Ok(details)
 }
 
+pub fn get_libraries_full(server_info: ServerInfo) -> Result<LibraryDetailsVec, Box<dyn std::error::Error>> {
+    let response = simple_get(
+        server_info.server_url.clone(),
+        &server_info.api_key,
+        Vec::new(),
+    );
+    if response.status() == StatusCode::OK {
+        let libraries = response.json::<LibraryDetailsVec>()?;
+        Ok(libraries)
+    } else {
+        handle_others(&response);
+        std::process::exit(1)
+    }
+}
+
+pub fn update_library(server_info: ServerInfo, library_options: LibraryOptionsRoot) {
+    let response = simple_post(
+            server_info.server_url, 
+            &server_info.api_key, 
+            serde_json::to_string(&library_options).unwrap(),
+        "application/json");
+    if response.status() == StatusCode::NO_CONTENT {
+        println!("Library updated successfully.");
+    } else {
+        handle_others(&response);
+        std::process::exit(1)
+    }
+}
+
 pub fn export_library(
-    server_info: &ServerInfo,
-    user_id: &str,
+    server_info: &ServerInfo, report_type: &ReportType,
 ) -> Result<MovieDetails, Box<dyn std::error::Error>> {
+    let binding = report_type.to_string();
     let query = vec![
         ("SortBy", "SortName,ProductionYear"),
-        ("IncludeItemTypes", "Movie"),
+        ("IncludeItemTypes", binding.as_str()),
         ("Recursive", "true"),
         ("fields", "Genres,DateCreated,Width,Height,Path"),
     ];
     let response = simple_get(
-        server_info.server_url.replace("{userId}", user_id),
+        server_info.server_url.clone(),
         &server_info.api_key,
         query,
     );
@@ -302,6 +327,7 @@ pub fn execute_task_by_id(server_info: &ServerInfo, taskname: &str, taskid: &str
         server_info.server_url.replace("{taskId}", taskid),
         &server_info.api_key,
         String::new(),
+        "application/json"
     );
     match response.status() {
         StatusCode::NO_CONTENT => {
@@ -414,7 +440,7 @@ pub fn scan_library(server_info: &ServerInfo, scan_options: &[(&str, &str)], lib
 }
 
 pub fn scan_library_all(server_info: ServerInfo) {
-    let response = simple_post(server_info.server_url, &server_info.api_key, String::new());
+    let response = simple_post(server_info.server_url, &server_info.api_key, String::new(), "application/json");
     match response.status() {
         StatusCode::NO_CONTENT => {
             println!("Library scan initiated.");
@@ -429,7 +455,7 @@ pub fn scan_library_all(server_info: ServerInfo) {
 }
 
 pub fn register_library(server_info: ServerInfo, json_contents: String) {
-    let response = simple_post(server_info.server_url, &server_info.api_key, json_contents);
+    let response = simple_post(server_info.server_url, &server_info.api_key, json_contents, "application/json");
     match response.status() {
         StatusCode::NO_CONTENT => {
             println!("Library successfully added.");
@@ -449,13 +475,14 @@ pub fn update_image(
     imagetype: &ImageType,
     img_base64: &String,
 ) {
-    let response = simple_post_image(
+    let response = simple_post(
         server_info
             .server_url
             .replace("{itemId}", id)
             .replace("{imageType}", imagetype.to_string().as_str()),
         &server_info.api_key,
         img_base64.to_string(),
+        "image/png"
     );
     match response.status() {
         StatusCode::NO_CONTENT => {
@@ -475,6 +502,7 @@ pub fn update_metadata(server_info: &ServerInfo, id: &str, json: String) {
         server_info.server_url.replace("{itemId}", id),
         &server_info.api_key,
         json,
+        "application/json"
     );
     match response.status() {
         StatusCode::NO_CONTENT => {

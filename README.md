@@ -20,9 +20,11 @@ Commands:
   apply-backup                 Applies the specified backup
   completions                  Generate Shell completions
   create-backup                Creates a new backup (metadata, trickplay, subtitles, database)
-  create-report                Creates a report of either activity or available movie items
+  create-report                Creates a report of either activity or available items (movie, series, boxset)
   delete-user                  Deletes an existing user
+  disable-library              Disable a library
   disable-user                 Disable a user
+  enable-library               Enable a library
   enable-user                  Enable a user
   execute-task-by-name         Executes a scheduled task by name
   generate-report              Generate a report for an issue
@@ -90,7 +92,7 @@ scoop install jellyroller
 
 ### Building From Source
 
-Currently built with rustc 1.88.0. If building on a Linux machine, you may need to install openssl-devel.
+Currently built with rustc 1.91.1. If building on a Linux machine, you may need to install openssl-devel.
 
 ```
 cargo install --git https://github.com/LSchallot/JellyRoller

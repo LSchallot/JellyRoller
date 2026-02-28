@@ -6,9 +6,7 @@ use super::{
     Policy, UserDetails,
 };
 use reqwest::{
-    blocking::Client,
-    header::{CONTENT_LENGTH, CONTENT_TYPE},
-    StatusCode,
+    StatusCode, blocking::Client, header::{CONTENT_LENGTH, CONTENT_TYPE}
 };
 
 #[derive(Serialize, Deserialize)]
@@ -46,6 +44,7 @@ impl UserWithPass {
             self.server_url.clone(),
             &self.auth_key.clone(),
             serde_json::to_string_pretty(&self)?,
+            "application/json"
         );
         match response.status() {
             StatusCode::NO_CONTENT => {
@@ -68,6 +67,7 @@ impl UserWithPass {
             self.server_url.clone(),
             &self.auth_key.clone(),
             serde_json::to_string_pretty(&self)?,
+            "application/json"
         );
         match response.status() {
             StatusCode::OK => {
@@ -253,11 +253,6 @@ impl UserList {
         Ok(serde_json::from_str(response.text()?.as_str())?)
     }
 
-    pub fn get_current_user_information(self) -> Result<UserDetails, Box<dyn std::error::Error>> {
-        let response = simple_get(self.server_url, &self.api_key, Vec::new());
-        Ok(response.json::<UserDetails>()?)
-    }
-
     pub fn update_user_config_bool(
         self,
         user_info: &Policy,
@@ -269,6 +264,7 @@ impl UserList {
             self.server_url.replace("{userId}", id),
             &self.api_key.clone(),
             body,
+            "application/json"
         );
         if response.status() == StatusCode::NO_CONTENT {
             println!("User {username} successfully updated.");
@@ -297,6 +293,7 @@ impl UserList {
             self.server_url.replace("{userId}", id),
             &self.api_key.clone(),
             body,
+            "application/json"
         );
         if user_response.status() == StatusCode::NO_CONTENT {
         } else {
@@ -312,6 +309,7 @@ impl UserList {
             policy_url.replace("{userId}", id),
             &self.api_key,
             serde_json::to_string_pretty(&info.policy)?,
+            "application/json"
         );
         if response.status() == StatusCode::NO_CONTENT {
             println!("{} successfully updated.", info.name);

@@ -2,3 +2,4 @@
 *.code-workspace
 exported*
 /.idea
+/.scannerwork

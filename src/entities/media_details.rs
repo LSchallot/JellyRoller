@@ -1,4 +1,8 @@
-// THIS IS CURRENTLY NOT USEABLE
+/*
+This items currently contains duplicate code and will not be fixed.
+Reasoning behind this is Jellyfin's GetItem API information.
+https://api.jellyfin.org/#tag/Items/operation/GetItems
+*/
 
 use comfy_table::{ContentArrangement, Table};
 use serde_derive::Deserialize;
