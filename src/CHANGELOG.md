@@ -2,7 +2,7 @@
 All notable changes to this project will be documented in this file.
  
 ## [1.1.0] - In progress
-Special thanks to @JKamsker or their contributions to this release!
+Special thanks to @JKamsker for their contributions to this release!
 
 ### Added
 - Added ability to create Reports for Series and BoxSets
