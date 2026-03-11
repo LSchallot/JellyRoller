@@ -1,7 +1,12 @@
 # Change Log
 All notable changes to this project will be documented in this file.
  
-## [1.1.0] - In progress
+## [1.1.1] - 2026-03-11
+### Maintenance
+- Updated quinn-proto to remove high severity security issue
+- Other dependency updates
+
+## [1.1.0] - 2026-02-28
 Special thanks to @JKamsker for their contributions to this release!
 
 ### Added
