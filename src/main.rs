@@ -257,6 +257,7 @@ enum Commands {
     /// Reconfigure the connection information.
     Reconfigure {},
     /// Registers a new library.
+    #[clap(verbatim_doc_comment)]
     RegisterLibrary {
         /// Name of the new library
         #[clap(required = true, short = 'n', long)]
@@ -264,8 +265,9 @@ enum Commands {
         /// Collection Type of the new library
         #[clap(required = true, short = 'c', long)]
         collectiontype: CollectionType,
-        /// Path to file that contains the JSON for the library
-        #[clap(required = true, short = 'f', long)]
+        /// Path to file that contains the JSON for the library.
+        /// JSON information can be found at:  https://api.jellyfin.org/#tag/LibraryStructure/operation/AddVirtualFolder
+        #[clap(required = true, short = 'f', long, verbatim_doc_comment)]
         filename: String,
     },
     /// Registers a new Plugin Repository
@@ -338,14 +340,13 @@ enum Commands {
         server_url: String,
         /// Configuration file
         /// Configuration file example:
-            ///     `server_url`: <http://localhost:8096>
-            ///     `MetadataCountryCode`: US
-            ///     `PreferredMetadataLanguage`: en
-            ///     `UICulture`: en-US
-            ///     user: test
-            ///     password: password
-            ///     `EnableAutomcaticPortMapping`: false
-            ///     `EnableRemoteAccess`: true
+            ///     MetadataCountryCode: US
+            ///     PreferredMetadataLanguage: en
+            ///     UICulture: en-US
+            ///     Name: test
+            ///     Password: password
+            ///     EnableAutomcaticPortMapping: false
+            ///     EnableRemoteAccess: true
         #[clap(required = true, value_parser, verbatim_doc_comment)]
         filename: String,
     },
