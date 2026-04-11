@@ -1,6 +1,17 @@
 # Change Log
 All notable changes to this project will be documented in this file.
- 
+
+## [1.1.2] - 2026-04-10
+Special thanks to @joriswvanrijn for their contributions to this release!
+
+### Fixed
+- Corrected inverse user disablement flags (@joriswvanrijn)
+- Mislabeled help documentation
+
+### Maintenance
+- Dependency updates
+
+
 ## [1.1.1] - 2026-03-11
 ### Maintenance
 - Updated quinn-proto to remove high severity security issue
