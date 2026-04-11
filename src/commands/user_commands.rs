@@ -108,11 +108,11 @@ pub fn command_reset_password(cfg: AppConfig, username: &str, password: String, 
 }
 
 pub fn command_disable_user(cfg: &AppConfig, username: &str, user_policy_endpoint: &str, user_id_endpoint: &str) {
-    modify_user(cfg, username, user_policy_endpoint, user_id_endpoint, &UserMods::Active, false);
+    modify_user(cfg, username, user_policy_endpoint, user_id_endpoint, &UserMods::Active, true);
 }
 
 pub fn command_enable_user(cfg: &AppConfig, username: &str, user_policy_endpoint: &str, user_id_endpoint: &str) {
-    modify_user(cfg, username, user_policy_endpoint, user_id_endpoint, &UserMods::Active, true);
+    modify_user(cfg, username, user_policy_endpoint, user_id_endpoint, &UserMods::Active, false);
 }
 
 pub fn command_grant_admin(cfg: &AppConfig, username: &str, user_policy_endpoint: &str, user_id_endpoint: &str) {
