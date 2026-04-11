@@ -28,8 +28,8 @@ pub fn log_request(method: &str, url: &str, body: Option<&str>) {
     if is_verbose() {
         eprintln!("[DEBUG] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
         eprintln!("[DEBUG] HTTP Request: {} {}", method, url);
-        if let Some(b) = body {
-            if !b.is_empty() {
+        if let Some(b) = body
+            && !b.is_empty() {
                 eprintln!("[DEBUG] Request Body:");
                 // Pretty print if it's JSON, otherwise print as-is
                 if let Ok(json) = serde_json::from_str::<serde_json::Value>(b) {
@@ -38,7 +38,6 @@ pub fn log_request(method: &str, url: &str, body: Option<&str>) {
                     eprintln!("{}", b);
                 }
             }
-        }
     }
 }
 
@@ -46,8 +45,8 @@ pub fn log_request(method: &str, url: &str, body: Option<&str>) {
 pub fn log_response(status: u16, body: Option<&str>) {
     if is_verbose() {
         eprintln!("[DEBUG] Response Status: {}", status);
-        if let Some(b) = body {
-            if !b.is_empty() {
+        if let Some(b) = body
+            && !b.is_empty() {
                 eprintln!("[DEBUG] Response Body:");
                 // Pretty print if it's JSON, otherwise print as-is (truncate if very long)
                 if let Ok(json) = serde_json::from_str::<serde_json::Value>(b) {
@@ -63,7 +62,6 @@ pub fn log_response(status: u16, body: Option<&str>) {
                     eprintln!("{}", b);
                 }
             }
-        }
         eprintln!("[DEBUG] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     }
 }
