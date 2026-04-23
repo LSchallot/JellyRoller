@@ -1,6 +1,15 @@
 # Change Log
 All notable changes to this project will be documented in this file.
 
+## [1.1.3] - 2026-04-22
+
+### Fixed
+- Trim quotes from server_url.
+
+### Maintenance
+- Clippy cleanup
+- Dependency updates, including updates to rustls-webpki and rand to address security issues
+
 ## [1.1.2] - 2026-04-10
 Special thanks to @joriswvanrijn for their contributions to this release!
 
@@ -10,7 +19,6 @@ Special thanks to @joriswvanrijn for their contributions to this release!
 
 ### Maintenance
 - Dependency updates
-
 
 ## [1.1.1] - 2026-03-11
 ### Maintenance

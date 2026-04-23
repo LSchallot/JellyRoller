@@ -7,9 +7,8 @@ use crate::{ entities::{backup_details::BackupDetails, device_details::DeviceDet
 
 
 pub fn command_initialize(mut cfg: AppConfig, username: &str, password: String, server_url: &str) {
-    println!("Configuring JellyRoller with supplied values.....");
     env::consts::OS.clone_into(&mut cfg.os);
-    server_url.trim().clone_into(&mut cfg.server_url);
+    server_url.replace("\"","").trim().clone_into(&mut cfg.server_url);
     cfg.api_key = UserAuth::auth_user(UserAuth::new(&cfg.server_url, username.trim(), password))
                 .expect("Unable to generate user auth token.  Please assure your configuration information was input correctly\n");
             "configured".clone_into(&mut cfg.status);
@@ -270,7 +269,8 @@ pub fn command_get_backups(cfg: &AppConfig, output_format: &OutputFormat, backup
 /// 
 /// Call /Startup/Complete
 /// * No configuration items needed 
-pub fn command_server_setup(server_url: String, filename: String) {
+pub fn command_server_setup(mut server_url: String, filename: String) {
+    server_url = server_url.replace("\"","");
     let server_config = PropReader::new(&filename);
 
     // Setup and execute the /Startup/Configuration call
