@@ -115,7 +115,17 @@ enum Commands {
         shell: Shell,
     },
     /// Creates a new backup (metadata, trickplay, subtitles, database)
-    CreateBackup {},
+    CreateBackup {
+        /// Skip backing up metadata
+        #[clap(long, required = false)]
+        skip_metadata: bool,
+        /// Skip backing up trickplay
+        #[clap(long, required = false)]
+        skip_trickplay: bool,
+        /// Skip backing up subtitles
+        #[clap(long, required = false)]
+        skip_subtitles: bool,
+    },
     /// Creates a report of either activity or available items (movie, series, boxset)
     CreateReport {
         /// Type of report (activity, movie, series, boxset)
@@ -513,7 +523,7 @@ fn main() -> Result<(), confy::ConfyError> {
         
         // Server Commands
         Commands::ApplyBackup { filename } => command_apply_backup(&cfg, &filename),
-        Commands::CreateBackup {} => command_create_backup(&cfg),
+        Commands::CreateBackup { skip_metadata, skip_trickplay, skip_subtitles} => command_create_backup(&cfg, !skip_metadata, !skip_trickplay, !skip_subtitles),
         Commands::ExecuteTaskByName { task } => command_execute_task_by_name(&cfg, &task),
         Commands::GetBackups { output_format } => command_get_backups(&cfg, &output_format, BACKUPS),
         Commands::GetDevices { active, output_format} => command_get_devices(&cfg, active, &output_format, DEVICES),

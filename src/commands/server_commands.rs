@@ -182,9 +182,12 @@ pub fn command_register_repository(cfg: &AppConfig, name: String, path: String) 
     );
 }
 
-pub fn command_create_backup(cfg: &AppConfig) {
+pub fn command_create_backup(cfg: &AppConfig, metadata: bool, trickplay: bool, subtitles: bool) {
     let server_info = ServerInfo::new("/Backup/Create", &cfg.server_url, &cfg.api_key);
-    let body= "{\"Metadata\": true,\"Trickplay\": true,\"Subtitles\": true,\"Database\": true}";
+    let body = format!(
+        "{{\"Metadata\": {},\"Trickplay\": {},\"Subtitles\": {},\"Database\": true}}",
+        metadata, trickplay, subtitles
+    );
     let response = simple_post(
         server_info.server_url,
         &cfg.api_key,
