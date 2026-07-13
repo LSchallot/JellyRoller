@@ -19,7 +19,7 @@ serde = "1.0.224"
 serde_derive = "1.0.224"
 serde_json = "1.0.145"
 reqwest = { version = "0.12.23", features = ["blocking", "json", "rustls-tls"], default-features = false }
-rpassword = "7.4.0"
+rpassword = "7.5.0"
 url = "2.5.7"
 comfy-table = "7.2.1"   
 image = "0.25.8"
