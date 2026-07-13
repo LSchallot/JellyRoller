@@ -71,7 +71,7 @@ impl UserWithPass {
         );
         match response.status() {
             StatusCode::OK => {
-                println!("User \"{}\" successfully created.", &self.username.unwrap());
+                println!("User \"{}\" successfully created.", self.username.unwrap());
             }
             StatusCode::UNAUTHORIZED => {
                 handle_unauthorized();
@@ -94,7 +94,7 @@ impl UserWithPass {
             .send()?;
         match response.status() {
             StatusCode::NO_CONTENT => {
-                println!("User \"{}\" successfully removed.", &self.username.unwrap());
+                println!("User \"{}\" successfully removed.", self.username.unwrap());
             }
             StatusCode::UNAUTHORIZED => {
                 handle_unauthorized();

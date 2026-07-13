@@ -72,13 +72,13 @@ impl ActivityDetails {
         for activity in activities.items {
             let piece = format!(
                 "{},{},{},{},{},{},{}\n",
-                &activity.date,
-                &activity.id.to_string(),
-                &activity.type_field,
-                &activity.severity,
-                &activity.name,
-                &activity.short_overview,
-                &activity.overview
+                activity.date,
+                activity.id,
+                activity.type_field,
+                activity.severity,
+                activity.name,
+                activity.short_overview,
+                activity.overview
             );
             data.push_str(&piece);
         }

@@ -1,10 +1,19 @@
 # Change Log
 All notable changes to this project will be documented in this file.
 
+## [1.1.4] - XXXX-XX-XX
+
+### Fixed
+- Trim single quotes from server_url
+
+### Maintenance
+- Clippy cleanup
+- Dependency updates, including updates to rpassword to address security issues
+
 ## [1.1.3] - 2026-04-22
 
 ### Fixed
-- Trim quotes from server_url.
+- Trim quotes from server_url
 
 ### Maintenance
 - Clippy cleanup
