@@ -40,6 +40,7 @@ Commands:
   install-package              Installs the specified package
   list-logs                    Displays the available system logs
   list-users                   Lists the current users with basic information
+  quickconnect                 Authenticate via QuickConnect
   reconfigure                  Reconfigure the connection information
   register-library             Registers a new library
   register-repository          Registers a new Plugin Repository
@@ -59,6 +60,7 @@ Commands:
   update-users                 Mass update users in the supplied file
   update-user-profile-picture  Update a user's profile picture
   help                         Print this message or the help of the given subcommand(s)
+
 
 Options:
   -h, --help     Print help

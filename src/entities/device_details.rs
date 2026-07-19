@@ -35,7 +35,7 @@ impl DeviceDetails {
 
     pub fn csv_print(devices: &[DeviceDetails]) {
         for device in devices {
-            println!("{}, {}, {}", &device.id, &device.name, &device.lastusername);
+            println!("{}, {}, {}", device.id, device.name, device.lastusername);
         }
     }
 

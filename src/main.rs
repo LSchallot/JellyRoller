@@ -3,6 +3,8 @@ use clap_complete::{generate, Shell};
 use std::env;
 use std::fmt;
 use std::io::{self, Write};
+use std::thread;
+use std::time;
 
 mod user_actions;
 use user_actions::UserAuth;
@@ -33,6 +35,8 @@ use commands::log_commands::{command_create_report, command_generate_report, com
 use commands::media_commands::{command_get_libraries, command_library_enable_disable, command_register_libarary, command_scan_library, command_search_media, command_update_metadata, command_update_image_by_name, command_update_image_by_id};
 use commands::server_commands::{command_apply_backup, command_create_backup, command_execute_task_by_name, command_get_backups, command_get_devices, command_get_packages, command_get_plugins, command_get_repositories, command_get_scheduled_tasks, command_initialize, command_install_package, command_register_repository, command_server_setup, token_to_api};
 use commands::user_commands::{command_add_user, command_add_users, command_delete_user, command_disable_user, command_enable_user, command_grant_admin, command_list_users, command_remove_device_by_username, command_reset_password, command_revoke_admin, command_update_users, command_update_profile_picture};
+
+use crate::user_actions::UserAuthQuickconnect;
 
 #[macro_use]
 extern crate serde_derive;
@@ -115,7 +119,17 @@ enum Commands {
         shell: Shell,
     },
     /// Creates a new backup (metadata, trickplay, subtitles, database)
-    CreateBackup {},
+    CreateBackup {
+        /// Skip backing up metadata
+        #[clap(long, required = false)]
+        skip_metadata: bool,
+        /// Skip backing up trickplay
+        #[clap(long, required = false)]
+        skip_trickplay: bool,
+        /// Skip backing up subtitles
+        #[clap(long, required = false)]
+        skip_subtitles: bool,
+    },
     /// Creates a report of either activity or available items (movie, series, boxset)
     CreateReport {
         /// Type of report (activity, movie, series, boxset)
@@ -254,6 +268,8 @@ enum Commands {
         #[clap(short, long, default_value = "")]
         username: String,
     },
+    /// Authenticate via QuickConnect.
+    Quickconnect {},
     /// Reconfigure the connection information.
     Reconfigure {},
     /// Registers a new library.
@@ -476,7 +492,7 @@ fn main() -> Result<(), confy::ConfyError> {
 
     // Due to an oddity with confy and clap, manually check for help flag.
     let args: Vec<String> = env::args().collect();
-    if !(args.contains(&"initialize".to_string()) || args.contains(&"server-setup".to_string()) || args.contains(&"-h".to_string()) || args.contains(&"--help".to_string())) {
+    if !(args.contains(&"initialize".to_string()) || args.contains(&"server-setup".to_string()) || args.contains(&"quickconnect".to_string()) || args.contains(&"-h".to_string()) || args.contains(&"--help".to_string())) {
         if cfg.status == "not configured" {
             println!("Application is not configured!");
             initial_config(cfg);
@@ -513,7 +529,7 @@ fn main() -> Result<(), confy::ConfyError> {
         
         // Server Commands
         Commands::ApplyBackup { filename } => command_apply_backup(&cfg, &filename),
-        Commands::CreateBackup {} => command_create_backup(&cfg),
+        Commands::CreateBackup { skip_metadata, skip_trickplay, skip_subtitles} => command_create_backup(&cfg, !skip_metadata, !skip_trickplay, !skip_subtitles),
         Commands::ExecuteTaskByName { task } => command_execute_task_by_name(&cfg, &task),
         Commands::GetBackups { output_format } => command_get_backups(&cfg, &output_format, BACKUPS),
         Commands::GetDevices { active, output_format} => command_get_devices(&cfg, active, &output_format, DEVICES),
@@ -523,6 +539,7 @@ fn main() -> Result<(), confy::ConfyError> {
         Commands::GetScheduledTasks { output_format } => command_get_scheduled_tasks(&cfg, &output_format),
         Commands::Initialize { username, password, server_url } => command_initialize(cfg, &username, password, &server_url),
         Commands::InstallPackage { package, version, repository} => command_install_package(&cfg, &package, &version, &repository),
+        Commands::Quickconnect {} => process_quickconnect(cfg),
         Commands::Reconfigure {} => initial_config(cfg),
         Commands::RegisterRepository { name, path } => command_register_repository(&cfg, name, path),
         Commands::RestartJellyfin {} => restart_or_shutdown(ServerInfo::new("/System/Restart",&cfg.server_url,&cfg.api_key,)),
@@ -586,6 +603,31 @@ fn initial_config(mut cfg: AppConfig) {
     "configured".clone_into(&mut cfg.status);
     println!("[INFO] Converting token to api");
     token_to_api(cfg);
+}
+
+fn process_quickconnect(mut cfg: AppConfig) {
+    println!("[INFO] QuickConnect auth in progress...");
+    print!("[INPUT] Please enter your Jellyfin URL:  ");
+    io::stdout().flush().expect("Unable to get Jellyfin URL.");
+    let mut server_url_input = String::new();
+    io::stdin()
+        .read_line(&mut server_url_input)
+        .expect("Could not read server url information");
+    server_url_input.trim().clone_into(&mut cfg.server_url);
+    println!("[INFO] Attempting to initialize a QuickConnect request.....");
+    let mut details = UserAuthQuickconnect::quickconnect_initiate(UserAuthQuickconnect::new(&cfg.server_url)).unwrap();
+    println!("Your login code is: {}", details.code.clone());
+    // Wait while the QuickConnect code is approved.  
+    while !&details.authenticated {
+        let result = UserAuthQuickconnect::quickconnect_get_status(&details, &cfg.server_url).unwrap();
+        details.authenticated = result.authenticated;
+        thread::sleep(time::Duration::from_secs(1));
+    }
+    // Now that we are authenticated we need to tie our QuickConnect to the account
+    cfg.api_key = UserAuthQuickconnect::quickconnect_authenticate(&details, &cfg.server_url).unwrap();
+    "configured".clone_into(&mut cfg.status);
+    token_to_api(cfg);
+
 }
 
 ///

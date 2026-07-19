@@ -72,7 +72,7 @@ pub fn command_create_report(cfg: &AppConfig, report_type: &ReportType, limit: &
             if filename.is_empty() {
                 ActivityDetails::table_print(activities);
             } else {
-                println!("Exporting Activity information to {}.....", &filename);
+                println!("Exporting Activity information to {}.....", filename);
                 let csv = ActivityDetails::print_as_csv(activities);
                 export_data(&csv, filename);
                 println!("Export complete.");
@@ -92,7 +92,7 @@ pub fn command_create_report(cfg: &AppConfig, report_type: &ReportType, limit: &
             if filename.is_empty() {
                 MovieDetails::table_print(movies);
             } else {
-                println!("Exporting Movie information to {}.....", &filename);
+                println!("Exporting Movie information to {}.....", filename);
                 let csv = MovieDetails::print_as_csv(movies);
                 export_data(&csv, filename);
                 println!("Export complete.");

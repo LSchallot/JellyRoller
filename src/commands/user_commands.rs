@@ -91,7 +91,7 @@ pub fn command_reset_password(cfg: AppConfig, username: &str, password: String, 
         username,
     );
     // Setup the endpoint
-    let server_path = format!("{}/Users/{user_id}/Password", &cfg.server_url);
+    let server_path = format!("{}/Users/{user_id}/Password", cfg.server_url);
     match UserWithPass::resetpass(UserWithPass::new(
         None,
         Some(password),

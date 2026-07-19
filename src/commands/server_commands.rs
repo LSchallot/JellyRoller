@@ -8,7 +8,7 @@ use crate::{ entities::{backup_details::BackupDetails, device_details::DeviceDet
 
 pub fn command_initialize(mut cfg: AppConfig, username: &str, password: String, server_url: &str) {
     env::consts::OS.clone_into(&mut cfg.os);
-    server_url.replace("\"","").trim().clone_into(&mut cfg.server_url);
+    server_url.replace("\'","").replace("\"","").trim().clone_into(&mut cfg.server_url);
     cfg.api_key = UserAuth::auth_user(UserAuth::new(&cfg.server_url, username.trim(), password))
                 .expect("Unable to generate user auth token.  Please assure your configuration information was input correctly\n");
             "configured".clone_into(&mut cfg.status);
@@ -182,14 +182,18 @@ pub fn command_register_repository(cfg: &AppConfig, name: String, path: String) 
     );
 }
 
-pub fn command_create_backup(cfg: &AppConfig) {
+pub fn command_create_backup(cfg: &AppConfig, metadata: bool, trickplay: bool, subtitles: bool) {
     let server_info = ServerInfo::new("/Backup/Create", &cfg.server_url, &cfg.api_key);
-    let body= "{\"Metadata\": true,\"Trickplay\": true,\"Subtitles\": true,\"Database\": true}";
+    let body = format!(
+        "{{\"Metadata\": {},\"Trickplay\": {},\"Subtitles\": {},\"Database\": true}}",
+        metadata, trickplay, subtitles
+    );
     let response = simple_post(
         server_info.server_url,
         &cfg.api_key,
         body.to_string(),
-        "application/json"
+        "application/json",
+        &Vec::new()
     );
     match response.status() {
         StatusCode::OK => {
@@ -211,7 +215,8 @@ pub fn command_apply_backup(cfg: &AppConfig, filename: &str) {
         server_info.server_url,
         &cfg.api_key,
         body.to_string(),
-        "application/json"
+        "application/json",
+        &Vec::new()
     );
     match response.status() {
         StatusCode::OK => {
@@ -270,7 +275,7 @@ pub fn command_get_backups(cfg: &AppConfig, output_format: &OutputFormat, backup
 /// Call /Startup/Complete
 /// * No configuration items needed 
 pub fn command_server_setup(mut server_url: String, filename: String) {
-    server_url = server_url.replace("\"","");
+    server_url = server_url.replace("\'","").replace("\"","");
     let server_config = PropReader::new(&filename);
 
     // Setup and execute the /Startup/Configuration call
@@ -287,7 +292,8 @@ pub fn command_server_setup(mut server_url: String, filename: String) {
         format!("{server_url}/Startup/Configuration"),
         "",
         body.to_string(),
-        "application/json"
+        "application/json",
+        &Vec::new()
     );
     match response.status() {
         StatusCode::NO_CONTENT => {
@@ -312,7 +318,8 @@ pub fn command_server_setup(mut server_url: String, filename: String) {
         format!("{server_url}/Startup/User"),
         "",
         body.to_string(),
-        "application/json"
+        "application/json",
+        &Vec::new()
     );
 
     match response.status() {
@@ -336,7 +343,8 @@ pub fn command_server_setup(mut server_url: String, filename: String) {
         format!("{server_url}/Startup/RemoteAccess"),
         "",
         body.to_string(),
-        "application/json"
+        "application/json",
+        &Vec::new()
     );
 
     match response.status() {
@@ -353,7 +361,8 @@ pub fn command_server_setup(mut server_url: String, filename: String) {
         format!("{server_url}/Startup/Complete"),
         "",
         String::new(),
-        "application/json"
+        "application/json",
+        &Vec::new()
     );
 
     match response.status() {
