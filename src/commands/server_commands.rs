@@ -192,7 +192,8 @@ pub fn command_create_backup(cfg: &AppConfig, metadata: bool, trickplay: bool, s
         server_info.server_url,
         &cfg.api_key,
         body.to_string(),
-        "application/json"
+        "application/json",
+        &Vec::new()
     );
     match response.status() {
         StatusCode::OK => {
@@ -214,7 +215,8 @@ pub fn command_apply_backup(cfg: &AppConfig, filename: &str) {
         server_info.server_url,
         &cfg.api_key,
         body.to_string(),
-        "application/json"
+        "application/json",
+        &Vec::new()
     );
     match response.status() {
         StatusCode::OK => {
@@ -290,7 +292,8 @@ pub fn command_server_setup(mut server_url: String, filename: String) {
         format!("{server_url}/Startup/Configuration"),
         "",
         body.to_string(),
-        "application/json"
+        "application/json",
+        &Vec::new()
     );
     match response.status() {
         StatusCode::NO_CONTENT => {
@@ -315,7 +318,8 @@ pub fn command_server_setup(mut server_url: String, filename: String) {
         format!("{server_url}/Startup/User"),
         "",
         body.to_string(),
-        "application/json"
+        "application/json",
+        &Vec::new()
     );
 
     match response.status() {
@@ -339,7 +343,8 @@ pub fn command_server_setup(mut server_url: String, filename: String) {
         format!("{server_url}/Startup/RemoteAccess"),
         "",
         body.to_string(),
-        "application/json"
+        "application/json",
+        &Vec::new()
     );
 
     match response.status() {
@@ -356,7 +361,8 @@ pub fn command_server_setup(mut server_url: String, filename: String) {
         format!("{server_url}/Startup/Complete"),
         "",
         String::new(),
-        "application/json"
+        "application/json",
+        &Vec::new()
     );
 
     match response.status() {

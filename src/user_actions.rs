@@ -1,4 +1,5 @@
 use crate::entities::token_details::TokenDetails;
+use crate::entities::quickconnect_details::QuickConnectDetails;
 
 use super::{
     handle_others, handle_unauthorized,
@@ -44,7 +45,8 @@ impl UserWithPass {
             self.server_url.clone(),
             &self.auth_key.clone(),
             serde_json::to_string_pretty(&self)?,
-            "application/json"
+            "application/json",
+            &Vec::new()
         );
         match response.status() {
             StatusCode::NO_CONTENT => {
@@ -67,7 +69,8 @@ impl UserWithPass {
             self.server_url.clone(),
             &self.auth_key.clone(),
             serde_json::to_string_pretty(&self)?,
-            "application/json"
+            "application/json",
+            &Vec::new()
         );
         match response.status() {
             StatusCode::OK => {
@@ -198,6 +201,72 @@ impl UserAuth {
     }
 }
 
+pub struct UserAuthQuickconnect {
+    server_url: String
+}
+
+impl UserAuthQuickconnect {
+    pub fn new(server_url: &str) -> UserAuthQuickconnect {
+        UserAuthQuickconnect {
+            server_url: server_url.to_string()
+        }
+    }
+
+    pub fn quickconnect_initiate(self) -> Result<QuickConnectDetails, Box<dyn std::error::Error>> {
+        let response = simple_post(
+            format!("{0}/QuickConnect/Initiate", self.server_url),
+            "",
+            String::new(),
+            "application/json",
+            &Vec::new()
+        );
+
+        if response.status() == StatusCode::OK {
+            let result = response.json::<QuickConnectDetails>()?;
+            Ok(result)
+        } else {
+            panic!("Failed")
+        }
+    }
+
+    pub fn quickconnect_get_status(details: &QuickConnectDetails, server_url: &str) -> Result<QuickConnectDetails, Box<dyn std::error::Error>> {
+        let response = simple_get(
+            format!("{0}/QuickConnect/Connect", server_url),
+            "",
+            vec![("secret", &details.secret)]
+        );
+
+        // If a 404 is thrown, the QuickConnect request is timed out.
+        if response.status() == StatusCode::OK {
+            let result = response.json::<QuickConnectDetails>()?;
+            Ok(result)
+        } else if response.status() == StatusCode::NOT_FOUND {
+            println!("QuickConnect info not found");
+            std::process::exit(1)
+        } else {
+            panic!("Failed")
+        }
+    }
+
+    pub fn quickconnect_authenticate(details: &QuickConnectDetails, server_url: &str) -> Result<String, Box<dyn std::error::Error>> {
+        let response = simple_post(
+            format!("{0}/Users/AuthenticateWithQuickConnect", server_url),
+            "",
+            serde_json::to_string_pretty(&details)?,
+            "application/json",
+            &Vec::new()
+        );
+        
+        if response.status() == StatusCode::OK {
+            let result = response.json::<UserAuthJson>()?;
+            println!("[INFO] User authenticated successfully.");
+            Ok(result.access_token)
+        } else {
+            panic!("Failed")
+        }
+    }
+}
+
 #[derive(Clone)]
 pub struct UserList {
     server_url: String,
@@ -264,7 +333,8 @@ impl UserList {
             self.server_url.replace("{userId}", id),
             &self.api_key.clone(),
             body,
-            "application/json"
+            "application/json",
+            &Vec::new()
         );
         if response.status() == StatusCode::NO_CONTENT {
             println!("User {username} successfully updated.");
@@ -293,7 +363,8 @@ impl UserList {
             self.server_url.replace("{userId}", id),
             &self.api_key.clone(),
             body,
-            "application/json"
+            "application/json",
+            &Vec::new()
         );
         if user_response.status() == StatusCode::NO_CONTENT {
         } else {
@@ -309,7 +380,8 @@ impl UserList {
             policy_url.replace("{userId}", id),
             &self.api_key,
             serde_json::to_string_pretty(&info.policy)?,
-            "application/json"
+            "application/json",
+            &Vec::new()
         );
         if response.status() == StatusCode::NO_CONTENT {
             println!("{} successfully updated.", info.name);

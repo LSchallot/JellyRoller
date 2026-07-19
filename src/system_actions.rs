@@ -4,7 +4,7 @@ use crate::{ReportType, entities::{
 
 use super::{
     handle_others, handle_unauthorized,
-    responder::{simple_get, simple_post, simple_post_with_query},
+    responder::{simple_get, simple_post},
     DeviceDetails, DeviceRootJson, ImageType, LogDetails,
     MovieDetails, PackageDetails, PackageDetailsRoot, RepositoryDetailsRoot, ServerInfo,
 };
@@ -70,7 +70,8 @@ pub fn set_repo_info(server_info: ServerInfo, repos: &[RepositoryDetails]) {
         server_info.server_url,
         &server_info.api_key,
         serde_json::to_string(&repos).unwrap(),
-        "application/json"
+        "application/json",
+        &Vec::new()
     );
 }
 
@@ -90,10 +91,11 @@ pub fn get_packages_info(
 
 pub fn install_package(server_info: &ServerInfo, package: &str, version: &str, repository: &str) {
     let query = &[("version", version), ("repository", repository)];
-    let response = simple_post_with_query(
+    let response = simple_post(
         server_info.server_url.replace("{package}", package),
         &server_info.api_key,
         String::new(),
+        "application/json",
         query,
     );
     match response.status() {
@@ -121,7 +123,7 @@ pub fn return_server_info(server_info: ServerInfo) -> String {
 }
 
 pub fn restart_or_shutdown(server_info: ServerInfo) {
-    let response = simple_post(server_info.server_url, &server_info.api_key, String::new(), "application/json");
+    let response = simple_post(server_info.server_url, &server_info.api_key, String::new(), "application/json", &Vec::new());
     match response.status() {
         StatusCode::NO_CONTENT => {
             println!("Command successful.");
@@ -249,7 +251,8 @@ pub fn update_library(server_info: ServerInfo, library_options: LibraryOptionsRo
             server_info.server_url, 
             &server_info.api_key, 
             serde_json::to_string(&library_options).unwrap(),
-        "application/json");
+        "application/json",
+    &Vec::new());
     if response.status() == StatusCode::NO_CONTENT {
         println!("Library updated successfully.");
     } else {
@@ -327,7 +330,8 @@ pub fn execute_task_by_id(server_info: &ServerInfo, taskname: &str, taskid: &str
         server_info.server_url.replace("{taskId}", taskid),
         &server_info.api_key,
         String::new(),
-        "application/json"
+        "application/json",
+        &Vec::new()
     );
     match response.status() {
         StatusCode::NO_CONTENT => {
@@ -418,12 +422,13 @@ pub fn get_scheduled_tasks(server_info: ServerInfo) -> Result<Vec<TaskDetails>, 
 }
 
 pub fn scan_library(server_info: &ServerInfo, scan_options: &[(&str, &str)], library_id: &str) {
-    let response = simple_post_with_query(
+    let response = simple_post(
         server_info
             .server_url
             .replace("{library_id}", library_id),
         &server_info.api_key,
         String::new(),
+        "application/json",
         scan_options,
     );
     match response.status() {
@@ -440,7 +445,7 @@ pub fn scan_library(server_info: &ServerInfo, scan_options: &[(&str, &str)], lib
 }
 
 pub fn scan_library_all(server_info: ServerInfo) {
-    let response = simple_post(server_info.server_url, &server_info.api_key, String::new(), "application/json");
+    let response = simple_post(server_info.server_url, &server_info.api_key, String::new(), "application/json", &Vec::new());
     match response.status() {
         StatusCode::NO_CONTENT => {
             println!("Library scan initiated.");
@@ -455,7 +460,7 @@ pub fn scan_library_all(server_info: ServerInfo) {
 }
 
 pub fn register_library(server_info: ServerInfo, json_contents: String) {
-    let response = simple_post(server_info.server_url, &server_info.api_key, json_contents, "application/json");
+    let response = simple_post(server_info.server_url, &server_info.api_key, json_contents, "application/json", &Vec::new());
     match response.status() {
         StatusCode::NO_CONTENT => {
             println!("Library successfully added.");
@@ -482,7 +487,8 @@ pub fn update_image(
             .replace("{imageType}", imagetype.to_string().as_str()),
         &server_info.api_key,
         img_base64.to_string(),
-        "image/png"
+        "image/png",
+        &Vec::new()
     );
     match response.status() {
         StatusCode::NO_CONTENT => {
@@ -502,7 +508,8 @@ pub fn update_metadata(server_info: &ServerInfo, id: &str, json: String) {
         server_info.server_url.replace("{itemId}", id),
         &server_info.api_key,
         json,
-        "application/json"
+        "application/json",
+        &Vec::new()
     );
     match response.status() {
         StatusCode::NO_CONTENT => {
