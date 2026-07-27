@@ -32,7 +32,7 @@ pub fn simple_post(server_url: String, api_key: &str, body: String, content_type
         headers.insert("Authorization","MediaBrowser Client=\"JellyRoller\", Device=\"jellyroller\", DeviceId=\"1\", Version=\"0.0.1\"".parse().unwrap());
     } else {
         // Used after JellyRoller has been authenticated.
-        headers.insert("Authoriztion", format!("MediaBrowser Token=\"{api_key}\"").parse().unwrap());
+        headers.insert("Authorization", format!("MediaBrowser Token=\"{api_key}\"").parse().unwrap());
     }
 
     let client = Client::new();
