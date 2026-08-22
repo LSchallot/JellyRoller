@@ -31,7 +31,6 @@ impl UserWithPass {
         auth_key: String,
     ) -> UserWithPass {
         UserWithPass {
-            //username: Some(username.unwrap_or_else(|| String::new())),
             username: Some(username.unwrap_or_default()),
             pass: Some(pass.unwrap_or_default()),
             currentpwd: Some(currentpwd.unwrap_or_default()),

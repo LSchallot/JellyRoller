@@ -184,6 +184,62 @@ pub fn command_library_enable_disable(cfg: &AppConfig, library: String, status: 
     }
 }
 
+pub fn command_duplicate_check(cfg: &AppConfig, library: String) {
+    // TODO: Consolidate this code 
+    // If library is set to "all" gather all library information
+    let libraries = get_libraries(ServerInfo::new(
+        "/Library/VirtualFolders",
+        &cfg.server_url,
+        &cfg.api_key
+    ));
+    if library.to_lowercase() == "all" {
+        for item in libraries.unwrap() {
+            get_duplicates(cfg, item)
+        }
+    } else { // Perform dupe check against single library
+        for item in libraries.unwrap() {
+            if item.name.to_lowercase() == library.to_lowercase() {
+                get_duplicates(cfg, item)
+            }
+        }
+    }
+}
+
+fn get_duplicates(cfg: &AppConfig, library: LibraryDetails) {
+    let query = vec![
+        ("SortBy", "SortName,ProductionYear"),
+        ("Recursive", "true"),
+        ("ParentId", library.item_id.as_str()),
+    ];
+    
+    let media = get_search_results(
+        ServerInfo::new(
+            "/Items",
+            &cfg.server_url,
+            &cfg.api_key
+        ),
+        query
+    ).unwrap();
+
+    println!("Duplicates found in {}:", library.name);
+    let mut prev_title = "".to_string(); // Start with a blank
+    let mut prev_year = 0; // Also start with a blank
+    let mut count = 0;
+    let mut prev_series_name = "".to_string();
+    for item in media.items {
+        if item.name.to_lowercase() == prev_title && item.production_year == prev_year && item.series_name == prev_series_name && !item.is_folder {
+            println!("     - {}, {}", item.name, item.production_year);
+            count+=1;
+        }
+        
+        prev_title = item.name.to_lowercase();
+        prev_year = item.production_year;
+        prev_series_name = item.series_name;
+    }
+    println!("Number of dupes found: {}\n", count)
+
+    
+}
 /* 
     The following section contains additional
     functions that are used to support the media_commands

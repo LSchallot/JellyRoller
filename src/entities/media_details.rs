@@ -173,7 +173,7 @@ pub struct MediaItem {
     #[serde(rename = "Tags")]
     pub tags: Vec<String>,
     #[serde(rename = "PrimaryImageAspectRatio")]
-    pub primary_image_aspect_ratio: i64,
+    pub primary_image_aspect_ratio: f32,
     #[serde(rename = "Artists")]
     pub artists: Vec<String>,
     #[serde(rename = "ArtistItems")]

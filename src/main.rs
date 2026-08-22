@@ -32,7 +32,7 @@ use utils::status_handler::{handle_others, handle_unauthorized};
 // All public functions in the below use statements are used within this file, so just get them all.
 mod commands;
 use commands::log_commands::{command_create_report, command_generate_report, command_list_logs};
-use commands::media_commands::{command_get_libraries, command_library_enable_disable, command_register_libarary, command_scan_library, command_search_media, command_update_metadata, command_update_image_by_name, command_update_image_by_id};
+use commands::media_commands::{command_duplicate_check, command_get_libraries, command_library_enable_disable, command_register_libarary, command_scan_library, command_search_media, command_update_metadata, command_update_image_by_name, command_update_image_by_id};
 use commands::server_commands::{command_apply_backup, command_create_backup, command_execute_task_by_name, command_get_backups, command_get_devices, command_get_packages, command_get_plugins, command_get_repositories, command_get_scheduled_tasks, command_initialize, command_install_package, command_register_repository, command_server_setup, token_to_api};
 use commands::user_commands::{command_add_user, command_add_users, command_delete_user, command_disable_user, command_enable_user, command_grant_admin, command_list_users, command_remove_device_by_username, command_reset_password, command_revoke_admin, command_update_users, command_update_profile_picture};
 
@@ -158,6 +158,11 @@ enum Commands {
     DisableUser {
         #[clap(required = true, value_parser)]
         username: String,
+    },
+    /// Checks your libraries for duplicates
+    DuplicateCheck {
+        #[clap(required = false, default_value = "all")]
+        library: String,
     },
     /// Enable a library
     EnableLibrary {
@@ -518,6 +523,7 @@ fn main() -> Result<(), confy::ConfyError> {
         
         // Media Commands
         Commands::DisableLibrary { library } => command_library_enable_disable(&cfg, library, false),
+        Commands::DuplicateCheck { library } => command_duplicate_check(&cfg, library),
         Commands::EnableLibrary { library } => command_library_enable_disable(&cfg, library, true),
         Commands::GetLibraries { output_format } => command_get_libraries(&cfg, &output_format),
         Commands::RegisterLibrary { name, collectiontype, filename } => command_register_libarary(&cfg, &name, &collectiontype, filename),
