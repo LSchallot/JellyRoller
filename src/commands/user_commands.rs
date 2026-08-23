@@ -84,7 +84,7 @@ pub fn command_list_users(cfg: &AppConfig, export: bool, mut output: String, use
     }
 }
 
-pub fn command_reset_password(cfg: AppConfig, username: &str, password: String, users_endpoint: &str) {
+pub fn command_reset_password(cfg: AppConfig, username: &str, password: String, users_endpoint: &str, timeout: u64) {
     // Get usename
     let user_id = UserList::get_user_id(
         UserList::new(users_endpoint, &cfg.server_url, &cfg.api_key),
@@ -98,7 +98,7 @@ pub fn command_reset_password(cfg: AppConfig, username: &str, password: String, 
         Some(String::new()),
         server_path,
         cfg.api_key,
-    )) {
+    ), timeout) {
         Err(_) => {
             eprintln!("Unable to convert user information into JSON.");
             std::process::exit(1);
@@ -107,40 +107,40 @@ pub fn command_reset_password(cfg: AppConfig, username: &str, password: String, 
     }
 }
 
-pub fn command_disable_user(cfg: &AppConfig, username: &str, user_policy_endpoint: &str, user_id_endpoint: &str) {
-    modify_user(cfg, username, user_policy_endpoint, user_id_endpoint, &UserMods::Active, true);
+pub fn command_disable_user(cfg: &AppConfig, username: &str, user_policy_endpoint: &str, user_id_endpoint: &str, timeout: u64) {
+    modify_user(cfg, username, user_policy_endpoint, user_id_endpoint, &UserMods::Active, true, timeout);
 }
 
-pub fn command_enable_user(cfg: &AppConfig, username: &str, user_policy_endpoint: &str, user_id_endpoint: &str) {
-    modify_user(cfg, username, user_policy_endpoint, user_id_endpoint, &UserMods::Active, false);
+pub fn command_enable_user(cfg: &AppConfig, username: &str, user_policy_endpoint: &str, user_id_endpoint: &str, timeout: u64) {
+    modify_user(cfg, username, user_policy_endpoint, user_id_endpoint, &UserMods::Active, false, timeout);
 }
 
-pub fn command_grant_admin(cfg: &AppConfig, username: &str, user_policy_endpoint: &str, user_id_endpoint: &str) {
-    modify_user(cfg, username, user_policy_endpoint, user_id_endpoint, &UserMods::Admin, true);
+pub fn command_grant_admin(cfg: &AppConfig, username: &str, user_policy_endpoint: &str, user_id_endpoint: &str, timeout: u64) {
+    modify_user(cfg, username, user_policy_endpoint, user_id_endpoint, &UserMods::Admin, true, timeout);
 }
 
-pub fn command_revoke_admin(cfg: &AppConfig, username: &str, user_policy_endpoint: &str, user_id_endpoint: &str) {
-    modify_user(cfg, username, user_policy_endpoint, user_id_endpoint, &UserMods::Admin, false);
+pub fn command_revoke_admin(cfg: &AppConfig, username: &str, user_policy_endpoint: &str, user_id_endpoint: &str, timeout: u64) {
+    modify_user(cfg, username, user_policy_endpoint, user_id_endpoint, &UserMods::Admin, false, timeout);
 }
 
-pub fn command_add_user(cfg: &AppConfig, username: String, password: String) {
-    add_user(cfg, username, password);
+pub fn command_add_user(cfg: &AppConfig, username: String, password: String, timeout: u64) {
+    add_user(cfg, username, password, timeout);
 }
 
-pub fn command_add_users(cfg: &AppConfig, inputfile: String) {
+pub fn command_add_users(cfg: &AppConfig, inputfile: String, timeout: u64) {
     let reader = BufReader::new(File::open(inputfile).unwrap());
     for line in reader.lines() {
         match line {
             Ok(l) => {
                 let vec: Vec<&str> = l.split(',').collect();
-                add_user(cfg, vec[0].to_owned(), vec[1].to_owned());
+                add_user(cfg, vec[0].to_owned(), vec[1].to_owned(), timeout);
             }
             Err(e) => println!("Unable to add user.  {e}"),
         }
     }
 }
 
-pub fn command_update_users(cfg: &AppConfig, inputfile: String, passed_user_id: &str) {
+pub fn command_update_users(cfg: &AppConfig, inputfile: String, passed_user_id: &str, timeout: u64) {
     let data: String = match fs::read_to_string(inputfile) {
         Err(_) => {
             eprintln!("Unable to process input file.");
@@ -160,7 +160,8 @@ pub fn command_update_users(cfg: &AppConfig, inputfile: String, passed_user_id: 
             if let Err(e) = UserList::update_user_info(
                 UserList::new(passed_user_id, &cfg.server_url, &cfg.api_key),
                 &item.id,
-                &item
+                &item,
+                timeout
             ) {
                 eprintln!("Unable to update user.  {e}");
             }
@@ -179,13 +180,14 @@ pub fn command_update_users(cfg: &AppConfig, inputfile: String, passed_user_id: 
             UserList::new(passed_user_id, &cfg.server_url, &cfg.api_key),
             &user_id,
             &info,
+            timeout
         ) {
             eprintln!("Unable to update user.  {e}");
         }
     }
 }
 
-pub fn command_update_profile_picture(cfg: &AppConfig, username: &str, path: &str) {
+pub fn command_update_profile_picture(cfg: &AppConfig, username: &str, path: &str, timeout: u64) {
     let id = get_user_id(cfg, username);
     let img_base64 = image_to_base64(path.to_string());
     update_image(
@@ -197,6 +199,7 @@ pub fn command_update_profile_picture(cfg: &AppConfig, username: &str, path: &st
         &id,
         &ImageType::Primary,
         &img_base64,
+        timeout
     )
 
 }
@@ -254,7 +257,7 @@ fn gather_user_information(cfg: &AppConfig, username: &str, id: &str, user_id: &
 ///
 /// Helper function to standardize the call for adding a user with a password.
 ///
-fn add_user(cfg: &AppConfig, username: String, password: String) {
+fn add_user(cfg: &AppConfig, username: String, password: String, timeout: u64) {
     let server_path = format!("{}/Users/New", cfg.server_url);
     match UserWithPass::create_user(UserWithPass::new(
         Some(username),
@@ -262,7 +265,7 @@ fn add_user(cfg: &AppConfig, username: String, password: String) {
         None,
         server_path,
         cfg.api_key.clone(),
-    )) {
+    ), timeout) {
         Err(_) => {
             println!("Unable to create user");
             std::process::exit(1);
@@ -274,7 +277,7 @@ fn add_user(cfg: &AppConfig, username: String, password: String) {
 ///
 /// Function to modify user information
 /// 
-fn modify_user(cfg: &AppConfig, username: &str, user_policy_endpoint: &str, user_id_endpoint: &str, mod_type: &UserMods, mod_flag: bool) {
+fn modify_user(cfg: &AppConfig, username: &str, user_policy_endpoint: &str, user_id_endpoint: &str, mod_type: &UserMods, mod_flag: bool, timeout: u64) {
     let id = get_user_id(cfg, username);
     let mut user_info = gather_user_information(cfg, username, &id, user_id_endpoint);
     match mod_type {
@@ -286,5 +289,6 @@ fn modify_user(cfg: &AppConfig, username: &str, user_policy_endpoint: &str, user
         &user_info.policy,
         &id,
         username,
+        timeout
     ).expect("Unable to update user.");
 }

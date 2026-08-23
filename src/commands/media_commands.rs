@@ -4,7 +4,7 @@ use crate::entities::library_details::LibraryDetails;
 use crate::system_actions::{get_libraries_full, update_library};
 use crate::{AppConfig, ImageType, OutputFormat, ScanType, system_actions::{get_libraries, get_search_results, register_library, update_metadata, update_image, scan_library, scan_library_all}, CollectionType, entities::library_options::LibraryOptionsRoot, entities::server_info::ServerInfo, entities::media_details::MediaRoot, utils::common::image_to_base64,};
 
-pub fn command_register_libarary(cfg: &AppConfig, name: &str, collectiontype: &CollectionType, filename: String) {
+pub fn command_register_libarary(cfg: &AppConfig, name: &str, collectiontype: &CollectionType, filename: String, timeout: u64) {
     let mut endpoint = String::from("/Library/VirtualFolders?CollectionType=");
     endpoint.push_str(collectiontype.to_string().as_str());
     endpoint.push_str("&refreshLibrary=true");
@@ -17,20 +17,22 @@ pub fn command_register_libarary(cfg: &AppConfig, name: &str, collectiontype: &C
     register_library(
         ServerInfo::new(endpoint.as_str(), &cfg.server_url, &cfg.api_key),
         contents,
+        timeout
     );
 }
 
-pub fn command_update_metadata(cfg: &AppConfig, id: &str, filename: String) {
+pub fn command_update_metadata(cfg: &AppConfig, id: &str, filename: String, timeout: u64) {
     // Read the JSON file and prepare it for upload.
     let json: String = fs::read_to_string(filename).unwrap();
     update_metadata(
         &ServerInfo::new("/Items/{itemId}", &cfg.server_url, &cfg.api_key),
         id,
         json,
+        timeout
     );
 }
 
-pub fn command_update_image_by_name(cfg: &AppConfig, title: &str, path: String, imagetype: &ImageType) {
+pub fn command_update_image_by_name(cfg: &AppConfig, title: &str, path: String, imagetype: &ImageType, timeout: u64) {
     let search: MediaRoot =
         execute_search(title, "all", "", false, cfg);
     if search.total_record_count > 1 {
@@ -50,11 +52,12 @@ pub fn command_update_image_by_name(cfg: &AppConfig, title: &str, path: String, 
             &item.id,
             imagetype,
             &img_base64,
+            timeout
         );
     }
 }
 
-pub fn command_update_image_by_id(cfg: &AppConfig, id: &str, path: String, imagetype: &ImageType) {
+pub fn command_update_image_by_id(cfg: &AppConfig, id: &str, path: String, imagetype: &ImageType, timeout: u64) {
     let img_base64 = image_to_base64(path);
     update_image(
         &ServerInfo::new(
@@ -65,6 +68,7 @@ pub fn command_update_image_by_id(cfg: &AppConfig, id: &str, path: String, image
         id,
         imagetype,
         &img_base64,
+        timeout
     );
 }
 
@@ -94,13 +98,13 @@ pub fn command_get_libraries(cfg: &AppConfig, output_format: &OutputFormat) {
     }
 }
 
-pub fn command_scan_library(cfg: &AppConfig, library_id: &str, scan_type: &ScanType) {
+pub fn command_scan_library(cfg: &AppConfig, library_id: &str, scan_type: &ScanType, timeout: u64) {
     if library_id == "all" {
         scan_library_all(ServerInfo::new(
             "/Library/Refresh",
             &cfg.server_url,
             &cfg.api_key,
-        ));
+        ), timeout);
     } else {
         let query_info  = match scan_type {
             ScanType::NewUpdated => {
@@ -139,6 +143,7 @@ pub fn command_scan_library(cfg: &AppConfig, library_id: &str, scan_type: &ScanT
             &ServerInfo::new("/Items/{library_id}/Refresh", &cfg.server_url, &cfg.api_key),
             &query_info,
             library_id,
+            timeout
         );
     }
 }
@@ -165,7 +170,7 @@ pub fn command_search_media(cfg: &AppConfig, term: &str, mediatype: &str, parent
     }
 }
 
-pub fn command_library_enable_disable(cfg: &AppConfig, library: String, status: bool) {
+pub fn command_library_enable_disable(cfg: &AppConfig, library: String, status: bool, timeout: u64) {
     let response = get_libraries_full(ServerInfo::new(
             "/Library/VirtualFolders",
             &cfg.server_url,
@@ -179,7 +184,8 @@ pub fn command_library_enable_disable(cfg: &AppConfig, library: String, status: 
                 "/Library/VirtualFolders/LibraryOptions",
                 &cfg.server_url,
                 &cfg.api_key,
-            ), update);
+            ), update,
+        timeout);
         }
     }
 }

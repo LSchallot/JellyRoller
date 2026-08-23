@@ -5,7 +5,6 @@ use prop_reader::PropReader;
 
 use crate::{ entities::{backup_details::BackupDetails, device_details::DeviceDetails, package_details::PackageDetails, plugin_details::PluginDetails, repository_details::RepositoryDetails, server_info::ServerInfo, task_details::TaskDetails}, plugin_actions::PluginInfo, responder::{simple_get, simple_post}, system_actions::{ execute_task_by_id, get_backups_info, get_devices, get_packages_info, get_repo_info, get_scheduled_tasks, get_taskid_by_taskname, install_package, set_repo_info }, user_actions::{ UserAuth, UserWithPass }, utils::status_handler::{handle_others, handle_unauthorized}, AppConfig, OutputFormat};
 
-
 pub fn command_initialize(mut cfg: AppConfig, username: &str, password: String, server_url: &str) {
     env::consts::OS.clone_into(&mut cfg.os);
     server_url.replace("\'","").replace("\"","").trim().clone_into(&mut cfg.server_url);
@@ -40,7 +39,7 @@ pub fn command_get_devices(cfg: &AppConfig, active: bool, output_format: &Output
     }
 }
 
-pub fn command_execute_task_by_name(cfg: &AppConfig, task: &str) {
+pub fn command_execute_task_by_name(cfg: &AppConfig, task: &str, timeout: u64) {
     let taskid: String = match get_taskid_by_taskname(
         ServerInfo::new("/ScheduledTasks", &cfg.server_url, &cfg.api_key),
         task,
@@ -59,6 +58,7 @@ pub fn command_execute_task_by_name(cfg: &AppConfig, task: &str) {
         ),
         task,
         &taskid,
+        timeout
     );
 }
 
@@ -153,7 +153,7 @@ pub fn command_get_scheduled_tasks(cfg: &AppConfig, output_format: &OutputFormat
     }
 }
 
-pub fn command_install_package(cfg: &AppConfig, package: &str, version: &str, repository: &str) {
+pub fn command_install_package(cfg: &AppConfig, package: &str, version: &str, repository: &str, timeout: u64) {
      // Check if package name has spaces and replace them as needed
     let encoded = package.replace(' ', "%20");
     install_package(
@@ -165,10 +165,11 @@ pub fn command_install_package(cfg: &AppConfig, package: &str, version: &str, re
         &encoded,
         version,
         repository,
+        timeout
     );
 }
 
-pub fn command_register_repository(cfg: &AppConfig, name: String, path: String) {
+pub fn command_register_repository(cfg: &AppConfig, name: String, path: String, timeout: u64) {
     let mut repos = get_repo_info(ServerInfo::new(
         "/Repositories",
         &cfg.server_url,
@@ -179,10 +180,11 @@ pub fn command_register_repository(cfg: &AppConfig, name: String, path: String) 
     set_repo_info(
         ServerInfo::new("/Repositories", &cfg.server_url, &cfg.api_key),
         &repos,
+        timeout
     );
 }
 
-pub fn command_create_backup(cfg: &AppConfig, metadata: bool, trickplay: bool, subtitles: bool) {
+pub fn command_create_backup(cfg: &AppConfig, metadata: bool, trickplay: bool, subtitles: bool, timeout: u64) {
     let server_info = ServerInfo::new("/Backup/Create", &cfg.server_url, &cfg.api_key);
     let body = format!(
         "{{\"Metadata\": {},\"Trickplay\": {},\"Subtitles\": {},\"Database\": true}}",
@@ -193,7 +195,8 @@ pub fn command_create_backup(cfg: &AppConfig, metadata: bool, trickplay: bool, s
         &cfg.api_key,
         body.to_string(),
         "application/json",
-        &Vec::new()
+        &Vec::new(),
+        timeout
     );
     match response.status() {
         StatusCode::OK => {
@@ -208,7 +211,7 @@ pub fn command_create_backup(cfg: &AppConfig, metadata: bool, trickplay: bool, s
     }
 }
 
-pub fn command_apply_backup(cfg: &AppConfig, filename: &str) {
+pub fn command_apply_backup(cfg: &AppConfig, filename: &str, timeout: u64) {
     let server_info = ServerInfo::new("/Backup/Restore", &cfg.server_url, &cfg.api_key);
     let body = format!("{{\"ArchiveFileName\": \"{filename}\"}}");
     let response = simple_post(
@@ -216,7 +219,8 @@ pub fn command_apply_backup(cfg: &AppConfig, filename: &str) {
         &cfg.api_key,
         body.to_string(),
         "application/json",
-        &Vec::new()
+        &Vec::new(),
+        timeout
     );
     match response.status() {
         StatusCode::OK => {
@@ -274,7 +278,7 @@ pub fn command_get_backups(cfg: &AppConfig, output_format: &OutputFormat, backup
 /// 
 /// Call /Startup/Complete
 /// * No configuration items needed 
-pub fn command_server_setup(mut server_url: String, filename: String) {
+pub fn command_server_setup(mut server_url: String, filename: String, timeout: u64) {
     server_url = server_url.replace("\'","").replace("\"","");
     let server_config = PropReader::new(&filename);
 
@@ -293,7 +297,8 @@ pub fn command_server_setup(mut server_url: String, filename: String) {
         "",
         body.to_string(),
         "application/json",
-        &Vec::new()
+        &Vec::new(),
+        timeout
     );
     match response.status() {
         StatusCode::NO_CONTENT => {
@@ -319,7 +324,8 @@ pub fn command_server_setup(mut server_url: String, filename: String) {
         "",
         body.to_string(),
         "application/json",
-        &Vec::new()
+        &Vec::new(),
+        timeout
     );
 
     match response.status() {
@@ -344,7 +350,8 @@ pub fn command_server_setup(mut server_url: String, filename: String) {
         "",
         body.to_string(),
         "application/json",
-        &Vec::new()
+        &Vec::new(),
+        timeout
     );
 
     match response.status() {
@@ -362,7 +369,8 @@ pub fn command_server_setup(mut server_url: String, filename: String) {
         "",
         String::new(),
         "application/json",
-        &Vec::new()
+        &Vec::new(),
+        timeout
     );
 
     match response.status() {
