@@ -24,6 +24,7 @@ Commands:
   delete-user                  Deletes an existing user
   disable-library              Disable a library
   disable-user                 Disable a user
+  duplicate-check              Checks your libraries for duplicates
   enable-library               Enable a library
   enable-user                  Enable a user
   execute-task-by-name         Executes a scheduled task by name
@@ -42,7 +43,7 @@ Commands:
   list-users                   Lists the current users with basic information
   quickconnect                 Authenticate via QuickConnect
   reconfigure                  Reconfigure the connection information
-  register-library             Registers a new library
+  register-library             Registers a new library.
   register-repository          Registers a new Plugin Repository
   remove-device-by-username    Removes all devices associated with the specified user
   reset-password               Resets a user's password
@@ -60,7 +61,6 @@ Commands:
   update-users                 Mass update users in the supplied file
   update-user-profile-picture  Update a user's profile picture
   help                         Print this message or the help of the given subcommand(s)
-
 
 Options:
   -h, --help     Print help
