@@ -1,3 +1,4 @@
+use std::time::Duration;
 use reqwest::{blocking::{Client, Response}, header::{CONTENT_TYPE, HeaderMap}};
 use crate::utils::debug::{log_request, log_response};
 
@@ -22,7 +23,7 @@ pub fn simple_get(server_url: String, api_key: &str, query: Vec<(&str, &str)>) -
     }
 }
 
-pub fn simple_post(server_url: String, api_key: &str, body: String, content_type: &str, query: &[(&str, &str)]) -> Response {
+pub fn simple_post(server_url: String, api_key: &str, body: String, content_type: &str, query: &[(&str, &str)], timeout: u64) -> Response {
     log_request("POST", &server_url, Some(&body));
     let mut headers: HeaderMap = HeaderMap::new();
     headers.insert(CONTENT_TYPE, content_type.parse().unwrap());
@@ -41,6 +42,7 @@ pub fn simple_post(server_url: String, api_key: &str, body: String, content_type
         .headers(headers)
         .body(body)
         .query(&query)
+        .timeout(Duration::from_secs(timeout))
         .send();
     if let Ok(resp) = response {
         log_response(resp.status().as_u16(), None);

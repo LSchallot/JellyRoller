@@ -32,7 +32,7 @@ use utils::status_handler::{handle_others, handle_unauthorized};
 // All public functions in the below use statements are used within this file, so just get them all.
 mod commands;
 use commands::log_commands::{command_create_report, command_generate_report, command_list_logs};
-use commands::media_commands::{command_get_libraries, command_library_enable_disable, command_register_libarary, command_scan_library, command_search_media, command_update_metadata, command_update_image_by_name, command_update_image_by_id};
+use commands::media_commands::{command_duplicate_check, command_get_libraries, command_library_enable_disable, command_register_libarary, command_scan_library, command_search_media, command_update_metadata, command_update_image_by_name, command_update_image_by_id};
 use commands::server_commands::{command_apply_backup, command_create_backup, command_execute_task_by_name, command_get_backups, command_get_devices, command_get_packages, command_get_plugins, command_get_repositories, command_get_scheduled_tasks, command_initialize, command_install_package, command_register_repository, command_server_setup, token_to_api};
 use commands::user_commands::{command_add_user, command_add_users, command_delete_user, command_disable_user, command_enable_user, command_grant_admin, command_list_users, command_remove_device_by_username, command_reset_password, command_revoke_admin, command_update_users, command_update_profile_picture};
 
@@ -49,6 +49,11 @@ const USER_ID: &str = "/Users/{userId}";
 const USERS: &str = "/Users";
 const DEVICES: &str = "/Devices";
 const BACKUPS: &str = "/Backup";
+
+//
+// Other global variables
+//
+const DEFAULT_TIMEOUT: u64 = 600;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
@@ -129,6 +134,8 @@ enum Commands {
         /// Skip backing up subtitles
         #[clap(long, required = false)]
         skip_subtitles: bool,
+        #[clap(long, required = false, default_value_t = DEFAULT_TIMEOUT)]
+        timeout: u64
     },
     /// Creates a report of either activity or available items (movie, series, boxset)
     CreateReport {
@@ -158,6 +165,11 @@ enum Commands {
     DisableUser {
         #[clap(required = true, value_parser)]
         username: String,
+    },
+    /// Checks your libraries for duplicates
+    DuplicateCheck {
+        #[clap(required = false, default_value = "all")]
+        library: String,
     },
     /// Enable a library
     EnableLibrary {
@@ -517,20 +529,21 @@ fn main() -> Result<(), confy::ConfyError> {
         Commands::ShowLog { logfile } => LogFile::get_logfile(LogFile::new(ServerInfo::new("/System/Logs/Log", &cfg.server_url, &cfg.api_key),logfile,)).expect("Unable to retrieve the specified logfile."),
         
         // Media Commands
-        Commands::DisableLibrary { library } => command_library_enable_disable(&cfg, library, false),
-        Commands::EnableLibrary { library } => command_library_enable_disable(&cfg, library, true),
+        Commands::DisableLibrary { library } => command_library_enable_disable(&cfg, library, false, DEFAULT_TIMEOUT),
+        Commands::DuplicateCheck { library } => command_duplicate_check(&cfg, library),
+        Commands::EnableLibrary { library } => command_library_enable_disable(&cfg, library, true, DEFAULT_TIMEOUT),
         Commands::GetLibraries { output_format } => command_get_libraries(&cfg, &output_format),
-        Commands::RegisterLibrary { name, collectiontype, filename } => command_register_libarary(&cfg, &name, &collectiontype, filename),
-        Commands::ScanLibrary { library_id, scan_type } => command_scan_library(&cfg, &library_id, &scan_type),
+        Commands::RegisterLibrary { name, collectiontype, filename } => command_register_libarary(&cfg, &name, &collectiontype, filename, DEFAULT_TIMEOUT),
+        Commands::ScanLibrary { library_id, scan_type } => command_scan_library(&cfg, &library_id, &scan_type, DEFAULT_TIMEOUT),
         Commands::SearchMedia { term, mediatype, parentid, output_format, include_filepath, table_columns } => command_search_media(&cfg, &term, &mediatype, &parentid, &output_format, include_filepath, &table_columns),
-        Commands::UpdateMetadata { id, filename } => command_update_metadata(&cfg, &id, filename),
-        Commands::UpdateImageByName {title, path, imagetype} => command_update_image_by_name(&cfg, &title, path, &imagetype),
-        Commands::UpdateImageById { id, path, imagetype } => command_update_image_by_id(&cfg, &id, path, &imagetype),
+        Commands::UpdateMetadata { id, filename } => command_update_metadata(&cfg, &id, filename, DEFAULT_TIMEOUT),
+        Commands::UpdateImageByName {title, path, imagetype} => command_update_image_by_name(&cfg, &title, path, &imagetype, DEFAULT_TIMEOUT),
+        Commands::UpdateImageById { id, path, imagetype } => command_update_image_by_id(&cfg, &id, path, &imagetype, DEFAULT_TIMEOUT),
         
         // Server Commands
-        Commands::ApplyBackup { filename } => command_apply_backup(&cfg, &filename),
-        Commands::CreateBackup { skip_metadata, skip_trickplay, skip_subtitles} => command_create_backup(&cfg, !skip_metadata, !skip_trickplay, !skip_subtitles),
-        Commands::ExecuteTaskByName { task } => command_execute_task_by_name(&cfg, &task),
+        Commands::ApplyBackup { filename } => command_apply_backup(&cfg, &filename, DEFAULT_TIMEOUT),
+        Commands::CreateBackup { skip_metadata, skip_trickplay, skip_subtitles, timeout} => command_create_backup(&cfg, !skip_metadata, !skip_trickplay, !skip_subtitles, timeout),
+        Commands::ExecuteTaskByName { task } => command_execute_task_by_name(&cfg, &task, DEFAULT_TIMEOUT),
         Commands::GetBackups { output_format } => command_get_backups(&cfg, &output_format, BACKUPS),
         Commands::GetDevices { active, output_format} => command_get_devices(&cfg, active, &output_format, DEVICES),
         Commands::GetPackages { output_format } => command_get_packages(&cfg, &output_format),
@@ -538,28 +551,28 @@ fn main() -> Result<(), confy::ConfyError> {
         Commands::GetRepositories { output_format } => command_get_repositories(&cfg, &output_format),
         Commands::GetScheduledTasks { output_format } => command_get_scheduled_tasks(&cfg, &output_format),
         Commands::Initialize { username, password, server_url } => command_initialize(cfg, &username, password, &server_url),
-        Commands::InstallPackage { package, version, repository} => command_install_package(&cfg, &package, &version, &repository),
+        Commands::InstallPackage { package, version, repository} => command_install_package(&cfg, &package, &version, &repository, DEFAULT_TIMEOUT),
         Commands::Quickconnect {} => process_quickconnect(cfg),
         Commands::Reconfigure {} => initial_config(cfg),
-        Commands::RegisterRepository { name, path } => command_register_repository(&cfg, name, path),
-        Commands::RestartJellyfin {} => restart_or_shutdown(ServerInfo::new("/System/Restart",&cfg.server_url,&cfg.api_key,)),
+        Commands::RegisterRepository { name, path } => command_register_repository(&cfg, name, path, DEFAULT_TIMEOUT),
+        Commands::RestartJellyfin {} => restart_or_shutdown(ServerInfo::new("/System/Restart",&cfg.server_url,&cfg.api_key,), DEFAULT_TIMEOUT),
         Commands::ServerInfo {} => get_server_info(ServerInfo::new("/System/Info", &cfg.server_url, &cfg.api_key,)).expect("Unable to gather server information."),
-        Commands::ServerSetup { server_url, filename } => command_server_setup(server_url, filename),
-        Commands::ShutdownJellyfin {} => restart_or_shutdown(ServerInfo::new("/System/Shutdown",&cfg.server_url,&cfg.api_key,)),
+        Commands::ServerSetup { server_url, filename } => command_server_setup(server_url, filename, DEFAULT_TIMEOUT),
+        Commands::ShutdownJellyfin {} => restart_or_shutdown(ServerInfo::new("/System/Shutdown",&cfg.server_url,&cfg.api_key,), DEFAULT_TIMEOUT),
 
         // User commands
-        Commands::AddUser { username, password } => command_add_user(&cfg, username, password),
-        Commands::AddUsers { inputfile } => command_add_users(&cfg, inputfile),
+        Commands::AddUser { username, password } => command_add_user(&cfg, username, password, DEFAULT_TIMEOUT),
+        Commands::AddUsers { inputfile } => command_add_users(&cfg, inputfile, DEFAULT_TIMEOUT),
         Commands::DeleteUser { username } => command_delete_user(cfg, username),
-        Commands::DisableUser { username } => command_disable_user(&cfg, &username, USER_POLICY, USER_ID),
-        Commands::EnableUser { username } => command_enable_user(&cfg, &username, USER_POLICY, USER_ID),
-        Commands::GrantAdmin { username } => command_grant_admin(&cfg, &username, USER_POLICY, USER_ID),
+        Commands::DisableUser { username } => command_disable_user(&cfg, &username, USER_POLICY, USER_ID, DEFAULT_TIMEOUT),
+        Commands::EnableUser { username } => command_enable_user(&cfg, &username, USER_POLICY, USER_ID, DEFAULT_TIMEOUT),
+        Commands::GrantAdmin { username } => command_grant_admin(&cfg, &username, USER_POLICY, USER_ID, DEFAULT_TIMEOUT),
         Commands::ListUsers { export, output, username } => command_list_users(&cfg, export, output, &username, USERS, USER_ID),
         Commands::RemoveDeviceByUsername { username } => command_remove_device_by_username(&cfg, &username, DEVICES),
-        Commands::ResetPassword { username, password } => command_reset_password(cfg, &username, password, USERS),
-        Commands::RevokeAdmin { username } => command_revoke_admin(&cfg, &username, USER_POLICY, USER_ID),
-        Commands::UpdateUsers { inputfile } => command_update_users(&cfg, inputfile, USER_ID),
-        Commands::UpdateUserProfilePicture { username, path } => command_update_profile_picture(&cfg, &username, &path),
+        Commands::ResetPassword { username, password } => command_reset_password(cfg, &username, password, USERS, DEFAULT_TIMEOUT),
+        Commands::RevokeAdmin { username } => command_revoke_admin(&cfg, &username, USER_POLICY, USER_ID, DEFAULT_TIMEOUT),
+        Commands::UpdateUsers { inputfile } => command_update_users(&cfg, inputfile, USER_ID, DEFAULT_TIMEOUT),
+        Commands::UpdateUserProfilePicture { username, path } => command_update_profile_picture(&cfg, &username, &path, DEFAULT_TIMEOUT),
         
         // Other
         Commands::Completions { shell } => {
@@ -615,7 +628,7 @@ fn process_quickconnect(mut cfg: AppConfig) {
         .expect("Could not read server url information");
     server_url_input.trim().clone_into(&mut cfg.server_url);
     println!("[INFO] Attempting to initialize a QuickConnect request.....");
-    let mut details = UserAuthQuickconnect::quickconnect_initiate(UserAuthQuickconnect::new(&cfg.server_url)).unwrap();
+    let mut details = UserAuthQuickconnect::quickconnect_initiate(UserAuthQuickconnect::new(&cfg.server_url), DEFAULT_TIMEOUT).unwrap();
     println!("Your login code is: {}", details.code.clone());
     // Wait while the QuickConnect code is approved.  
     while !&details.authenticated {
@@ -624,7 +637,7 @@ fn process_quickconnect(mut cfg: AppConfig) {
         thread::sleep(time::Duration::from_secs(1));
     }
     // Now that we are authenticated we need to tie our QuickConnect to the account
-    cfg.api_key = UserAuthQuickconnect::quickconnect_authenticate(&details, &cfg.server_url).unwrap();
+    cfg.api_key = UserAuthQuickconnect::quickconnect_authenticate(&details, &cfg.server_url, DEFAULT_TIMEOUT).unwrap();
     "configured".clone_into(&mut cfg.status);
     token_to_api(cfg);
 

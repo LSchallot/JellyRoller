@@ -65,13 +65,14 @@ pub fn get_repo_info(
     Ok(repos)
 }
 
-pub fn set_repo_info(server_info: ServerInfo, repos: &[RepositoryDetails]) {
+pub fn set_repo_info(server_info: ServerInfo, repos: &[RepositoryDetails], timeout: u64) {
     simple_post(
         server_info.server_url,
         &server_info.api_key,
         serde_json::to_string(&repos).unwrap(),
         "application/json",
-        &Vec::new()
+        &Vec::new(),
+        timeout
     );
 }
 
@@ -89,7 +90,7 @@ pub fn get_packages_info(
     Ok(packages)
 }
 
-pub fn install_package(server_info: &ServerInfo, package: &str, version: &str, repository: &str) {
+pub fn install_package(server_info: &ServerInfo, package: &str, version: &str, repository: &str, timeout: u64) {
     let query = &[("version", version), ("repository", repository)];
     let response = simple_post(
         server_info.server_url.replace("{package}", package),
@@ -97,6 +98,7 @@ pub fn install_package(server_info: &ServerInfo, package: &str, version: &str, r
         String::new(),
         "application/json",
         query,
+        timeout
     );
     match response.status() {
         StatusCode::NO_CONTENT => {
@@ -122,8 +124,8 @@ pub fn return_server_info(server_info: ServerInfo) -> String {
     }
 }
 
-pub fn restart_or_shutdown(server_info: ServerInfo) {
-    let response = simple_post(server_info.server_url, &server_info.api_key, String::new(), "application/json", &Vec::new());
+pub fn restart_or_shutdown(server_info: ServerInfo, timeout: u64) {
+    let response = simple_post(server_info.server_url, &server_info.api_key, String::new(), "application/json", &Vec::new(), timeout);
     match response.status() {
         StatusCode::NO_CONTENT => {
             println!("Command successful.");
@@ -246,13 +248,15 @@ pub fn get_libraries_full(server_info: ServerInfo) -> Result<LibraryDetailsVec, 
     }
 }
 
-pub fn update_library(server_info: ServerInfo, library_options: LibraryOptionsRoot) {
+pub fn update_library(server_info: ServerInfo, library_options: LibraryOptionsRoot, timeout: u64) {
     let response = simple_post(
-            server_info.server_url, 
-            &server_info.api_key, 
-            serde_json::to_string(&library_options).unwrap(),
+        server_info.server_url, 
+        &server_info.api_key, 
+        serde_json::to_string(&library_options).unwrap(),
         "application/json",
-    &Vec::new());
+        &Vec::new(),
+    timeout
+    );
     if response.status() == StatusCode::NO_CONTENT {
         println!("Library updated successfully.");
     } else {
@@ -325,13 +329,14 @@ pub fn get_taskid_by_taskname(
     Ok(String::new())
 }
 
-pub fn execute_task_by_id(server_info: &ServerInfo, taskname: &str, taskid: &str) {
+pub fn execute_task_by_id(server_info: &ServerInfo, taskname: &str, taskid: &str, timeout: u64) {
     let response = simple_post(
         server_info.server_url.replace("{taskId}", taskid),
         &server_info.api_key,
         String::new(),
         "application/json",
-        &Vec::new()
+        &Vec::new(),
+        timeout
     );
     match response.status() {
         StatusCode::NO_CONTENT => {
@@ -421,7 +426,7 @@ pub fn get_scheduled_tasks(server_info: ServerInfo) -> Result<Vec<TaskDetails>, 
     Ok(details)
 }
 
-pub fn scan_library(server_info: &ServerInfo, scan_options: &[(&str, &str)], library_id: &str) {
+pub fn scan_library(server_info: &ServerInfo, scan_options: &[(&str, &str)], library_id: &str, timeout: u64) {
     let response = simple_post(
         server_info
             .server_url
@@ -430,6 +435,7 @@ pub fn scan_library(server_info: &ServerInfo, scan_options: &[(&str, &str)], lib
         String::new(),
         "application/json",
         scan_options,
+        timeout
     );
     match response.status() {
         StatusCode::NO_CONTENT => {
@@ -444,8 +450,15 @@ pub fn scan_library(server_info: &ServerInfo, scan_options: &[(&str, &str)], lib
     }
 }
 
-pub fn scan_library_all(server_info: ServerInfo) {
-    let response = simple_post(server_info.server_url, &server_info.api_key, String::new(), "application/json", &Vec::new());
+pub fn scan_library_all(server_info: ServerInfo, timeout: u64) {
+    let response = simple_post(
+        server_info.server_url, 
+        &server_info.api_key, 
+        String::new(), 
+        "application/json", 
+        &Vec::new(),
+        timeout
+    );
     match response.status() {
         StatusCode::NO_CONTENT => {
             println!("Library scan initiated.");
@@ -459,8 +472,15 @@ pub fn scan_library_all(server_info: ServerInfo) {
     }
 }
 
-pub fn register_library(server_info: ServerInfo, json_contents: String) {
-    let response = simple_post(server_info.server_url, &server_info.api_key, json_contents, "application/json", &Vec::new());
+pub fn register_library(server_info: ServerInfo, json_contents: String, timeout: u64) {
+    let response = simple_post(
+        server_info.server_url, 
+        &server_info.api_key, 
+        json_contents, 
+        "application/json", 
+        &Vec::new(),
+        timeout
+    );
     match response.status() {
         StatusCode::NO_CONTENT => {
             println!("Library successfully added.");
@@ -479,16 +499,18 @@ pub fn update_image(
     id: &str,
     imagetype: &ImageType,
     img_base64: &String,
+    timeout: u64
 ) {
     let response = simple_post(
         server_info
-            .server_url
-            .replace("{itemId}", id)
-            .replace("{imageType}", imagetype.to_string().as_str()),
+        .server_url
+        .replace("{itemId}", id)
+        .replace("{imageType}", imagetype.to_string().as_str()),
         &server_info.api_key,
         img_base64.to_string(),
         "image/png",
-        &Vec::new()
+        &Vec::new(),
+        timeout
     );
     match response.status() {
         StatusCode::NO_CONTENT => {
@@ -503,13 +525,14 @@ pub fn update_image(
     }
 }
 
-pub fn update_metadata(server_info: &ServerInfo, id: &str, json: String) {
+pub fn update_metadata(server_info: &ServerInfo, id: &str, json: String, timeout: u64) {
     let response = simple_post(
         server_info.server_url.replace("{itemId}", id),
         &server_info.api_key,
         json,
         "application/json",
-        &Vec::new()
+        &Vec::new(),
+        timeout
     );
     match response.status() {
         StatusCode::NO_CONTENT => {

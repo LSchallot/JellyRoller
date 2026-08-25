@@ -31,7 +31,6 @@ impl UserWithPass {
         auth_key: String,
     ) -> UserWithPass {
         UserWithPass {
-            //username: Some(username.unwrap_or_else(|| String::new())),
             username: Some(username.unwrap_or_default()),
             pass: Some(pass.unwrap_or_default()),
             currentpwd: Some(currentpwd.unwrap_or_default()),
@@ -40,13 +39,14 @@ impl UserWithPass {
         }
     }
 
-    pub fn resetpass(self) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn resetpass(self, timeout: u64) -> Result<(), Box<dyn std::error::Error>> {
         let response = simple_post(
             self.server_url.clone(),
             &self.auth_key.clone(),
             serde_json::to_string_pretty(&self)?,
             "application/json",
-            &Vec::new()
+            &Vec::new(),
+            timeout
         );
         match response.status() {
             StatusCode::NO_CONTENT => {
@@ -64,13 +64,14 @@ impl UserWithPass {
         Ok(())
     }
 
-    pub fn create_user(self) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn create_user(self, timeout: u64) -> Result<(), Box<dyn std::error::Error>> {
         let response = simple_post(
             self.server_url.clone(),
             &self.auth_key.clone(),
             serde_json::to_string_pretty(&self)?,
             "application/json",
-            &Vec::new()
+            &Vec::new(),
+            timeout
         );
         match response.status() {
             StatusCode::OK => {
@@ -212,13 +213,14 @@ impl UserAuthQuickconnect {
         }
     }
 
-    pub fn quickconnect_initiate(self) -> Result<QuickConnectDetails, Box<dyn std::error::Error>> {
+    pub fn quickconnect_initiate(self, timeout: u64) -> Result<QuickConnectDetails, Box<dyn std::error::Error>> {
         let response = simple_post(
             format!("{0}/QuickConnect/Initiate", self.server_url),
             "",
             String::new(),
             "application/json",
-            &Vec::new()
+            &Vec::new(),
+            timeout
         );
 
         if response.status() == StatusCode::OK {
@@ -248,13 +250,14 @@ impl UserAuthQuickconnect {
         }
     }
 
-    pub fn quickconnect_authenticate(details: &QuickConnectDetails, server_url: &str) -> Result<String, Box<dyn std::error::Error>> {
+    pub fn quickconnect_authenticate(details: &QuickConnectDetails, server_url: &str, timeout: u64) -> Result<String, Box<dyn std::error::Error>> {
         let response = simple_post(
             format!("{0}/Users/AuthenticateWithQuickConnect", server_url),
             "",
             serde_json::to_string_pretty(&details)?,
             "application/json",
-            &Vec::new()
+            &Vec::new(),
+            timeout
         );
         
         if response.status() == StatusCode::OK {
@@ -327,6 +330,7 @@ impl UserList {
         user_info: &Policy,
         id: &str,
         username: &str,
+        timeout: u64
     ) -> Result<(), Box<dyn std::error::Error>> {
         let body = serde_json::to_string_pretty(user_info)?;
         let response = simple_post(
@@ -334,7 +338,8 @@ impl UserList {
             &self.api_key.clone(),
             body,
             "application/json",
-            &Vec::new()
+            &Vec::new(),
+            timeout
         );
         if response.status() == StatusCode::NO_CONTENT {
             println!("User {username} successfully updated.");
@@ -353,6 +358,7 @@ impl UserList {
         self,
         id: &str,
         info: &UserDetails,
+        timeout: u64
     ) -> Result<(), Box<dyn std::error::Error>> {
         let body = serde_json::to_string_pretty(&info)?;
         // So we have to update the Policy and the user info separate even though they are the same JSON object :/
@@ -364,7 +370,8 @@ impl UserList {
             &self.api_key.clone(),
             body,
             "application/json",
-            &Vec::new()
+            &Vec::new(),
+            timeout
         );
         if user_response.status() == StatusCode::NO_CONTENT {
         } else {
@@ -381,7 +388,8 @@ impl UserList {
             &self.api_key,
             serde_json::to_string_pretty(&info.policy)?,
             "application/json",
-            &Vec::new()
+            &Vec::new(),
+            timeout
         );
         if response.status() == StatusCode::NO_CONTENT {
             println!("{} successfully updated.", info.name);

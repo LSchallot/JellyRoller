@@ -1,6 +1,6 @@
 [package]
 name = "jellyroller"
-version = "1.1.5"
+version = "1.2.0"
 edition = "2024"
 description = "The CLI Jellyfin Controller Utility for Linux and Windows."
 repository = "https://github.com/LSchallot/JellyRoller"
@@ -13,7 +13,7 @@ categories = ["command-line", "jellyfin"]
 
 [dependencies]
 chrono = "0.4.45" 
-clap = { version = "4.6.4", features = ["derive"] }
+clap = { version = "4.6.6", features = ["derive"] }
 confy = "2.0.0"
 serde = "1.0.229"
 serde_derive = "1.0.229"
@@ -25,5 +25,5 @@ comfy-table = "7.2.2"
 image = "0.25.10"
 base64 = "0.22.1"
 csv = "1.4.0"
-clap_complete = "4.6.8"
+clap_complete = "4.6.9"
 prop_reader = "0.2.0"

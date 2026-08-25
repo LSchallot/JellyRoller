@@ -1,7 +1,25 @@
 # Change Log
 All notable changes to this project will be documented in this file.
 
-## [1.1.4] - XXXX-XX-XX
+## [1.2.0] - 2026-08-24
+
+### Added
+- Added custom timeout option for creating a backup
+- Added ability to display duplicate pieces of media
+- Added deb packages for releases
+
+### Maintenance
+- Dependency updates
+
+## [1.1.5] - 2026-07-27
+
+### Fixed
+- Corrected typo in simple_post that was causing several call failures
+
+### Maintenance
+- Dependency updates
+
+## [1.1.4] - 2026-07-19
 Special thanks to @runarmod for their contributions to this release!
 
 ### Added
