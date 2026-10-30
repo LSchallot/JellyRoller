@@ -2,7 +2,7 @@ class Jellyroller < Formula
   desc "CLI Jellyfin Controller Utility for Linux and Windows"
   homepage ""
   url "https://github.com/LSchallot/JellyRoller/archive/refs/tags/v1.2.0.tar.gz"
-  sha256 "9aa0e80a838b42339ab1640d1d43d077afb88ef9"
+  sha256 "c14f867d90b642c7bb78a51f5a214aab949b1cf2f1a8fc657d60a388f6baaacc"
   license "GPL-2.0"
   
   depends_on "rust" => :build
