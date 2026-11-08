@@ -1,6 +1,11 @@
 # Change Log
 All notable changes to this project will be documented in this file.
 
+## [1.2.1] - 2026-11-07
+
+### Maintenance
+- Dependency updates, including updates to fix a vulnerability with rustls.
+
 ## [1.2.0] - 2026-08-24
 
 ### Added
