@@ -1,8 +1,8 @@
 class Jellyroller < Formula
   desc "CLI Jellyfin Controller Utility for Linux and Windows"
   homepage ""
-  url "https://github.com/LSchallot/JellyRoller/archive/refs/tags/v1.2.0.tar.gz"
-  sha256 "c14f867d90b642c7bb78a51f5a214aab949b1cf2f1a8fc657d60a388f6baaacc"
+  url "https://github.com/LSchallot/JellyRoller/archive/refs/tags/v1.2.1.tar.gz"
+  sha256 "6b7755b6f15f786abb48afb65d81acf4c6a5f613330d1d8c4fc55de7677b10e6"
   license "GPL-2.0"
   
   depends_on "rust" => :build
@@ -12,8 +12,8 @@ class Jellyroller < Formula
   end
 
   bottle do
-    root_url "https://github.com/LSchallot/JellyRoller/releases/download/v1.2.0"
-    sha256 x86_64_linux: "60a6717e0c46614520dbf1d3053644b1903b5344af69a28caa5526df8d89fbbb"
+    root_url "https://github.com/LSchallot/JellyRoller/releases/download/v1.2.1"
+    sha256 x86_64_linux: "46632da1cc1b4c6cde61c781f8fdf6f82c4f297328017d04e9c0a2892ed02705"
   end
   
   test do
